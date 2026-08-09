@@ -24,6 +24,11 @@ search:
   deep_search_candidate_limit: 20
   final_shortlist_limit: 10
   round_trip_benchmark: true
+  coverage_gate:
+    enabled: true
+    require_attempt_for_each_origin_airport: true
+    incomplete_origin_coverage_action: mark_missing_and_do_not_claim_full_radar
+    report_origin_coverage: true
 
 fare_policy:
   include_low_cost_carriers: true
@@ -150,6 +155,14 @@ china:
         - LZN
       onward_mode: ferry
       mainland_gateway_area: Fuzhou
+  coverage_gate:
+    enabled: true
+    required_modes:
+      - direct_air
+      - kinmen
+      - matsu
+    incomplete_mode_coverage_action: mark_missing_and_do_not_claim_full_china_radar
+    report_mode_coverage: true
   allow_mainland_domestic_flight: true
   allow_mainland_high_speed_rail: true
   allow_mainland_rail: true
