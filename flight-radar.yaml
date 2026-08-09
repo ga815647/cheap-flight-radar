@@ -30,6 +30,56 @@ search:
     incomplete_origin_coverage_action: mark_missing_and_do_not_claim_full_radar
     report_origin_coverage: true
 
+  daily_profiles:
+    enabled: true
+    shared_origin_coverage: true
+    unified_final_ranking: true
+    profiles:
+      world:
+        enabled: true
+        destination_scope: global
+        mode: broad_discovery
+        include_specialist_countries_in_discovery: true
+        specialist_country_deep_expansion: false
+        specialist_countries:
+          - JP
+          - KR
+          - CN
+        report_section: world_other_surprises
+      japan:
+        enabled: true
+        destination_countries:
+          - JP
+        mode: specialist_deep
+        allow_open_jaw: true
+        onward_modes:
+          - domestic_flight
+          - rail
+          - bus
+      korea:
+        enabled: true
+        destination_countries:
+          - KR
+        mode: specialist_deep
+        allow_open_jaw: true
+        onward_modes:
+          - domestic_flight
+          - rail
+          - bus
+      china:
+        enabled: true
+        destination_countries:
+          - CN
+        mode: specialist_deep
+        allow_open_jaw: true
+        enable_multimodal_gateways: true
+        onward_modes:
+          - domestic_flight
+          - high_speed_rail
+          - rail
+          - bus
+          - ferry
+
 fare_policy:
   include_low_cost_carriers: true
   include_full_service_carriers: true
@@ -140,6 +190,7 @@ penalties:
 
 china:
   enabled: true
+  activation_profile: china
   destination_scope: any_province_or_municipality
   direct_air: true
   gateway_modes:
@@ -157,12 +208,35 @@ china:
       mainland_gateway_area: Fuzhou
   coverage_gate:
     enabled: true
+    applies_only_when_profile: china
     required_modes:
       - direct_air
       - kinmen
       - matsu
     incomplete_mode_coverage_action: mark_missing_and_do_not_claim_full_china_radar
     report_mode_coverage: true
+  ferry_data_policy:
+    static_route_topology_allowed: true
+    timetable_must_be_live: true
+    fare_must_be_live: true
+    operating_status_must_be_live: true
+    passenger_eligibility_must_be_live: true
+    document_requirements_must_be_live: true
+    do_not_store_operational_timetable_as_constant: true
+  ferry_evaluation:
+    compare_against_simplest_comparable_air_itinerary: true
+    count_total_door_to_door_transport_time: true
+    include_port_transfer_and_checkin_time: true
+    include_immigration_and_wait_time: true
+    evaluate_savings_per_extra_transport_hour: true
+    evaluate_extra_transport_time_share_of_usable_trip: true
+    disruption_risk_model: qualitative_until_history_exists
+    qualitative_levels:
+      - low
+      - medium
+      - high
+    penalize_missed_connection_cascade_risk: true
+    never_invent_cancellation_probability: true
   allow_mainland_domestic_flight: true
   allow_mainland_high_speed_rail: true
   allow_mainland_rail: true
