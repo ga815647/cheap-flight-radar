@@ -29,6 +29,20 @@ class ScoringPolicyTests(unittest.TestCase):
             "mark_missing_and_do_not_claim_full_radar",
         )
 
+    def test_taiwan_airport_labels_are_airport_specific(self):
+        display = self.policy["search"]["display_policy"]
+        self.assertEqual(
+            display["taiwan_airport_labels"],
+            {"TPE": "桃園", "TSA": "松山", "RMQ": "台中", "KHH": "高雄"},
+        )
+        self.assertTrue(display["include_iata_with_airport_label"])
+        self.assertTrue(display["require_airport_specific_taiwan_label"])
+        self.assertTrue(display["forbid_taipei_alias_for_tpe_or_tsa"])
+        self.assertEqual(
+            set(display["forbidden_ambiguous_taiwan_origin_labels"]),
+            {"台北", "Taipei"},
+        )
+
     def test_daily_profiles_are_world_japan_korea_china(self):
         profiles = self.policy["search"]["daily_profiles"]
         self.assertTrue(profiles["enabled"])
