@@ -1,0 +1,186 @@
+version: 0.1
+status: experimental
+
+project:
+  name: cheap-flight-radar
+  objective: >-
+    Discover unusually cheap, actually usable trips from Taiwan by finding cheap
+    outbound opportunities first, then constructing and ranking complete return
+    or open-jaw itineraries.
+  currency: TWD
+  timezone: Asia/Taipei
+
+search:
+  horizon_days: 120
+  origin_country: TW
+  origin_airports:
+    - TPE
+    - TSA
+    - RMQ
+    - KHH
+  destination_scope: global
+  weekday_restriction: none
+  discovery_strategy: outbound_one_way_first
+  deep_search_candidate_limit: 20
+  final_shortlist_limit: 10
+  round_trip_benchmark: true
+
+fare_policy:
+  include_low_cost_carriers: true
+  include_full_service_carriers: true
+  allow_one_stop_international: true
+  allow_self_transfer: true
+  self_transfer_penalty: true
+  allow_mixed_carriers: true
+  allow_mixed_taiwan_airports: true
+  baggage:
+    normalization_mode: required_trip_baggage
+    default_assumption: personal_item_or_cabin_bag_only
+    add_checked_baggage_only_when_needed: true
+
+routing:
+  open_jaw: true
+  allow_positioning_segments: true
+  positioning_modes:
+    - domestic_flight
+    - rail
+    - bus
+    - ferry
+  max_extra_flight_segments_default: 1
+  prefer_domestic_positioning_over_cross_border_self_transfer: true
+  reject_unverified_connections: true
+
+return_windows:
+  # Based on typical one-way travel time. These are search windows, not mandatory trip lengths.
+  - max_one_way_hours: 2.5
+    min_nights: 2
+    max_nights: 6
+    ideal_nights: [2, 4]
+  - max_one_way_hours: 4.0
+    min_nights: 3
+    max_nights: 8
+    ideal_nights: [3, 5]
+  - max_one_way_hours: 6.0
+    min_nights: 4
+    max_nights: 10
+    ideal_nights: [4, 6]
+  - max_one_way_hours: 9.0
+    min_nights: 5
+    max_nights: 12
+    ideal_nights: [6, 8]
+  - max_one_way_hours: 12.0
+    min_nights: 6
+    max_nights: 14
+    ideal_nights: [7, 10]
+  - max_one_way_hours: null
+    min_nights: 8
+    max_nights: 18
+    ideal_nights: [9, 14]
+
+usable_time:
+  primary_measure: usable_destination_hours
+  derive_usable_days_from_hours: true
+  usable_day_hours: 12
+  penalize_overnight_or_long_connection_time: true
+  do_not_reward_excess_trip_length_beyond_ideal: true
+
+cost:
+  effective_total_transport_price_includes:
+    - international_airfare
+    - required_domestic_airfare
+    - required_rail
+    - required_bus
+    - required_ferry
+    - required_airport_or_port_transfer
+    - required_baggage
+    - unavoidable_transport_caused_overnight_cost
+  exclude_by_default:
+    - normal_local_sightseeing_transport
+    - hotels_not_caused_by_transport
+    - meals
+
+ranking:
+  preserve_views:
+    - absolute_cheapest
+    - best_value
+    - best_short_break
+    - unusual_long_haul_deal
+  primary_recommendation_components:
+    effective_total_price: 0.35
+    route_value: 0.25
+    trip_length_fit: 0.25
+    transport_efficiency: 0.15
+  weights_status: provisional_until_historical_calibration
+  price_priority_rule: >-
+    Absolute price must remain visible and must never be hidden by the composite
+    score. Composite ranking exists to distinguish usable deals from superficially
+    cheap but impractical itineraries.
+
+penalties:
+  self_transfer:
+    enabled: true
+    severity: moderate
+  excessive_connection_time:
+    enabled: true
+    severity: high
+  insufficient_trip_length_for_route:
+    enabled: true
+    severity: high
+  excessive_positioning_cost:
+    enabled: true
+    severity: high
+  unverifiable_price_or_schedule:
+    enabled: true
+    severity: reject
+
+china:
+  enabled: true
+  destination_scope: any_province_or_municipality
+  direct_air: true
+  gateway_modes:
+    kinmen:
+      enabled: true
+      taiwan_airport: KNH
+      onward_mode: ferry
+      mainland_gateway_area: Xiamen_Quanzhou
+    matsu:
+      enabled: true
+      taiwan_airports:
+        - MFK
+        - LZN
+      onward_mode: ferry
+      mainland_gateway_area: Fuzhou
+  allow_mainland_domestic_flight: true
+  allow_mainland_high_speed_rail: true
+  allow_mainland_rail: true
+  allow_open_jaw_exit: true
+  document_requirements_must_be_verified_live: true
+  ferry_schedule_must_be_verified_live: true
+
+price_history:
+  enabled: true
+  retain_observation_timestamp: true
+  retain_source: true
+  retain_currency_and_original_price: true
+  retain_normalized_twd_price: true
+  distinguish_discovery_from_verified_price: true
+  anomaly_views:
+    - new_route_low
+    - percentile_vs_route_history
+    - percentage_below_recent_baseline
+
+notifications:
+  enabled_when_automation_exists: true
+  notify_on:
+    - new_top_ranked_deal
+    - meaningful_new_route_low
+    - unusually_cheap_long_haul
+  suppress_routine_no_change_runs: true
+
+verification:
+  discovery_price_is_not_bookable_price: true
+  final_candidate_revalidation_required: true
+  record_observed_at: true
+  record_source_url_or_source_id: true
+  record_fare_conditions_when_available: true
+  never_invent_missing_components: true
