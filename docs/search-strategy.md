@@ -21,6 +21,19 @@ A cheap outbound fare is an efficient discovery signal. Most destinations do not
 
 Outbound-first does **not** mean two one-way tickets are assumed cheaper. The round-trip benchmark remains mandatory where available.
 
+## Daily radar profiles
+
+The default daily run uses one shared discovery engine with four views rather than four unrelated full searches:
+
+1. **World** — broad global discovery. Japan, Korea, and China remain eligible discovery destinations, but this profile does not spend deep-expansion budget on them because specialist profiles handle that work.
+2. **Japan** — specialist deep search for Japan, including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
+3. **Korea** — specialist deep search for Korea, including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
+4. **China** — specialist deep search for China. This is the only default profile that activates Kinmen/Matsu ferry gateway expansion and the full China multimodal coverage gate.
+
+The profiles share Taiwan-origin coverage and normalized candidate records. They should not perform the same broad discovery work four independent times when a shared result can be reused.
+
+The final daily report merges the profiles into a unified ranking while preserving dedicated Japan, Korea, China, and World-other sections. World discovery may still surface Japan/Korea/China seeds, but those countries should be represented by their specialist expansion results in the dedicated sections.
+
 ## Stage A — broad discovery
 
 Search the rolling horizon for low one-way fares from the configured Taiwan origins.
@@ -63,6 +76,8 @@ Candidate return forms:
 2. nearby/practical alternate city → Taiwan,
 3. different Taiwan return airport,
 4. one positioning segment by domestic flight, rail, bus, or ferry where allowed.
+
+Specialist profiles may spend more expansion budget inside their target country than the World profile. The World profile prioritizes geographic breadth and unusual long-haul opportunities; Japan/Korea/China profiles prioritize depth within their country.
 
 The system should avoid combinatorial explosion. Nearby/alternate exits should be generated from a curated transport graph or verified live transport options, not arbitrary geographic proximity.
 
