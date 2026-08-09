@@ -1,0 +1,149 @@
+name: FlyAI Keyless Research
+
+on:
+  push:
+    branches:
+      - research/flyai-keyless-validation-2026-08-10
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare output
+        run: mkdir -p research-output
+
+      - name: Install official FlyAI CLI
+        id: install
+        continue-on-error: true
+        run: npm install -g @fly-ai/flyai-cli@1.0.16
+
+      - name: Record CLI help
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: |
+          flyai --help > research-output/help.txt 2> research-output/help.err
+          flyai search-flight --help > research-output/search-flight-help.txt 2> research-output/search-flight-help.err
+
+      - name: Run exact-airport China probes
+        if: steps.install.outcome == 'success'
+        shell: bash
+        run: |
+          set +e
+          timeout 120s flyai search-flight \
+            --origin "TSA" \
+            --destination "SHA" \
+            --dep-date 2026-10-13 \
+            --back-date 2026-10-17 \
+            --seat-class-name "经济舱" \
+            --sort-type 3 \
+            > research-output/C1.json 2> research-output/C1.err
+          echo $? > research-output/C1.status
+
+          timeout 120s flyai search-flight \
+            --origin "TPE" \
+            --destination "XMN" \
+            --dep-date 2026-10-13 \
+            --back-date 2026-10-17 \
+            --seat-class-name "经济舱" \
+            --sort-type 3 \
+            > research-output/C2.json 2> research-output/C2.err
+          echo $? > research-output/C2.status
+
+      - name: Normalize probe summary
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          cases = {
+              "C1": {"origin": "TSA", "destination": "SHA", "out_date": "2026-10-13", "back_date": "2026-10-17"},
+              "C2": {"origin": "TPE", "destination": "XMN", "out_date": "2026-10-13", "back_date": "2026-10-17"},
+          }
+
+          def station_code(segment, prefix):
+              return segment.get(f"{prefix}StationCode")
+
+          def dep_date(segment):
+              value = segment.get("depDateTime") or ""
+              return value[:10]
+
+          summaries = {}
+          out_dir = Path("research-output")
+          for case_id, expected in cases.items():
+              status_path = out_dir / f"{case_id}.status"
+              raw_path = out_dir / f"{case_id}.json"
+              entry = {
+                  "requested": expected,
+                  "command_exit": int(status_path.read_text().strip()) if status_path.exists() else None,
+                  "json_parse_ok": False,
+                  "provider_status": None,
+                  "provider_message": None,
+                  "item_count": None,
+                  "exact_airport_date_item_count": None,
+                  "prices": [],
+                  "carriers": [],
+              }
+              if raw_path.exists() and raw_path.stat().st_size:
+                  try:
+                      payload = json.loads(raw_path.read_text())
+                      entry["json_parse_ok"] = True
+                      entry["provider_status"] = payload.get("status")
+                      entry["provider_message"] = payload.get("message")
+                      items = ((payload.get("data") or {}).get("itemList") or [])
+                      entry["item_count"] = len(items)
+                      exact = 0
+                      prices = []
+                      carriers = set()
+                      for item in items:
+                          if item.get("adultPrice") is not None:
+                              prices.append(str(item.get("adultPrice")))
+                          journeys = item.get("journeys") or []
+                          for journey in journeys:
+                              for seg in journey.get("segments") or []:
+                                  carrier = seg.get("marketingTransportName")
+                                  if carrier:
+                                      carriers.add(str(carrier))
+                          if len(journeys) < 2:
+                              continue
+                          outbound = journeys[0].get("segments") or []
+                          inbound = journeys[1].get("segments") or []
+                          if not outbound or not inbound:
+                              continue
+                          exact_match = (
+                              station_code(outbound[0], "dep") == expected["origin"]
+                              and station_code(outbound[-1], "arr") == expected["destination"]
+                              and dep_date(outbound[0]) == expected["out_date"]
+                              and station_code(inbound[0], "dep") == expected["destination"]
+                              and station_code(inbound[-1], "arr") == expected["origin"]
+                              and dep_date(inbound[0]) == expected["back_date"]
+                          )
+                          if exact_match:
+                              exact += 1
+                      entry["exact_airport_date_item_count"] = exact
+                      entry["prices"] = prices[:50]
+                      entry["carriers"] = sorted(carriers)
+                  except Exception as exc:
+                      entry["parse_error"] = f"{type(exc).__name__}: {exc}"
+              summaries[case_id] = entry
+
+          (out_dir / "summary.json").write_text(json.dumps(summaries, ensure_ascii=False, indent=2))
+          print(json.dumps(summaries, ensure_ascii=False, indent=2))
+
+      - name: Upload research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flyai-keyless-probe
+          path: research-output/
+          if-no-files-found: warn
