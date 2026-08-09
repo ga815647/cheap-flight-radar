@@ -18,6 +18,17 @@ class ScoringPolicyTests(unittest.TestCase):
     def test_v01_has_no_weekday_restriction(self):
         self.assertEqual(self.policy["search"]["weekday_restriction"], "none")
 
+    def test_global_radar_requires_each_configured_origin_attempt(self):
+        search = self.policy["search"]
+        self.assertEqual(set(search["origin_airports"]), {"TPE", "TSA", "RMQ", "KHH"})
+        self.assertTrue(search["coverage_gate"]["enabled"])
+        self.assertTrue(search["coverage_gate"]["require_attempt_for_each_origin_airport"])
+        self.assertTrue(search["coverage_gate"]["report_origin_coverage"])
+        self.assertEqual(
+            search["coverage_gate"]["incomplete_origin_coverage_action"],
+            "mark_missing_and_do_not_claim_full_radar",
+        )
+
     def test_long_haul_too_short_is_penalized(self):
         short = trip_length_fit(13.0, 3, self.policy)
         adequate = trip_length_fit(13.0, 10, self.policy)
@@ -53,6 +64,16 @@ class ScoringPolicyTests(unittest.TestCase):
     def test_china_gateways_are_enabled(self):
         self.assertTrue(self.policy["china"]["gateway_modes"]["kinmen"]["enabled"])
         self.assertTrue(self.policy["china"]["gateway_modes"]["matsu"]["enabled"])
+
+    def test_full_china_radar_requires_all_entry_modes_attempted(self):
+        gate = self.policy["china"]["coverage_gate"]
+        self.assertTrue(gate["enabled"])
+        self.assertEqual(set(gate["required_modes"]), {"direct_air", "kinmen", "matsu"})
+        self.assertTrue(gate["report_mode_coverage"])
+        self.assertEqual(
+            gate["incomplete_mode_coverage_action"],
+            "mark_missing_and_do_not_claim_full_china_radar",
+        )
 
 
 if __name__ == "__main__":
