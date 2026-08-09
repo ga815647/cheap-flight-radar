@@ -25,6 +25,21 @@ Outbound-first does **not** mean two one-way tickets are assumed cheaper. The ro
 
 Search the rolling horizon for low one-way fares from the configured Taiwan origins.
 
+### Origin coverage gate
+
+Every configured airport in `search.origin_airports` must receive a discovery attempt before a run may be described as a **full global radar**.
+
+For v0.1 that means independent coverage attempts for:
+
+- `TPE`,
+- `TSA`,
+- `RMQ`,
+- `KHH`.
+
+A source that only exposes Taipei results does not count as Taiwan-wide coverage. Results from all successfully searched origins are merged before candidate ranking, and mixed Taiwan airports may still be used for outbound and return when allowed by policy.
+
+If an origin cannot be searched or returns unavailable data, record it as `missing` or `unavailable`. Do not silently substitute another airport and do not present the run as complete. The report should expose origin coverage so incomplete discovery is visible.
+
 Capture at minimum:
 
 - origin and destination,
