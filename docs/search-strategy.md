@@ -53,6 +53,19 @@ A source that only exposes Taipei results does not count as Taiwan-wide coverage
 
 If an origin cannot be searched or returns unavailable data, record it as `missing` or `unavailable`. Do not silently substitute another airport and do not present the run as complete. The report should expose origin coverage so incomplete discovery is visible.
 
+### Taiwan airport display labels
+
+User-visible Taiwan airport labels must remain airport-specific. Do not collapse `TPE` and `TSA` into the ambiguous city label `Taipei` / `台北`.
+
+Default labels are:
+
+- `TPE` → `桃園（TPE）`,
+- `TSA` → `松山（TSA）`,
+- `RMQ` → `台中（RMQ）`,
+- `KHH` → `高雄（KHH）`.
+
+This rule applies to both outbound and return segments. If a source exposes only a metro-area label such as `Taipei` but the actual airport cannot be resolved, mark the airport as unknown rather than publishing the candidate as though `TPE` or `TSA` had been identified.
+
 Capture at minimum:
 
 - origin and destination,
