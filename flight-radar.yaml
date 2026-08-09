@@ -30,6 +30,20 @@ search:
     incomplete_origin_coverage_action: mark_missing_and_do_not_claim_full_radar
     report_origin_coverage: true
 
+  display_policy:
+    taiwan_airport_labels:
+      TPE: 桃園
+      TSA: 松山
+      RMQ: 台中
+      KHH: 高雄
+    include_iata_with_airport_label: true
+    require_airport_specific_taiwan_label: true
+    forbid_taipei_alias_for_tpe_or_tsa: true
+    forbidden_ambiguous_taiwan_origin_labels:
+      - 台北
+      - Taipei
+    unresolved_metro_area_action: mark_airport_unknown_and_do_not_publish_as_airport_specific_deal
+
   daily_profiles:
     enabled: true
     shared_origin_coverage: true
