@@ -17,6 +17,18 @@ Do not assume ferry gateways are cheaper. They are candidates that must compete 
 
 A route that saves a small amount of money while consuming most of a travel day should normally lose to a simple flight.
 
+## China coverage gate
+
+A run may be described as a **full China radar** only after it has attempted all enabled entry modes configured in the SSOT:
+
+- direct air,
+- Kinmen gateway,
+- Matsu gateway.
+
+A mode does not need to produce a valid deal to count as attempted. If current fare, ferry, eligibility, schedule, or connection data cannot be obtained, mark that mode `missing`, `unavailable`, or `unverified` as appropriate. Do not silently omit it and do not claim complete China coverage.
+
+The report should expose mode coverage explicitly so that a direct-air-only search cannot be mistaken for a China-wide multimodal radar.
+
 ## Kinmen gateway
 
 Configured entry airport: `KNH`.
