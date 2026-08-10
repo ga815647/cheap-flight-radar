@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
@@ -19,9 +18,10 @@ CASES = {
     "C1": ("TSA", "SHA", "2026-10-13", "2026-10-17"),
     "C2": ("TPE", "XMN", "2026-10-13", "2026-10-17"),
 }
+# Exact flight-number sets from FlyAI formal-key artifact 9067758804.
 FLYAI_FLIGHTS = {
     "C1": {"AE211", "CA197", "CA198", "CI201", "CI202", "FM3001", "FM3002", "MF8511", "MF8542", "MF8547", "MF882", "MF883", "MU5098", "MU8628"},
-    "C2": {"9C8922", "9C8951", "CX408", "CX495", "HX252", "HX253", "MF882", "MF883", "NX631", "NX632"},
+    "C2": {"9C8804", "9C8807", "9C8815", "9C8951", "CX461", "CX495", "CX978", "HX232", "HX234", "HX246", "HX253", "HX255", "HX261", "HX283", "MF887", "MF888", "NX132", "NX615", "NX621"},
 }
 
 
