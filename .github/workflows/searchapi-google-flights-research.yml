@@ -1,0 +1,53 @@
+name: SearchAPI Google Flights Research
+
+on:
+  push:
+    branches:
+      - research/searchapi-google-flights-validation-2026-08-10
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SEARCHAPI_API_KEY: ${{ secrets.SEARCHAPI_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify SearchAPI key presence
+        shell: bash
+        run: |
+          if [ -z "$SEARCHAPI_API_KEY" ]; then
+            echo "SEARCHAPI_API_KEY is not available to this workflow"
+            exit 2
+          fi
+          echo "SEARCHAPI_API_KEY is present; value will not be printed"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: python -m pip install -e .
+
+      - name: Run fixed basket within free-request budget
+        id: research
+        continue-on-error: true
+        run: python scripts/searchapi_google_flights_research.py
+
+      - name: Upload sanitized research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: searchapi-google-flights-fixed-basket
+          path: research-output/
+          if-no-files-found: error
+
+      - name: Fail if research runner failed
+        if: steps.research.outcome != 'success'
+        run: exit 1
