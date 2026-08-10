@@ -144,3 +144,18 @@ Weekday, weekend, and potential leave-day information may be displayed later, bu
 Search-result and metasearch prices are discovery signals, not promises.
 
 Before calling a result a verified deal, re-check the fare through a source capable of showing the actual itinerary and current price. When final checkout cannot be verified, label the confidence/state accurately.
+
+## Current source-router slice
+
+Production source routing is intentionally **partial**. The current SSOT selects only one empirically supported slice:
+
+- profile: `china`
+- stage: `deep_search`
+- query shape: exact round trip
+- primary provider: FlyAI with formal `FLYAI_API_KEY`
+
+The router reads this selection from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or unconfigured market/stage yields an explicit unavailable/unsupported coverage state. It must not silently substitute a lower-fidelity source while still claiming coverage.
+
+FlyAI results pass a strict returned-segment airport/date gate before normalization. A `TSA-SHA` request whose returned itinerary uses `PVG`, for example, is rejected rather than relabeled. Observed FlyAI `ticketPrice` remains a raw provider value because the formal response did not expose verified currency, tax, baggage, or fare-family semantics; those normalized fields remain unknown.
+
+FlyAI is **not** currently selected for broad discovery, true revalidation, final cross-check, or one combined open-jaw fare. Independent SearchAPI/Google Flights reference evidence found multiple low-price exact itineraries whose flight-number components were absent from the FlyAI formal exact result set, so a FlyAI-only run must never claim complete China airfare coverage. Broader World/Japan/Korea provider routing remains unconfigured until Issue #2 produces sufficient evidence.
