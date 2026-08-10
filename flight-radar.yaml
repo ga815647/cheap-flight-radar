@@ -285,3 +285,38 @@ verification:
   record_source_url_or_source_id: true
   record_fare_conditions_when_available: true
   never_invent_missing_components: true
+
+source_routing:
+  status: partial
+  strict_no_silent_degradation: true
+  unconfigured_market_stage_action: mark_source_unavailable_and_do_not_claim_coverage
+  selected_routes:
+    china:
+      deep_search:
+        primary_provider: flyai
+        query_scope: exact_round_trip
+        credential_required: FLYAI_API_KEY
+        exact_returned_airport_and_date_gate: true
+        combined_open_jaw: unsupported_by_tested_interface
+        fallback_provider: null
+        incomplete_coverage_action: mark_missing_and_do_not_claim_full_china_airfare_coverage
+  providers:
+    flyai:
+      selected_roles:
+        - china_deep_search
+      unselected_roles:
+        - broad_discovery
+        - revalidation
+        - final_cross_check
+      freshness: provider_live_search
+      verification_state: discovery
+      fare_semantics:
+        currency: unknown
+        tax_inclusion: unknown
+        baggage: unknown
+        fare_family: unknown
+      known_limitations:
+        - returned_airport_substitution_requires_strict_filtering
+        - combined_open_jaw_not_supported_by_tested_cli
+        - independent_reference_found_a_c2_itinerary_component_coverage_gap
+        - true_revalidation_not_measured
