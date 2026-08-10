@@ -1,0 +1,11 @@
+{
+  "missing": {
+    "ticketPrice": "2713",
+    "journeys": [{"segments": [{"seatClassName": "economy"}]}]
+  },
+  "present": {
+    "price": {"amount": "2713", "currency": "TWD", "taxIncluded": true},
+    "fareFamily": "Basic",
+    "baggageAllowance": "7kg"
+  }
+}
