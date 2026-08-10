@@ -1,9 +1,7 @@
-name: Feature Gate China FlyAI
+name: Manual China FlyAI Feature Gate
 
 on:
-  push:
-    branches:
-      - feat/china-flyai-source-router-2026-08-10
+  workflow_dispatch:
 
 permissions:
   contents: read
