@@ -1,0 +1,20 @@
+{
+  "first": [
+    {
+      "raw_price": "2027",
+      "journeys": [
+        {"segments": [{"origin": "TPE", "destination": "XMN", "departure": "2026-10-13T09:00:00", "marketing_flight_number": "MF888"}]},
+        {"segments": [{"origin": "XMN", "destination": "TPE", "departure": "2026-10-17T18:00:00", "marketing_flight_number": "MF889"}]}
+      ]
+    }
+  ],
+  "repeat": [
+    {
+      "raw_price": "2035",
+      "journeys": [
+        {"segments": [{"origin": "TPE", "destination": "XMN", "departure": "2026-10-13T09:00:00", "marketing_flight_number": "MF888"}]},
+        {"segments": [{"origin": "XMN", "destination": "TPE", "departure": "2026-10-17T18:00:00", "marketing_flight_number": "MF889"}]}
+      ]
+    }
+  ]
+}
