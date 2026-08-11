@@ -4,6 +4,7 @@ import unittest
 
 import yaml
 
+from cheap_flight_radar.fixed_watch_runner import browser_required
 from cheap_flight_radar.public_intelligence import (
     DiscoverySighting,
     FixedWatchAttempt,
@@ -50,6 +51,13 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         self.assertEqual(orchestration["primary_scheduler"], "chatgpt_scheduled_radar_run")
         self.assertFalse(orchestration["independent_github_cron"])
         self.assertIn("freshness_reuse_window", orchestration["cadence_semantics"])
+        self.assertEqual(self.by_id["tigerair_tw_official"].acquisition, "headless")
+        self.assertEqual(self.by_id["china_airlines_official"].acquisition, "direct_http")
+        self.assertEqual(self.by_id["ptt_japan_travel_info"].acquisition, "direct_http")
+
+    def test_browser_is_required_only_for_headless_subset(self):
+        self.assertTrue(browser_required((self.by_id["tigerair_tw_official"],)))
+        self.assertFalse(browser_required((self.by_id["china_airlines_official"], self.by_id["ptt_japan_travel_info"])))
 
     def test_no_success_is_due(self):
         plan = {entry.source_id: entry for entry in plan_fixed_watches(self.watches, (), self.now)}
@@ -149,14 +157,16 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         second = exact_itinerary_identity(**kwargs)
         self.assertEqual(first, second)
 
-    def test_fixed_watch_workflow_has_no_schedule_cron(self):
+    def test_fixed_watch_workflow_has_no_schedule_and_browser_install_is_conditional(self):
         workflow_path = ROOT / ".github/workflows/fixed-watch-run.yml"
         text = workflow_path.read_text(encoding="utf-8")
         workflow = yaml.load(text, Loader=yaml.BaseLoader)
         triggers = workflow["on"]
         self.assertIn("workflow_dispatch", triggers)
         self.assertNotIn("schedule", triggers)
-        self.assertNotIn("playwright install", text)
+        self.assertIn("--print-browser-required", text)
+        self.assertIn("if: steps.runtime.outputs.browser_required == 'true'", text)
+        self.assertIn("playwright install --with-deps chromium", text)
 
 
 if __name__ == "__main__":

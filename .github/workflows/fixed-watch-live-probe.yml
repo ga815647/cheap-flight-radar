@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - .github/workflows/fixed-watch-live-probe.yml
+      - flight-radar.yaml
+      - src/cheap_flight_radar/fixed_watch_runner.py
+      - src/cheap_flight_radar/public_sources.py
 
 permissions:
   contents: read
@@ -13,8 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Checkout exact source head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,6 +28,18 @@ jobs:
 
       - name: Install selected HTTP runtime
         run: python -m pip install -e .
+
+      - name: Resolve optional browser runtime
+        id: runtime
+        run: |
+          required=$(python -m cheap_flight_radar.fixed_watch_runner --watch-ids "tigerair_tw_official,china_airlines_official,ptt_japan_travel_info" --print-browser-required)
+          echo "browser_required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Install vanilla Playwright fallback only when required
+        if: steps.runtime.outputs.browser_required == 'true'
+        run: |
+          python -m pip install -e '.[browser]'
+          python -m playwright install --with-deps chromium
 
       - name: Execute all current fixed watches
         run: >-

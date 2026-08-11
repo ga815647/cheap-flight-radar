@@ -37,6 +37,19 @@ class PublicSourceParserTests(unittest.TestCase):
         self.assertIn("優惠", items[0].title)
         self.assertEqual(items[0].carrier, "China Airlines")
 
+    def test_china_airlines_generic_ticket_and_disruption_links_are_not_promotions(self):
+        html = """
+        <html><body>
+          <a href='/tw/zh/itinerary-booking/ticket-information/fare-family'>票價產品介紹</a>
+          <a href='/tw/zh/prepare-for-the-fly/information/announcements?id=1'>受颱風影響機票處理辦法</a>
+          <a href='/tw/zh/itinerary-booking/exclusive-offers/latest-events/student-sale'>學生暑期同行 1+1 優惠</a>
+        </body></html>
+        """
+        watch = self.by_id["china_airlines_official"]
+        items = parse_source_html(watch, html, watch.entry_url, self.observed_at)
+        self.assertEqual(len(items), 1)
+        self.assertIn("學生", items[0].title)
+
     def test_ptt_fixture_keeps_information_airfare_post_only(self):
         items = self.parse_fixture("ptt_japan_travel_info")
         self.assertEqual(len(items), 1)

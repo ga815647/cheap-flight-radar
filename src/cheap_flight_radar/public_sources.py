@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from parsel import Selector
 
@@ -16,10 +16,15 @@ class ParseContractError(ValueError):
 
 
 PROMO_RE = re.compile(
-    r"(?:促銷|優惠|特價|限時|開賣|機票|票價|sale|promo|promotion|fare|discount|from\s+[$NT¥￥]|\b\d{2,6}\s*元)",
+    r"(?:促銷|優惠|特價|限時|開賣|sale|promo(?:tion)?|discount|fare\s+sale|"
+    r"(?:TWD|NT\$|NTD|[$¥￥])\s*\d[\d,]*|\b\d{3,6}\s*元(?:起)?)",
     re.IGNORECASE,
 )
-PRICE_RE = re.compile(r"(?:NT\$|TWD\s*|NTD\s*|[$¥￥])?\s*\d{1,3}(?:,\d{3})+(?:\s*元)?|\b\d{3,6}\s*元", re.IGNORECASE)
+PRICE_RE = re.compile(
+    r"(?:NT\$|TWD\s*|NTD\s*|[$¥￥])\s*\d[\d,]*|\b\d{3,6}\s*元",
+    re.IGNORECASE,
+)
+ROUTE_PRICE_RE = re.compile(r"\b[A-Z]{3}\s+[A-Z]{3}\b|\b[A-Z]{3}\s*[-–]\s*[A-Z]{3}\b")
 
 
 def parse_source_html(
@@ -63,6 +68,8 @@ def _parse_airline(
         if not title or not PROMO_RE.search(title):
             continue
         item_url = urljoin(response_url, href)
+        if watch.id == "china_airlines_official" and not _china_airlines_signal(item_url, title):
+            continue
         if item_url in seen_urls:
             continue
         seen_urls.add(item_url)
@@ -79,6 +86,16 @@ def _parse_airline(
             )
         )
     return tuple(sightings)
+
+
+def _china_airlines_signal(item_url: str, title: str) -> bool:
+    parsed = urlparse(item_url)
+    host = parsed.netloc.casefold()
+    path = parsed.path.casefold().rstrip("/")
+    if host == "flights.china-airlines.com":
+        return bool(PRICE_RE.search(title) and ROUTE_PRICE_RE.search(title.upper()))
+    prefix = "/tw/zh/itinerary-booking/exclusive-offers/latest-events/"
+    return host.endswith("china-airlines.com") and path.startswith(prefix.rstrip("/")) and path != prefix.rstrip("/")
 
 
 def _parse_ptt(

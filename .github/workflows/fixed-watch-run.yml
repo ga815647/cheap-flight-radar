@@ -31,6 +31,18 @@ jobs:
       - name: Install deterministic HTTP runtime
         run: python -m pip install -e .
 
+      - name: Resolve optional browser runtime
+        id: runtime
+        run: |
+          required=$(python -m cheap_flight_radar.fixed_watch_runner --watch-ids "${{ inputs.watch_ids }}" --print-browser-required)
+          echo "browser_required=$required" >> "$GITHUB_OUTPUT"
+
+      - name: Install vanilla Playwright fallback only when required
+        if: steps.runtime.outputs.browser_required == 'true'
+        run: |
+          python -m pip install -e '.[browser]'
+          python -m playwright install --with-deps chromium
+
       - name: Execute requested fixed watches
         run: >-
           python -m cheap_flight_radar.fixed_watch_runner

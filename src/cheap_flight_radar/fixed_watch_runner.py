@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 from datetime import datetime
 import json
 from pathlib import Path
@@ -26,6 +25,25 @@ from .public_sources import ParseContractError, parse_source_html
 
 BLOCKED_HTTP = {401, 403, 429}
 UNAVAILABLE_HTTP = {404, 410}
+
+
+def browser_required(watches: tuple[FixedWatch, ...]) -> bool:
+    return any(watch.acquisition == "headless" for watch in watches)
+
+
+def crawler_settings(watches: tuple[FixedWatch, ...]) -> dict[str, Any]:
+    if not browser_required(watches):
+        return {}
+    return {
+        "DOWNLOAD_HANDLERS": {
+            "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+            "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+        },
+        "TWISTED_REACTOR": "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
+        "PLAYWRIGHT_BROWSER_TYPE": "chromium",
+        "PLAYWRIGHT_LAUNCH_OPTIONS": {"chromium_sandbox": False},
+        "PLAYWRIGHT_MAX_PAGES_PER_CONTEXT": 2,
+    }
 
 
 class FixedWatchSpider(scrapy.Spider):
@@ -62,13 +80,32 @@ class FixedWatchSpider(scrapy.Spider):
         for watch in self.watches:
             started_at = utc_now()
             self.started_at[watch.id] = started_at
-            if watch.acquisition != "direct_http":
+            meta: dict[str, Any] = {"handle_httpstatus_all": True}
+            if watch.acquisition == "headless":
+                try:
+                    from scrapy_playwright.page import PageMethod
+                except ImportError:
+                    self._record_attempt(
+                        watch,
+                        status="unavailable",
+                        started_at=started_at,
+                        completed_at=utc_now(),
+                        error="headless watch requested without the browser extra installed",
+                    )
+                    continue
+                meta.update(
+                    {
+                        "playwright": True,
+                        "playwright_page_methods": [PageMethod("wait_for_timeout", 2000)],
+                    }
+                )
+            elif watch.acquisition != "direct_http":
                 self._record_attempt(
                     watch,
                     status="unavailable",
                     started_at=started_at,
                     completed_at=utc_now(),
-                    error="current production workflow supports direct_http fixed watches only; JS fallback is opt-in",
+                    error=f"unsupported acquisition: {watch.acquisition}",
                 )
                 continue
             yield scrapy.Request(
@@ -77,7 +114,7 @@ class FixedWatchSpider(scrapy.Spider):
                 errback=self.errback_watch,
                 cb_kwargs={"watch": watch},
                 dont_filter=True,
-                meta={"handle_httpstatus_all": True},
+                meta=meta,
             )
 
     def parse_watch(self, response: scrapy.http.Response, watch: FixedWatch):
@@ -207,7 +244,7 @@ class FixedWatchSpider(scrapy.Spider):
         )
 
 
-def _select_watches(all_watches: tuple[FixedWatch, ...], watch_ids: str) -> tuple[FixedWatch, ...]:
+def select_watches(all_watches: tuple[FixedWatch, ...], watch_ids: str) -> tuple[FixedWatch, ...]:
     requested = tuple(dict.fromkeys(value.strip() for value in watch_ids.split(",") if value.strip()))
     if not requested:
         raise SystemExit("--watch-ids must contain at least one fixed-watch id")
@@ -220,16 +257,29 @@ def _select_watches(all_watches: tuple[FixedWatch, ...], watch_ids: str) -> tupl
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--run-id")
     parser.add_argument("--watch-ids", required=True, help="comma-separated fixed-watch ids chosen by the ChatGPT orchestrator")
-    parser.add_argument("--output", required=True)
+    parser.add_argument("--output")
     parser.add_argument("--policy", default="flight-radar.yaml")
+    parser.add_argument("--print-browser-required", action="store_true")
     args = parser.parse_args(argv)
 
     registry = load_fixed_watch_registry(args.policy)
-    watches = _select_watches(registry, args.watch_ids)
+    watches = select_watches(registry, args.watch_ids)
+    if args.print_browser_required:
+        print("true" if browser_required(watches) else "false")
+        return 0
+    if not args.run_id or not args.output:
+        parser.error("--run-id and --output are required for execution")
+
+    if browser_required(watches):
+        try:
+            import scrapy_playwright  # noqa: F401
+        except ImportError as exc:
+            raise SystemExit("selected watches require the optional browser extra: pip install -e '.[browser]'") from exc
+
     requested_at = utc_now()
-    process = CrawlerProcess()
+    process = CrawlerProcess(settings=crawler_settings(watches))
     process.crawl(
         FixedWatchSpider,
         run_id=args.run_id,
