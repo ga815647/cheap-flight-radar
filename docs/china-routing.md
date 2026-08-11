@@ -124,6 +124,53 @@ Once a cheap gateway is found, the system may expand into practical onward trans
 
 The search should be gateway-first rather than province-by-province brute force. A cheap Fuzhou/Xiamen entry can then be expanded toward selected mainland hubs based on current onward fares and journey time.
 
+## Mixed-routing decision loop
+
+The 2026-08-11 live PVG stress run showed that the generic gateway idea needs a small repeatable decision contract rather than a city whitelist or brute-force matrix.
+
+### 1. Trigger gateway expansion
+
+Expand a mainland arrival airport only after it becomes a **serious gateway seed** with current exact fare evidence and at least one verified practical onward or open-jaw edge.
+
+A trip exceeding the default `return_windows.max_nights` is not rejected for that reason. Return windows remain search and trip-fit guidance; exact fare, complete transport cost, time, and verification state determine whether the candidate survives.
+
+### 2. Select second cities from transport edges
+
+Do not choose second cities from geographic proximity alone. Generate them from current verified transport edges and compare the complete itinerary.
+
+Prefer high-speed rail when the verified rail path has lower required transport time and transfer friction than a domestic flight for the same expansion. Use domestic air when rail is absent or materially worse after station/airport access, check-in, transfer, and connection time are included.
+
+Open-jaw exits should be considered when a current verified exit fare can reduce backtracking or improve complete transport cost/time. Do not infer a one-way open-jaw fare by dividing a round-trip fare or by reusing a route headline from unrelated dates.
+
+### 3. Normalize before comparing
+
+For every surviving expansion, normalize:
+
+- complete required transport cost,
+- required transport time,
+- usable destination time,
+- extra transport time versus the simplest same-gateway round trip,
+- self-transfer / separately ticketed connection risk,
+- baggage and fare-scope assumptions,
+- current verification state for every essential component.
+
+The conventional same-city round trip remains the benchmark even when the mixed itinerary is the desired travel pattern.
+
+### 4. Stop expansion early
+
+Stop expanding a branch when any of these becomes true:
+
+- the next required segment cannot be currently revalidated;
+- complete effective cost or required transport time cannot be normalized;
+- the candidate no longer competes with the round-trip benchmark or already-evaluated expansions on price/time/route value;
+- the configured deep-search candidate budget is reached.
+
+This stop rule is intentionally evidence-based and contains no permanent numeric China fare threshold. A future low-fare gateway can therefore trigger the same procedure without changing policy.
+
+### 5. Final revalidation fails closed
+
+A serious mixed itinerary needs exact airports/dates for air segments, current prices for all priced required segments, and live schedules for time-sensitive rail/ferry segments. If an essential component remains unknown, retain the route as an exploratory seed rather than promoting it to a verified finalist.
+
 ## Open-jaw examples
 
 Valid patterns include:
