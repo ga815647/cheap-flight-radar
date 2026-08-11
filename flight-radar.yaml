@@ -372,7 +372,8 @@ public_intelligence:
     - id: tigerair_tw_official
       markets: [japan, korea, world]
       source_type: official_airline
-      acquisition: direct_http
+      acquisition: headless
+      rendering_reason: direct_http_200_but_no_public_anchor_dom_on_ubuntu_probe_2026_08_11
       entry_url: https://www.tigerairtw.com/zh-TW/
       cadence_hours: 3
       carrier_scope: tigerair_taiwan_only
