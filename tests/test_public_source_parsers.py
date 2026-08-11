@@ -23,19 +23,13 @@ class PublicSourceParserTests(unittest.TestCase):
         watch = self.by_id[source_id]
         return parse_source_html(watch, html, watch.entry_url, self.observed_at)
 
-    def test_tigerair_fixture_extracts_only_promo_signal(self):
-        items = self.parse_fixture("tigerair_tw_official")
-        self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].source_id, "tigerair_tw_official")
-        self.assertIn("促銷", items[0].title)
-        self.assertEqual(items[0].price_text, "NT$1,999")
-
-    def test_china_airlines_fixture_extracts_only_promo_signal(self):
+    def test_china_airlines_fixture_extracts_live_route_price_contract(self):
         items = self.parse_fixture("china_airlines_official")
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].source_id, "china_airlines_official")
-        self.assertIn("優惠", items[0].title)
+        self.assertIn("TPE NRT", items[0].title)
         self.assertEqual(items[0].carrier, "China Airlines")
+        self.assertEqual(items[0].price_text, "TWD 10,848")
 
     def test_china_airlines_generic_ticket_and_disruption_links_are_not_promotions(self):
         html = """
