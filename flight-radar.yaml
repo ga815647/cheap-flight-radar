@@ -286,6 +286,121 @@ verification:
   record_fare_conditions_when_available: true
   never_invent_missing_components: true
 
+public_intelligence:
+  status: evidence_backed_registry_v0
+  roles:
+    fixed_watch:
+      definition: required_public_discovery_source_on_declared_cadence
+      failure_affects_coverage: true
+    opportunistic:
+      definition: best_effort_open_web_or_public_social_signal
+      failure_affects_coverage: false
+    verification_only:
+      definition: candidate_triggered_airline_ota_or_fare_search_surface
+      failure_affects_discovery_coverage: false
+  coverage:
+    fixed_watch_attempts_are_coverage_authority: true
+    attempt_statuses:
+      - success
+      - unavailable
+      - blocked
+      - fetch_failed
+      - parse_failed
+    failed_fixed_watch_must_be_reported: true
+    opportunistic_source_cannot_substitute_fixed_watch_coverage: true
+    fixed_registry_does_not_claim_market_exhaustiveness: true
+  provenance:
+    first_seen_immutable: true
+    discovery_sources_append_only: true
+    preserve_all_duplicate_sightings: true
+    keep_deep_search_sources_separate: true
+    keep_revalidation_sources_separate: true
+    keep_final_cross_check_sources_separate: true
+    exact_taiwan_airport_identity_required_when_known: true
+  dedupe:
+    source_identity_excluded_from_candidate_identity: true
+    price_excluded_from_itinerary_identity: true
+    exact_itinerary_key_components:
+      - trip_type
+      - exact_origin_airport
+      - exact_destination_airport_when_known
+      - outbound_date_or_window
+      - return_date_or_window
+      - operating_or_marketing_flight_identity_when_known
+    campaign_key_components:
+      - carrier
+      - sale_period
+      - travel_period
+      - route_set
+      - promo_code_when_known
+    fare_observations_append_to_existing_candidate: true
+    never_count_duplicate_sightings_as_separate_deals: true
+  fixed_watch_registry:
+    - id: tigerair_tw_official
+      markets: [japan, korea, world]
+      source_type: official_airline
+      acquisition: direct_http
+      entry_url: https://www.tigerairtw.com/zh-TW/
+      cadence_hours: 3
+      carrier_scope: tigerair_taiwan_only
+      taiwan_origin_evidence: [TPE, RMQ, KHH]
+      lcc_coverage: true
+      fsc_coverage: false
+      coverage_claim: source_attempt_only
+    - id: china_airlines_official
+      markets: [japan, korea, china, world]
+      source_type: official_airline
+      acquisition: direct_http
+      entry_url: https://www.china-airlines.com/tw/zh/index.html
+      cadence_hours: 6
+      carrier_scope: china_airlines_and_mandarin_promotions_only
+      taiwan_origin_evidence: [TPE, TSA, RMQ, KHH]
+      lcc_coverage: false
+      fsc_coverage: true
+      coverage_claim: source_attempt_only
+    - id: ptt_japan_travel_info
+      markets: [japan]
+      source_type: public_forum
+      acquisition: direct_http
+      entry_url: https://www.ptt.cc/bbs/Japan_Travel/index.html
+      content_filter: information_posts_with_airfare_or_sale_signals
+      cadence_hours: 3
+      carrier_scope: multi_carrier_user_reported_promotions
+      taiwan_origin_evidence: [TPE, KHH]
+      lcc_coverage: true
+      fsc_coverage: partial
+      coverage_claim: board_attempt_only
+  opportunistic_policy:
+    include_public_search_engine_results: true
+    include_public_social_posts_when_indexed_without_login_bypass: true
+    include_news_and_forums: true
+    include_public_airline_promotion_pages_not_in_fixed_registry: true
+    preserve_source_url_or_post_identity: true
+    examples_researched_not_required_coverage:
+      - taiwan_airfare_editor_facebook_pages
+      - peach_official_promotions
+      - tway_official_events
+      - jejuair_official_events
+      - eva_air_official_promotions
+      - cheapflytw
+      - secret_flying
+      - fly4free
+  verification_only_policy:
+    trigger_after_serious_candidate: true
+    source_classes:
+      - airline_booking_or_exact_fare_page
+      - ota_exact_itinerary_page
+      - metasearch_exact_itinerary_page
+    verify_when_possible:
+      - exact_airports
+      - exact_dates
+      - flight_identity
+      - current_price
+      - tax_scope
+      - baggage_scope
+      - fare_family
+    unknown_components_remain_unknown: true
+
 source_routing:
   status: partial
   strict_no_silent_degradation: true
