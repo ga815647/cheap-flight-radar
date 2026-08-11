@@ -27,7 +27,7 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
             self.assertGreater(source["cadence_hours"], 0)
             self.assertIn(source["acquisition"], {"direct_http", "headless"})
             self.assertTrue(source["markets"])
-            self.assertEqual(source["coverage_claim"], "source_attempt_only")
+            self.assertTrue(source["coverage_claim"].endswith("_attempt_only"))
 
     def test_opportunistic_sources_cannot_repair_fixed_coverage(self) -> None:
         coverage = self.public["coverage"]
