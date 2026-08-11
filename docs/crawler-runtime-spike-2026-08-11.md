@@ -2,57 +2,67 @@
 
 ## Decision
 
-Use **Scrapy as the fixed-watch HTTP runtime** and keep **scrapy-playwright as an opt-in JavaScript fallback** for sources that are later proven to need browser rendering.
+Use **Scrapy as the fixed-watch HTTP runtime**. Keep **scrapy-playwright as an opt-in vanilla JavaScript fallback interface**, but do not promote a source to fixed coverage merely because a browser exits successfully.
 
-Do not build a custom crawler runtime. Keep source-specific parsers, fixtures, coverage semantics, normalized observation models, provenance, and dedupe inside this repository.
+Do not build a custom crawler runtime. Source-specific parsers, fixtures, coverage semantics, normalized observation models, provenance, and dedupe stay in this repository. Scrapy owns request scheduling, queueing, normal retries, cookies/session continuity, downloader lifecycle, and selector response objects.
 
-The current three fixed watches are all `direct_http`, so the normal GitHub Actions execution path installs Scrapy only and does not download a browser. A future source may opt into `scrapy-playwright` only after a fixture and live probe demonstrate that HTTP is insufficient.
-
-No CAPTCHA bypass, stealth fingerprinting, fingerprint spoofing, proxy rotation, residential IP, or similar anti-bot evasion is permitted.
+No CAPTCHA bypass, stealth/fingerprint spoofing, proxy rotation, residential IP, or similar anti-bot evasion is permitted.
 
 ## Orchestration boundary
 
-GitHub Actions is **not** the primary scheduler for Cheap Flight Radar.
+GitHub Actions is **not** the primary scheduler. A ChatGPT scheduled radar run reads the registry and prior successful attempt state, determines which fixed watches are due, dispatches the deterministic GitHub execution backend, reads the attempt manifest and normalized observations, then continues with opportunistic Web discovery, deep search, revalidation, and final reporting.
 
-A ChatGPT scheduled radar run is the orchestrator. It reads the fixed-watch registry and prior successful attempt state, determines which watches are due under `cadence_hours`, dispatches the required deterministic GitHub execution, reads the resulting attempt manifest and normalized observations, then continues with opportunistic Web discovery, deep search, revalidation, and report generation.
+`cadence_hours` is the maximum reusable age of the latest **successful** fixed-watch attempt. It is not an Actions cron expression. A failed attempt never refreshes the due clock. Production fixed-watch execution is `workflow_dispatch` only; there is no independent GitHub cron.
 
-`cadence_hours` is a freshness/reuse ceiling and due threshold measured from the latest successful fixed-watch attempt. It is not an Actions cron expression or an instruction to create an independent GitHub schedule. Failed attempts do not refresh the due clock.
+## Candidate comparison
 
-## Candidates
-
-| Runtime | HTTP + JS | Retry / session / queue | Fixtureability / output | Actions cost observed | Maintenance / compliance | License | Decision |
+| Runtime | HTTP + JS | Queue / retry / session | Output / fixture fit | Observed Actions cost | Maintenance / compliance | License | Decision |
 |---|---|---|---|---|---|---|---|
-| Scrapy + scrapy-playwright | Native Scrapy HTTP; Playwright per-request opt-in | Mature scheduler/queue, RetryMiddleware, cookies/session support | Parsel selectors are easy to fixture-test; feed exports support JSON/JSONL/CSV/XML | Probe: pip 9.46s; Chromium install 22.90s; HTTP+JS smoke 1.62s | Clear separation between HTTP and vanilla Playwright; no anti-bot feature required | Scrapy BSD-3-Clause; scrapy-playwright BSD-3-Clause | **Selected** |
-| Crawlee for Python | ParselCrawler + PlaywrightCrawler | Built-in request queue, retries, sessions, datasets | Strong crawler-level storage and routing | Probe: pip 9.15s; Chromium install 27.21s; HTTP+JS smoke 2.97s | Technically good, but Playwright extra installs fingerprint packages and fingerprint generation is a default capability; project would need permanent explicit opt-out guards | Apache-2.0 | Not selected |
-| urlwatch | URL jobs + Browser jobs | Per-job retry; state/history is oriented to change monitoring | Excellent page-diff fixtures, but primary output/state model is changed/unchanged history rather than normalized sightings/run manifests | Probe: pip 10.10s; Chromium install 23.83s; browser test 1.32s. Static test hit a local test-server readiness race, not a product limitation | Adds diff/history semantics the radar does not need | BSD-family project; not embedded | Not selected |
-| changedetection.io | HTTP service; JS normally uses a separate browser service | Watch-oriented service state/retry | UI/API centered on change detection and notification history | Probe: container cold start about 20s; image 1,020,365,287 bytes | Heavy persistent-service architecture for an ephemeral Actions backend; repository also has historical licensing-surface ambiguity around an added commercial-license file | Repository advertises Apache-2.0; licensing ambiguity noted in upstream issue #2806 | Not selected |
+| Scrapy + scrapy-playwright | Native HTTP; per-request Playwright opt-in | Mature scheduler, retry middleware, cookies | Parsel is fixture-friendly; repo controls normalized manifests | pip 9.46s; Chromium 22.90s; HTTP+JS smoke 1.62s | Clean HTTP-first boundary; vanilla Playwright only | BSD-3-Clause / BSD-3-Clause | **Selected** |
+| Crawlee for Python | ParselCrawler + PlaywrightCrawler | Built-in queue/retries/sessions/datasets | Strong crawler storage/routing | pip 9.15s; Chromium 27.21s; smoke 2.97s | Browser extra installed fingerprint tooling; safe behavior required explicit fingerprint/session/block-retry opt-outs | Apache-2.0 | Not selected |
+| urlwatch | URL + browser jobs | Watch-oriented retry/state | Excellent diff monitoring, but output model is changed/unchanged history rather than radar sightings/manifests | pip 10.10s; Chromium 23.83s; browser test 1.32s | Would add a second state/diff model the radar does not need | not decision-critical | Not selected |
+| changedetection.io | HTTP service + separate browser service for JS | Persistent watch service | UI/API centered on page changes/history | ~20s container cold start; ~1.02 GB image | Too heavy for ephemeral Actions execution; persistent-service architecture mismatches ChatGPT orchestration | upstream advertises Apache-2.0; licensing surface not needed for decision | Not selected |
 
-## GitHub Actions probes
+## Framework probe evidence
 
-Temporary workflow: `.github/workflows/crawler-runtime-spike.yml`.
+- `572ace2d2e468520128ede271a479b59254de3e9`, run `31471922991`: initial harness exposed Chromium sandbox/test issues and Crawlee fingerprint behavior when not explicitly disabled.
+- `e8bd1995b81500c30fc10bb4804966b5c6ade0ad`, run `31472215749`: corrected probe. Scrapy+Playwright and Crawlee both passed deterministic HTTP+JS fixtures; Crawlee used `fingerprint_generator=None`, `retry_on_blocked=False`, and no session rotation. changedetection.io started successfully; urlwatch browser job returned the JS fixture. Project CI run `31472215751` passed.
+- The temporary generic runtime-spike workflow was removed after the evidence was recorded.
 
-- First probe commit: `572ace2d2e468520128ede271a479b59254de3e9`
-  - run `31471922991`
-  - exposed two test-harness issues and one important Crawlee compliance default: old Scrapy `start_requests`, Chromium sandbox launch, and Crawlee Playwright fingerprint injection when not explicitly disabled.
-- Corrected probe commit: `e8bd1995b81500c30fc10bb4804966b5c6ade0ad`
-  - run `31472215749`
-  - `scrapy_playwright`: success on HTTP and JS
-  - `crawlee`: success on HTTP and JS with `fingerprint_generator=None`, `retry_on_blocked=False`, and session rotation disabled
-  - `changedetection`: service startup success
-  - `urlwatch`: browser job returned `js-ready`; HTTP assertion raced the local fixture server startup
-  - ordinary project CI run `31472215751`: success
+## Current-source live evidence
 
-The spike workflow is temporary evidence and should be removed after the runtime decision is recorded; production workflow(s) must remain `workflow_dispatch`/caller-driven with no independent cron.
+A separate one-shot live workflow ran the actual registry sources on GitHub-hosted Ubuntu and was removed after evidence collection.
 
-## Why Scrapy wins this repository
+### First integration probe
 
-1. All current fixed watches are ordinary HTTP sources, so Scrapy gives queue/retry/cookies/export without a browser dependency.
-2. Parsel selectors can be exercised directly against committed HTML fixtures, keeping parser drift deterministic and source-specific.
-3. A future JS-only source can use `scrapy-playwright` on a request-by-request basis without changing the queue, retry, item pipeline, or run-manifest contract.
-4. Vanilla Playwright is the default integration path. This avoids importing a crawler whose browser extra ships fingerprint generation as a normal/default anti-blocking feature.
-5. Scrapy's output does not impose a separate page-diff/history database; normalized observations and provenance remain Cheap Flight Radar concepts.
+Run `31473460091`:
 
-## Production runtime contract
+- China Airlines: HTTP 200, parser succeeded, but the first parser was too broad and included generic fare-information/disruption links.
+- PTT Japan_Travel: HTTP 200, parser contract succeeded, zero matching `[資訊]` airfare signals at that moment. Zero observations is still a successful source attempt when the public board structure is valid.
+- Tigerair Taiwan current homepage: HTTP 200 but no stable public promotion-anchor contract; correctly recorded `parse_failed`.
+
+### Corrected integration probe
+
+Run `31473909367` on exact source head `86d3bf3e9c3e93ae32a9a8a1cbba5d5475181f12`:
+
+- China Airlines: HTTP 200, parser succeeded and was narrowed to actual event pages / route-price cards; 8 observations in that live snapshot.
+- PTT Japan_Travel: HTTP 200, parser succeeded, zero matching current airfare signals.
+- Tigerair Taiwan: ordinary Playwright also returned HTTP 200 but still did not expose a stable promotion-anchor parser contract; it remained `parse_failed`.
+
+This result changed the registry. Tigerair is **not** a fixed watch in v1. Public Web discovery can find official Tigerair news and `static.tigerairtw.com` event pages, so Tigerair remains valuable as `opportunistic`, but a source whose deterministic HTTP and vanilla-browser attempts cannot establish a stable parse contract must not permanently degrade fixed coverage.
+
+## Final v1 runtime shape
+
+Current fixed watches are:
+
+- `china_airlines_official` — direct HTTP, 6-hour freshness threshold;
+- `ptt_japan_travel_info` — direct HTTP, 3-hour freshness threshold.
+
+Therefore current fixed-watch executions install **Scrapy only**. The production workflow retains a conditional `scrapy-playwright` installation path for a future source only after that source has a repeatable, public, source-specific browser contract and fixture. No current fixed watch requires a browser.
+
+Tigerair official news/static event pages are handled by ChatGPT's opportunistic open-Web phase and do not count toward fixed-watch coverage.
+
+## Repository/runtime ownership
 
 The repository owns:
 
@@ -70,6 +80,6 @@ Scrapy owns:
 - cookie/session continuity where a public source requires it;
 - downloader lifecycle;
 - parser response objects / selectors;
-- optional vanilla Playwright rendering when explicitly enabled for a source.
+- optional vanilla Playwright rendering only when explicitly enabled by a future source contract.
 
-Blocked/login/CAPTCHA outcomes are recorded as coverage failures. They are not a trigger for stealth, fingerprint spoofing, proxy rotation, residential IPs, or CAPTCHA bypass.
+Blocked/login/CAPTCHA outcomes are coverage failures, not triggers for evasion.
