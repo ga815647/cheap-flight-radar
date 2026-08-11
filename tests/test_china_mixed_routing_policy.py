@@ -43,7 +43,10 @@ class ChinaMixedRoutingPolicyTests(unittest.TestCase):
             second_city["use_domestic_flight_when"],
             "verified_rail_is_absent_or_materially_worse_for_total_required_transport_time",
         )
-        self.assertIn("open_jaw", second_city["consider_open_jaw_when"])
+        self.assertEqual(
+            second_city["consider_open_jaw_when"],
+            "verified_exit_reduces_backtracking_or_complete_transport_cost_or_time",
+        )
 
     def test_mixed_routing_stops_on_unverifiable_or_noncompetitive_branches(self):
         stop_rules = set(self.mixed["stop_expansion_when"])
