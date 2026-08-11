@@ -9,7 +9,9 @@ from cheap_flight_radar.price_history import (
     build_snapshot,
     compare_with_history,
     current_live_floors,
+    snapshot_from_json,
     snapshot_repository_path,
+    snapshot_to_json,
 )
 
 
@@ -119,6 +121,18 @@ class PriceHistoryComputationTests(unittest.TestCase):
         self.assertAlmostEqual(result.percent_below_baseline, (5200 - 4000) / 5200 * 100)
         self.assertIsNone(result.historical_percentile)
 
+    def test_same_run_duplicate_sightings_do_not_inflate_confidence(self):
+        current = obs("current", price=4000)
+        history = [
+            obs("r1-source-a", radar_run_id="r1", observed_at="2026-08-01T12:00:00+00:00", departure_date="2026-08-11", price=5200),
+            obs("r1-source-b", radar_run_id="r1", observed_at="2026-08-01T12:05:00+00:00", departure_date="2026-08-11", price=5000),
+            obs("r2", radar_run_id="r2", observed_at="2026-08-02T12:00:00+00:00", departure_date="2026-08-12", price=5400),
+        ]
+        result = compare_with_history(current, history, self.policy)
+        self.assertEqual(result.sample_count, 2)
+        self.assertEqual(result.all_time_low_twd, 5000)
+        self.assertEqual(result.confidence, "sparse")
+
     def test_sparse_history_does_not_invent_median_or_percentile(self):
         current = obs("current", price=4000)
         history = [
@@ -169,13 +183,14 @@ class PriceHistoryComputationTests(unittest.TestCase):
         snapshot = build_snapshot(
             "run:jp/kr",
             datetime(2026, 8, 11, 12, 0, tzinfo=timezone.utc),
-            [obs("a")],
+            [obs("a", radar_run_id="run:jp/kr")],
         )
         path = snapshot_repository_path(snapshot)
         self.assertEqual(path, "data/price-history/2026/08/11/run-jp-kr.json")
         self.assertEqual(snapshot.schema_version, 1)
         self.assertEqual(snapshot.radar_run_id, "run:jp/kr")
         self.assertEqual(len(snapshot.observations), 1)
+        self.assertEqual(snapshot_from_json(snapshot_to_json(snapshot)), snapshot)
 
 
 if __name__ == "__main__":
