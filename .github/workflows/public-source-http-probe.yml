@@ -1,0 +1,51 @@
+name: Public source HTTP probe
+
+on:
+  push:
+    branches:
+      - research/free-public-source-registry-2026-08-11
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe public source endpoints
+        shell: bash
+        run: |
+          set -u
+          probe() {
+            name="$1"
+            url="$2"
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            meta=$(curl -L --connect-timeout 8 --max-time 25 \
+              -A 'CheapFlightRadarResearch/0.1 (+https://github.com/ga815647/cheap-flight-radar)' \
+              -sS -D "$headers" -o "$body" \
+              -w '%{http_code}|%{content_type}|%{size_download}|%{time_total}|%{url_effective}' \
+              "$url" 2>&1) || rc=$?
+            rc=${rc:-0}
+            flags=""
+            if grep -Eqi 'captcha|challenge-platform|cf-chl|verify you are human|robot check' "$body" "$headers"; then flags="${flags}challenge,"; fi
+            if grep -Eqi 'log[ -]?in|登入|登录|sign in' "$body"; then flags="${flags}login-text,"; fi
+            printf 'PROBE|%s|rc=%s|%s|flags=%s\n' "$name" "$rc" "$meta" "$flags"
+            rm -f "$body" "$headers"
+            unset rc
+          }
+
+          probe peach_home 'https://www.flypeach.com/'
+          probe jeju_events 'https://www.jejuair.net/zh-tw/event/pastEvent.do'
+          probe tway_events 'https://www.twayair.com/app/promotion/event/being'
+          probe china_airlines_home 'https://www.china-airlines.com/tw/zh/index.html'
+          probe eva_news 'https://www.evaair.com/zh-tw/about-eva-air/news/'
+          probe airasia_news 'https://newsroom.airasia.com/news/tag/Taiwan'
+          probe tigerair_home 'https://www.tigerairtw.com/zh-TW/'
+          probe cheapflytw 'https://cheapfly.gocarry.tw/'
+          probe ptt_japan 'https://www.ptt.cc/bbs/Japan_Travel/index.html'
+          probe secretflying_tw 'https://www.secretflying.com/cheap-flights-from/taiwan/'
+          probe fly4free_tw 'https://www.fly4free.com/flight-deals/taiwan/'
+          probe facebook_taiwanairtkt 'https://www.facebook.com/TaiwanAirTkt/'
