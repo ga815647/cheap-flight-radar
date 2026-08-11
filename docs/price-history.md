@@ -88,6 +88,8 @@ The lead-time buckets are the SSOT values:
 
 Each historical observation is bucketed using **its own observation time versus its own departure date**. This prevents a fare seen 7 days before departure from being naively compared with one seen 90 days before departure.
 
+A radar run contributes at most **one comparable price sample** for the same exact route + trip type + lead-time bucket. Multiple Web query permutations, editors, OTAs, or duplicate sightings in that run remain append-only provenance and must not inflate sample count/confidence. When one run contains multiple usable complete-trip observations for the same comparison key, the run-level historical sample is the lowest observed usable complete-trip price. This is consistent with the existing candidate-dedupe rule that duplicate sightings are evidence, not separate deals.
+
 Season/month and comparable trip length are additional dimensions only when enough history exists. They must never be applied by shrinking a sample below the configured minimum and then pretending the smaller result is precise.
 
 The current observation is excluded from its own historical baseline. Only earlier observation timestamps may contribute.
