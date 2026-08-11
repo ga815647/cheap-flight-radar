@@ -280,12 +280,19 @@ china:
 price_history:
   enabled: true
   persistence:
-    observation_log_mode: append_only_events
-    baseline_state: derived_from_observation_log_each_run
-    durable_store_owner: chatgpt_orchestrator_supplied
-    github_actions_may_emit_observation_batch: true
+    observation_log_mode: immutable_run_snapshots
+    durable_store: github_repository
+    repository: self
+    ref: history/price-observations
+    snapshot_path_template: data/price-history/YYYY/MM/DD/{radar_run_id}.json
+    immutable_run_snapshots: true
+    baseline_state: derived_from_github_snapshots_each_run
+    history_ref_absent_action: initialize_empty_history_without_backfill
+    chatgpt_may_write_snapshot_directly_when_practical: true
+    github_actions_may_write_validated_snapshot_when_delegated: true
     github_actions_is_not_durable_history_service: true
-    repository_snapshot_required_for_runtime: false
+    artifact_role: transient_handoff_only
+    data_snapshot_write_is_not_policy_or_code_merge: true
   backfill:
     synthetic_backfill: forbidden
     derive_only_from_observed_evidence: true
