@@ -18,7 +18,7 @@ jobs:
           /usr/bin/time -f 'CRAWLEE_PIP_SECONDS=%e' python -m pip install 'crawlee[parsel,playwright]'
           /usr/bin/time -f 'CRAWLEE_BROWSER_SECONDS=%e' python -m playwright install --with-deps chromium
           python - <<'PY'
-          import crawlee, playwright
+          import crawlee
           print('crawlee_version', crawlee.__version__)
           PY
       - name: Prepare deterministic fixture
@@ -27,7 +27,7 @@ jobs:
           printf '%s\n' '<html><title>static</title><div id="signal">static-ready</div></html>' > /tmp/radar-spike/static.html
           printf '%s\n' '<html><title>js</title><div id="signal">before</div><script>document.getElementById("signal").textContent="js-ready";</script></html>' > /tmp/radar-spike/js.html
           python -m http.server 8765 --directory /tmp/radar-spike >/tmp/radar-spike/http.log 2>&1 &
-      - name: Run HTTP and JS paths
+      - name: Run HTTP and JS paths with bypass features disabled
         run: |
           cat > /tmp/radar-spike/crawlee_spike.py <<'PY'
           import asyncio
@@ -42,7 +42,15 @@ jobs:
               await http.run(['http://127.0.0.1:8765/static.html'])
               assert http_values == ['static-ready'], http_values
 
-              browser = PlaywrightCrawler(max_requests_per_crawl=1, max_request_retries=1, max_session_rotations=0, retry_on_blocked=False, browser_type='chromium')
+              browser = PlaywrightCrawler(
+                  max_requests_per_crawl=1,
+                  max_request_retries=1,
+                  max_session_rotations=0,
+                  retry_on_blocked=False,
+                  browser_type='chromium',
+                  fingerprint_generator=None,
+                  browser_launch_options={'chromium_sandbox': False},
+              )
               browser_values = []
               @browser.router.default_handler
               async def browser_handler(context: PlaywrightCrawlingContext):
@@ -94,11 +102,12 @@ jobs:
                       'https': 'scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler',
                   },
                   'TWISTED_REACTOR': 'twisted.internet.asyncioreactor.AsyncioSelectorReactor',
+                  'PLAYWRIGHT_LAUNCH_OPTIONS': {'chromium_sandbox': False},
                   'FEEDS': {str(out): {'format': 'jsonlines', 'overwrite': True}},
                   'LOG_LEVEL': 'ERROR',
                   'RETRY_TIMES': 1,
               }
-              def start_requests(self):
+              async def start(self):
                   yield scrapy.Request('http://127.0.0.1:8765/static.html', cb_kwargs={'kind':'http'})
                   yield scrapy.Request('http://127.0.0.1:8765/js.html', meta={'playwright': True}, cb_kwargs={'kind':'browser'})
               def parse(self, response, kind):
@@ -137,6 +146,7 @@ jobs:
           url: http://127.0.0.1:8765/static.html
           filter:
             - css: '#signal'
+            - html2text
           ---
           name: browser
           navigate: http://127.0.0.1:8765/js.html
@@ -144,10 +154,12 @@ jobs:
           wait_for: '#signal'
           filter:
             - css: '#signal'
+            - html2text
           YAML
-          /usr/bin/time -f 'URLWATCH_RUN_SECONDS=%e' urlwatch | tee /tmp/radar-spike/urlwatch.out
-          grep -q 'static-ready' /tmp/radar-spike/urlwatch.out
-          grep -q 'js-ready' /tmp/radar-spike/urlwatch.out
+          /usr/bin/time -f 'URLWATCH_STATIC_SECONDS=%e' urlwatch --test-filter 1 | tee /tmp/radar-spike/static.out
+          /usr/bin/time -f 'URLWATCH_BROWSER_RUN_SECONDS=%e' urlwatch --test-filter 2 | tee /tmp/radar-spike/browser.out
+          grep -q 'static-ready' /tmp/radar-spike/static.out
+          grep -q 'js-ready' /tmp/radar-spike/browser.out
           echo URLWATCH_SMOKE_OK
 
   changedetection:
