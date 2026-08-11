@@ -274,6 +274,30 @@ china:
   allow_mainland_high_speed_rail: true
   allow_mainland_rail: true
   allow_open_jaw_exit: true
+  mixed_routing:
+    return_window_semantics: search_and_scoring_reference_not_hard_rejection
+    gateway_expansion:
+      trigger_when:
+        - serious_gateway_seed_has_current_exact_fare_evidence
+        - verified_practical_onward_or_open_jaw_edge_exists
+      do_not_require_trip_within_default_return_window: true
+    second_city_selection:
+      require_verified_transport_edge: true
+      geographic_proximity_alone_is_insufficient: true
+      prefer_high_speed_rail_when: verified_rail_has_lower_required_transport_time_and_transfer_friction_than_domestic_flight
+      use_domestic_flight_when: verified_rail_is_absent_or_materially_worse_for_total_required_transport_time
+      consider_open_jaw_when: verified_exit_reduces_backtracking_or_complete_transport_cost_or_time
+    stop_expansion_when:
+      - next_required_component_cannot_be_currently_revalidated
+      - complete_effective_cost_or_required_transport_time_cannot_be_normalized
+      - candidate_no_longer_competes_with_round_trip_benchmark_or_existing_expansions
+      - deep_search_candidate_limit_reached
+    final_revalidation:
+      round_trip_benchmark_required: true
+      exact_airport_and_date_required_for_air_segments: true
+      current_price_required_for_all_priced_segments: true
+      live_schedule_required_for_time_sensitive_ground_or_ferry_segments: true
+      essential_unknown_action: exploratory_not_verified
   document_requirements_must_be_verified_live: true
   ferry_schedule_must_be_verified_live: true
 
