@@ -18,7 +18,6 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
         self.assertEqual(
             {source["id"] for source in registry},
             {
-                "tigerair_tw_official",
                 "china_airlines_official",
                 "ptt_japan_travel_info",
             },
@@ -28,6 +27,17 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
             self.assertIn(source["acquisition"], {"direct_http", "headless"})
             self.assertTrue(source["markets"])
             self.assertTrue(source["coverage_claim"].endswith("_attempt_only"))
+
+    def test_tigerair_is_opportunistic_after_live_runner_contract_failed(self) -> None:
+        fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}
+        self.assertNotIn("tigerair_tw_official", fixed_ids)
+        exclusion = self.public["fixed_watch_research_exclusions"]["tigerair_tw_official"]
+        self.assertEqual(exclusion["role"], "opportunistic")
+        self.assertEqual(
+            exclusion["preferred_discovery"],
+            "public_web_indexed_official_news_and_static_event_pages",
+        )
+        self.assertFalse(exclusion["anti_bot_evasion_allowed"])
 
     def test_opportunistic_sources_cannot_repair_fixed_coverage(self) -> None:
         coverage = self.public["coverage"]
@@ -47,7 +57,7 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
         self.assertTrue(dedupe["fare_observations_append_to_existing_candidate"])
         self.assertTrue(dedupe["never_count_duplicate_sightings_as_separate_deals"])
 
-    def test_high_risk_sources_are_researched_examples_not_required_watches(self) -> None:
+    def test_high_risk_or_unstable_sources_are_researched_examples_not_required_watches(self) -> None:
         fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}
         opportunistic_examples = set(
             self.public["opportunistic_policy"]["examples_researched_not_required_coverage"]
@@ -55,6 +65,7 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
         self.assertNotIn("facebook", fixed_ids)
         self.assertTrue(
             {
+                "tigerair_tw_official_news_and_static_events",
                 "taiwan_airfare_editor_facebook_pages",
                 "tway_official_events",
                 "jejuair_official_events",
