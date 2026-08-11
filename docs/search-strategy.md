@@ -38,6 +38,31 @@ The final daily report merges the profiles into a unified ranking while preservi
 
 Search the rolling horizon for low one-way fares from the configured Taiwan origins.
 
+### Broad-discovery routing
+
+The shared production broad-discovery route is intentionally different from fixed-watch monitoring and from provider-backed deep search.
+
+ChatGPT performs this stage directly with public Web fare-index evidence. The preferred source order is:
+
+1. public OTA/metasearch **route fare indexes** that expose actual origin/destination/date/price observations;
+2. indexed exact-fare results;
+3. official LCC promotion/event pages;
+4. public deal editors/forums as additional seeds.
+
+This ordering exists because a promotion announcement is not the same thing as a cheap fare observation. A carrier event page may prove that a sale, route, date range, or coupon exists while exposing no absolute price at all. It is useful intelligence, but it cannot by itself tell the radar which route/date is currently cheapest.
+
+For each configured Taiwan origin, broad discovery should use several query shapes rather than one generic sale search:
+
+- **origin floor scan** — exact origin IATA + rolling-horizon month/date context + cheap-flight/fare-index intent, preferably in TWD, to discover low destination floors;
+- **exact route probe** — exact origin IATA + candidate destination IATA + month/date window + one-way and round-trip intent;
+- **LCC carrier probe** — exact route/date context plus relevant low-cost carrier when route coverage is known and the generic fare index may under-surface it.
+
+The route is shared across World/Japan/Korea/China profiles so the radar does not repeat the same broad scan four times. Candidate records are then handed to the appropriate specialist profile for deeper expansion.
+
+Public fare-index observations remain **discovery evidence**. Indexed prices can be stale, prices can change between observations, and metro-area pages can silently substitute airports. Exact airport/date/price must therefore be revalidated before a candidate is described as verified; checkout/bookability remains a separate confidence level.
+
+This best-effort Web route does **not** claim an exhaustive fare matrix. Its purpose is high cheapness recall at low cost. Fixed watches remain coverage/provenance signals and are not expanded merely to imitate a fare matrix. GitHub Actions is not part of this normal direct-Web path unless a later deterministic collector is empirically justified.
+
 ### Origin coverage gate
 
 Every configured airport in `search.origin_airports` must receive a discovery attempt before a run may be described as a **full global radar**.
@@ -147,15 +172,17 @@ Before calling a result a verified deal, re-check the fare through a source capa
 
 ## Current source-router slice
 
-Production source routing is intentionally **partial**. The current SSOT selects only one empirically supported slice:
+Production source routing remains intentionally **partial**, but broad discovery is no longer left undefined.
 
-- profile: `china`
-- stage: `deep_search`
-- query shape: exact round trip
-- primary provider: FlyAI with formal `FLYAI_API_KEY`
+The SSOT now selects two different execution slices:
 
-The router reads this selection from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or unconfigured market/stage yields an explicit unavailable/unsupported coverage state. It must not silently substitute a lower-fidelity source while still claiming coverage.
+1. **shared broad discovery** across World/Japan/Korea/China — `chatgpt_web_public_fare_index`, executed directly by ChatGPT Web using the ordered public fare-index/query-shape policy above; no credential and no GitHub runner are required for the normal path;
+2. **China deep search** — exact round trip through FlyAI with formal `FLYAI_API_KEY`.
+
+The router reads these selections from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or otherwise unconfigured market/stage yields an explicit unavailable/unsupported coverage state. It must not silently substitute a lower-fidelity source while still claiming provider coverage.
+
+The shared Web route is also explicit about its limits: it is a best-effort discovery backend, not a deterministic full-market matrix and not checkout verification. A cheap indexed fare may be promoted to deep search, but only a separate revalidation observation can upgrade its confidence.
 
 FlyAI results pass a strict returned-segment airport/date gate before normalization. A `TSA-SHA` request whose returned itinerary uses `PVG`, for example, is rejected rather than relabeled. Observed FlyAI `ticketPrice` remains a raw provider value because the formal response did not expose verified currency, tax, baggage, or fare-family semantics; those normalized fields remain unknown.
 
-FlyAI is **not** currently selected for broad discovery, true revalidation, final cross-check, or one combined open-jaw fare. Independent SearchAPI/Google Flights reference evidence found multiple low-price exact itineraries whose flight-number components were absent from the FlyAI formal exact result set, so a FlyAI-only run must never claim complete China airfare coverage. Broader World/Japan/Korea provider routing remains unconfigured until Issue #2 produces sufficient evidence.
+FlyAI is **not** currently selected for broad discovery, true revalidation, final cross-check, or one combined open-jaw fare. Independent SearchAPI/Google Flights reference evidence found multiple low-price exact itineraries whose flight-number components were absent from the FlyAI formal exact result set, so a FlyAI-only run must never claim complete China airfare coverage. Deeper World/Japan/Korea provider-backed routing remains unconfigured until sufficient evidence justifies a production provider.
