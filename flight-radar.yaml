@@ -24,6 +24,17 @@ search:
   deep_search_candidate_limit: 20
   final_shortlist_limit: 10
   round_trip_benchmark: true
+  price_time_views:
+    near_term:
+      enabled: true
+      departure_within_days: 30
+      purpose: actionable_low_price_for_travel_soon
+    horizon_absolute:
+      enabled: true
+      departure_within_days: inherit_search_horizon
+      purpose: lowest_usable_complete_trip_price_in_current_live_horizon
+    do_not_treat_near_term_premium_as_horizon_floor: true
+    do_not_stop_floor_search_after_coarse_target_band_hit: true
   coverage_gate:
     enabled: true
     require_attempt_for_each_origin_airport: true
@@ -76,6 +87,9 @@ search:
           - KR
         mode: specialist_deep
         allow_open_jaw: true
+        floor_scan_policy: all_relevant_korean_airports_not_only_seoul_or_busan
+        floor_scan_seed_airports: [ICN, GMP, PUS, CJU, TAE, CJJ]
+        floor_scan_seed_list_exhaustive: false
         onward_modes:
           - domestic_flight
           - rail
@@ -170,10 +184,15 @@ cost:
 
 ranking:
   preserve_views:
+    - near_term_cheapest
     - absolute_cheapest
     - best_value
     - best_short_break
     - unusual_long_haul_deal
+  price_view_semantics:
+    near_term_cheapest: lowest_usable_complete_trip_price_departing_within_30_days
+    absolute_cheapest: lowest_usable_complete_trip_price_in_rolling_120_day_horizon
+    historical_anomaly: separate_evidence_axis_not_a_synonym_for_absolute_cheapest
   primary_recommendation_components:
     effective_total_price: 0.35
     route_value: 0.25
@@ -265,6 +284,25 @@ price_history:
   retain_currency_and_original_price: true
   retain_normalized_twd_price: true
   distinguish_discovery_from_verified_price: true
+  departure_lead_time_buckets_days:
+    - id: d0_14
+      min_days: 0
+      max_days: 14
+    - id: d15_30
+      min_days: 15
+      max_days: 30
+    - id: d31_60
+      min_days: 31
+      max_days: 60
+    - id: d61_120
+      min_days: 61
+      max_days: 120
+  comparison_dimensions:
+    - exact_route_when_available
+    - departure_lead_time_bucket
+    - season_or_month_when_history_sufficient
+    - comparable_trip_length
+  sparse_history_action: label_low_confidence_and_do_not_invent_percentile
   anomaly_views:
     - new_route_low
     - percentile_vs_route_history
@@ -457,6 +495,9 @@ source_routing:
           prefer_local_currency: TWD
           retain_one_way_outbound_seed: true
           retain_round_trip_benchmark_when_available: true
+          retain_near_term_floor: true
+          retain_horizon_absolute_floor: true
+          continue_floor_scan_after_coarse_target_band_hit: true
         source_class_order:
           - public_ota_or_metasearch_route_fare_index
           - indexed_exact_fare_result
