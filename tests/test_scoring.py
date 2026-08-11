@@ -3,7 +3,12 @@ import unittest
 
 import yaml
 
-from cheap_flight_radar.scoring import composite_score, transport_efficiency, trip_length_fit
+from cheap_flight_radar.scoring import (
+    composite_score,
+    departure_lead_time_bucket,
+    transport_efficiency,
+    trip_length_fit,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +64,49 @@ class ScoringPolicyTests(unittest.TestCase):
         self.assertTrue(world["include_specialist_countries_in_discovery"])
         self.assertFalse(world["specialist_country_deep_expansion"])
         self.assertEqual(set(world["specialist_countries"]), {"JP", "KR", "CN"})
+
+    def test_price_views_separate_near_term_from_horizon_floor(self):
+        search = self.policy["search"]
+        views = search["price_time_views"]
+        self.assertTrue(views["near_term"]["enabled"])
+        self.assertEqual(views["near_term"]["departure_within_days"], 30)
+        self.assertTrue(views["horizon_absolute"]["enabled"])
+        self.assertEqual(views["horizon_absolute"]["departure_within_days"], "inherit_search_horizon")
+        self.assertTrue(views["do_not_treat_near_term_premium_as_horizon_floor"])
+        self.assertTrue(views["do_not_stop_floor_search_after_coarse_target_band_hit"])
+        self.assertIn("near_term_cheapest", self.policy["ranking"]["preserve_views"])
+        self.assertIn("absolute_cheapest", self.policy["ranking"]["preserve_views"])
+
+    def test_historical_price_comparison_uses_lead_time_buckets(self):
+        history = self.policy["price_history"]
+        self.assertEqual(
+            [bucket["id"] for bucket in history["departure_lead_time_buckets_days"]],
+            ["d0_14", "d15_30", "d31_60", "d61_120"],
+        )
+        self.assertIn("departure_lead_time_bucket", history["comparison_dimensions"])
+        self.assertEqual(departure_lead_time_bucket(0, history), "d0_14")
+        self.assertEqual(departure_lead_time_bucket(14, history), "d0_14")
+        self.assertEqual(departure_lead_time_bucket(15, history), "d15_30")
+        self.assertEqual(departure_lead_time_bucket(30, history), "d15_30")
+        self.assertEqual(departure_lead_time_bucket(45, history), "d31_60")
+        self.assertEqual(departure_lead_time_bucket(120, history), "d61_120")
+        with self.assertRaises(ValueError):
+            departure_lead_time_bucket(121, history)
+
+    def test_korea_floor_scan_is_not_seoul_busan_only(self):
+        korea = self.policy["search"]["daily_profiles"]["profiles"]["korea"]
+        self.assertEqual(korea["floor_scan_policy"], "all_relevant_korean_airports_not_only_seoul_or_busan")
+        self.assertFalse(korea["floor_scan_seed_list_exhaustive"])
+        self.assertEqual(
+            set(korea["floor_scan_seed_airports"]),
+            {"ICN", "GMP", "PUS", "CJU", "TAE", "CJJ"},
+        )
+
+    def test_shared_broad_discovery_keeps_both_fare_floors(self):
+        requirements = self.policy["source_routing"]["selected_routes"]["shared"]["broad_discovery"]["query_requirements"]
+        self.assertTrue(requirements["retain_near_term_floor"])
+        self.assertTrue(requirements["retain_horizon_absolute_floor"])
+        self.assertTrue(requirements["continue_floor_scan_after_coarse_target_band_hit"])
 
     def test_long_haul_too_short_is_penalized(self):
         short = trip_length_fit(13.0, 3, self.policy)
