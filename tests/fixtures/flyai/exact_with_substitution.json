@@ -1,0 +1,72 @@
+{
+  "status": 0,
+  "message": "success",
+  "data": {
+    "itemList": [
+      {
+        "ticketPrice": "2713.00",
+        "jumpUrl": "https://example.invalid/flyai/exact",
+        "journeys": [
+          {
+            "journeyType": "直达",
+            "segments": [
+              {
+                "depStationCode": "TSA",
+                "arrStationCode": "SHA",
+                "depDateTime": "2026-10-13 12:30:00",
+                "arrDateTime": "2026-10-13 14:15:00",
+                "marketingTransportName": "中华航空",
+                "marketingTransportNo": "CI201",
+                "seatClassName": "经济舱"
+              }
+            ]
+          },
+          {
+            "journeyType": "直达",
+            "segments": [
+              {
+                "depStationCode": "SHA",
+                "arrStationCode": "TSA",
+                "depDateTime": "2026-10-17 16:15:00",
+                "arrDateTime": "2026-10-17 18:15:00",
+                "marketingTransportName": "中华航空",
+                "marketingTransportNo": "CI202",
+                "seatClassName": "经济舱"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ticketPrice": "2500.00",
+        "jumpUrl": "https://example.invalid/flyai/substitution",
+        "journeys": [
+          {
+            "segments": [
+              {
+                "depStationCode": "TSA",
+                "arrStationCode": "PVG",
+                "depDateTime": "2026-10-13 08:00:00",
+                "arrDateTime": "2026-10-13 10:00:00",
+                "marketingTransportName": "Example Air",
+                "marketingTransportNo": "XX101"
+              }
+            ]
+          },
+          {
+            "segments": [
+              {
+                "depStationCode": "PVG",
+                "arrStationCode": "TSA",
+                "depDateTime": "2026-10-17 12:00:00",
+                "arrDateTime": "2026-10-17 14:00:00",
+                "marketingTransportName": "Example Air",
+                "marketingTransportNo": "XX102"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

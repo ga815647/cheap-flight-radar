@@ -1,0 +1,25 @@
+{
+  "itineraries": [
+    {
+      "raw_price": "2713",
+      "journeys": [
+        {"segments": [{"origin": "TSA", "destination": "SHA", "departure": "2026-10-13T12:00:00", "marketing_flight_number": "MU500"}]},
+        {"segments": [{"origin": "SHA", "destination": "TSA", "departure": "2026-10-17T15:00:00", "marketing_flight_number": "MU501"}]}
+      ]
+    },
+    {
+      "raw_price": "2600",
+      "journeys": [
+        {"segments": [{"origin": "TSA", "destination": "PVG", "departure": "2026-10-13T12:00:00", "marketing_flight_number": "MU510"}]},
+        {"segments": [{"origin": "SHA", "destination": "TSA", "departure": "2026-10-17T15:00:00", "marketing_flight_number": "MU511"}]}
+      ]
+    },
+    {
+      "raw_price": "2500",
+      "journeys": [
+        {"segments": [{"origin": "TPE", "destination": "SHA", "departure": "2026-10-13T12:00:00", "marketing_flight_number": "MU520"}]},
+        {"segments": [{"origin": "SHA", "destination": "TSA", "departure": "2026-10-17T15:00:00", "marketing_flight_number": "MU521"}]}
+      ]
+    }
+  ]
+}
