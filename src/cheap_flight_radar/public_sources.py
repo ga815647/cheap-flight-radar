@@ -1,4 +1,4 @@
-"""Fixture-testable parsers for the v0 fixed public-intelligence sources."""
+"""Fixture-testable parsers for the v1 fixed public-intelligence sources."""
 
 from __future__ import annotations
 
@@ -37,20 +37,16 @@ def parse_source_html(
         raise ParseContractError(f"{watch.id}: empty document")
     if watch.id == "ptt_japan_travel_info":
         return _parse_ptt(watch, html, response_url, observed_at)
-    if watch.id == "tigerair_tw_official":
-        return _parse_airline(watch, html, response_url, observed_at, carrier="Tigerair Taiwan")
     if watch.id == "china_airlines_official":
-        return _parse_airline(watch, html, response_url, observed_at, carrier="China Airlines")
-    raise ParseContractError(f"no parser registered for {watch.id}")
+        return _parse_china_airlines(watch, html, response_url, observed_at)
+    raise ParseContractError(f"no fixed-watch parser registered for {watch.id}")
 
 
-def _parse_airline(
+def _parse_china_airlines(
     watch: FixedWatch,
     html: str,
     response_url: str,
     observed_at: datetime,
-    *,
-    carrier: str,
 ) -> tuple[DiscoverySighting, ...]:
     selector = Selector(text=html, type="html")
     anchors = selector.xpath("//a[@href]")
@@ -68,7 +64,7 @@ def _parse_airline(
         if not title or not PROMO_RE.search(title):
             continue
         item_url = urljoin(response_url, href)
-        if watch.id == "china_airlines_official" and not _china_airlines_signal(item_url, title):
+        if not _china_airlines_signal(item_url, title):
             continue
         if item_url in seen_urls:
             continue
@@ -81,7 +77,7 @@ def _parse_airline(
                 item_url=item_url,
                 observed_at=observed_at,
                 title=title,
-                carrier=carrier,
+                carrier="China Airlines",
                 price_text=_price_text(title),
             )
         )
