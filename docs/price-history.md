@@ -14,13 +14,21 @@ These views must not be collapsed. A fare can be excellent for travel next week 
 
 ## State model
 
-The durable source of truth for history is an **append-only observation event log** supplied by the ChatGPT/orchestrator runtime. Baselines are derived from that log on each radar run; the derived median/percentile/low values are not a second authoritative state store.
+The durable source of truth for fare history is **GitHub repository data**, not ChatGPT memory and not GitHub Actions artifacts.
 
-GitHub Actions may emit normalized observation batches when ChatGPT delegates deterministic compute, crawling, or Gate work. Actions is not the durable history service, scheduler, daemon, queue, or database. The caller chooses the persistent storage location available to the orchestrator.
+The SSOT uses a dedicated durable ref, `history/price-observations`, containing immutable per-radar-run snapshots. The default path shape is:
 
-Validated data snapshots may be archived separately, but repository snapshots are not required runtime state.
+`data/price-history/YYYY/MM/DD/{radar_run_id}.json`
 
-Synthetic historical backfill is forbidden. If the radar has not actually observed enough comparable fares, the corresponding baseline, percentile, or anomaly label is unknown.
+Each radar run creates one new snapshot file and never rewrites an older run snapshot. Baselines are derived from those snapshots on each radar run; the derived median/percentile/low values are not a second authoritative state store.
+
+ChatGPT remains scheduler/orchestrator/decision layer. It may create a small validated snapshot directly through the GitHub connector. When data volume or aggregation work justifies it, ChatGPT may delegate a short-lived GitHub Action to read the history ref, compute results, and/or commit one validated snapshot. The Action is still disposable compute; **the repository ref is the durable store**.
+
+GitHub Actions artifacts remain short-term handoff/evidence only and must not be the 365-day/all-time history source.
+
+If the history ref does not yet exist, initialize an empty history without fabricated backfill. Synthetic historical backfill is forbidden. If the radar has not actually observed enough comparable fares, the corresponding baseline, percentile, or anomaly label is unknown.
+
+Validated history-snapshot writes are data-only updates. They do not authorize policy/code changes or merge the current code PR.
 
 ## Observation contract
 
@@ -174,12 +182,13 @@ A stale/disappeared event never makes the old fare currently purchasable again. 
 
 For each scheduled ChatGPT radar run:
 
-1. perform current fixed-watch/opportunistic/deep-search/revalidation work according to the existing orchestrator policy;
-2. normalize usable fare observations and stale/disappeared follow-up events;
-3. append new events to the durable history log without rewriting prior events;
+1. read the GitHub history ref needed for the requested comparison window, using disposable compute only when bulk aggregation is useful;
+2. perform current fixed-watch/opportunistic/deep-search/revalidation work according to the existing orchestrator policy;
+3. normalize usable fare observations and stale/disappeared follow-up events;
 4. compute the current-run 0–30 day and 0–120 day live floors;
 5. compare serious current fares with prior route + lead-time-matched history;
-6. expose median windows, rolling lows, percentile where supported, baseline delta, low distance, sample count/confidence, and provenance;
-7. leave the formal SSOT unchanged unless accumulated evidence justifies a methodology change.
+6. write one immutable validated run snapshot to the GitHub history ref;
+7. expose median windows, rolling lows, percentile where supported, baseline delta, low distance, sample count/confidence, and provenance;
+8. leave the formal SSOT unchanged unless accumulated evidence justifies a methodology change.
 
 A single market swing therefore changes observations and derived metrics, not the system's methodology.
