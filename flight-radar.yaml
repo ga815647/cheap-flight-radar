@@ -287,7 +287,7 @@ verification:
   never_invent_missing_components: true
 
 public_intelligence:
-  status: evidence_backed_registry_v0
+  status: evidence_backed_registry_v1
   roles:
     fixed_watch:
       definition: required_public_discovery_source_with_fresh_success_on_declared_cadence
@@ -369,18 +369,6 @@ public_intelligence:
     fare_observations_append_to_existing_candidate: true
     never_count_duplicate_sightings_as_separate_deals: true
   fixed_watch_registry:
-    - id: tigerair_tw_official
-      markets: [japan, korea, world]
-      source_type: official_airline
-      acquisition: headless
-      rendering_reason: direct_http_200_but_no_public_anchor_dom_on_ubuntu_probe_2026_08_11
-      entry_url: https://www.tigerairtw.com/zh-TW/
-      cadence_hours: 3
-      carrier_scope: tigerair_taiwan_only
-      taiwan_origin_evidence: [TPE, RMQ, KHH]
-      lcc_coverage: true
-      fsc_coverage: false
-      coverage_claim: source_attempt_only
     - id: china_airlines_official
       markets: [japan, korea, china, world]
       source_type: official_airline
@@ -404,6 +392,15 @@ public_intelligence:
       lcc_coverage: true
       fsc_coverage: partial
       coverage_claim: board_attempt_only
+  fixed_watch_research_exclusions:
+    tigerair_tw_official:
+      role: opportunistic
+      reason: no_stable_public_promotion_dom_from_current_homepage_on_ubuntu_runner
+      evidence:
+        - direct_http_200_but_parser_contract_absent
+        - vanilla_playwright_200_but_parser_contract_absent
+      preferred_discovery: public_web_indexed_official_news_and_static_event_pages
+      anti_bot_evasion_allowed: false
   opportunistic_policy:
     include_public_search_engine_results: true
     include_public_social_posts_when_indexed_without_login_bypass: true
@@ -411,6 +408,7 @@ public_intelligence:
     include_public_airline_promotion_pages_not_in_fixed_registry: true
     preserve_source_url_or_post_identity: true
     examples_researched_not_required_coverage:
+      - tigerair_tw_official_news_and_static_events
       - taiwan_airfare_editor_facebook_pages
       - peach_official_promotions
       - tway_official_events
