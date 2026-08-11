@@ -1,0 +1,45 @@
+name: Fixed watch live probe
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/fixed-watch-live-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  live-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install selected HTTP runtime
+        run: python -m pip install -e .
+
+      - name: Execute all current fixed watches
+        run: >-
+          python -m cheap_flight_radar.fixed_watch_runner
+          --run-id "live-probe-${{ github.run_id }}"
+          --watch-ids "tigerair_tw_official,china_airlines_official,ptt_japan_travel_info"
+          --output artifacts/fixed-watch-run.json
+
+      - name: Show manifest
+        if: always()
+        run: cat artifacts/fixed-watch-run.json
+
+      - name: Upload manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixed-watch-live-probe-${{ github.run_id }}
+          path: artifacts/fixed-watch-run.json
+          if-no-files-found: error
+          retention-days: 7
