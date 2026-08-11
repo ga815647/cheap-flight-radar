@@ -438,6 +438,33 @@ source_routing:
   strict_no_silent_degradation: true
   unconfigured_market_stage_action: mark_source_unavailable_and_do_not_claim_coverage
   selected_routes:
+    shared:
+      broad_discovery:
+        primary_provider: chatgpt_web_public_fare_index
+        execution_mode: chatgpt_web_direct
+        query_scope: rolling_horizon_public_fare_index
+        applies_to_profiles: [world, japan, korea, china]
+        shared_across_profiles: true
+        require_exact_origin_airport: true
+        require_origin_attempt_for_each_configured_airport: true
+        query_shapes:
+          - origin_floor_scan
+          - exact_route_probe
+          - lcc_carrier_probe
+        query_requirements:
+          use_exact_origin_iata: true
+          include_rolling_horizon_month_or_date_window: true
+          prefer_local_currency: TWD
+          retain_one_way_outbound_seed: true
+          retain_round_trip_benchmark_when_available: true
+        source_class_order:
+          - public_ota_or_metasearch_route_fare_index
+          - indexed_exact_fare_result
+          - official_lcc_promotion_or_event
+          - public_deal_editor_or_forum
+        evidence_state: discovery
+        full_market_coverage_claim: false
+        revalidation_required: true
     china:
       deep_search:
         primary_provider: flyai
@@ -448,6 +475,24 @@ source_routing:
         fallback_provider: null
         incomplete_coverage_action: mark_missing_and_do_not_claim_full_china_airfare_coverage
   providers:
+    chatgpt_web_public_fare_index:
+      selected_roles:
+        - shared_broad_discovery
+      execution: chatgpt_web_direct
+      credential_required: false
+      freshness: indexed_or_live_public_web_observation
+      verification_state: discovery
+      source_classes_ordered:
+        - public_ota_or_metasearch_route_fare_index
+        - indexed_exact_fare_result
+        - official_lcc_promotion_or_event
+        - public_deal_editor_or_forum
+      known_limitations:
+        - indexed_fares_may_be_stale_or_change_between_observations
+        - metro_labels_can_hide_exact_airport_substitution_and_must_be_resolved
+        - promotion_pages_often_lack_absolute_fare_and_only_seed_route_or_sale_interest
+        - best_effort_web_recall_does_not_claim_exhaustive_market_matrix
+        - serious_candidates_require_separate_revalidation
     flyai:
       selected_roles:
         - china_deep_search
