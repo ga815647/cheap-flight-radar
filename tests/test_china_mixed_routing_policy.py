@@ -35,7 +35,7 @@ class ChinaMixedRoutingPolicyTests(unittest.TestCase):
         second_city = self.mixed["second_city_selection"]
         self.assertTrue(second_city["require_verified_transport_edge"])
         self.assertTrue(second_city["geographic_proximity_alone_is_insufficient"])
-        self.assertIn("high_speed_rail", second_city["prefer_high_speed_rail_when"])
+        self.assertIn("verified_rail", second_city["prefer_high_speed_rail_when"])
         self.assertIn("domestic_flight", second_city["use_domestic_flight_when"])
         self.assertIn("open_jaw", second_city["consider_open_jaw_when"])
 
