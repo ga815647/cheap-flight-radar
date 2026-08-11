@@ -24,9 +24,13 @@ This is about **46.9% above** the old 4,755 seed, so 4,755 must not be described
 
 The corrected return-window semantics materially change the result: the 9-night `10/02 → 10/11` pair at TWD 6,987 was cheaper than the 7-night `10/02 → 10/09` pair at about TWD 7,144–7,171 and the 5-night `10/02 → 10/07` pair around TWD 7,010. A hard `max_nights` rejection would therefore discard the better current fare.
 
-Source:
+Current Spring Airlines schedule evidence for the exact travel days gives `9C8878 KHH 18:15 → PVG 20:35` and `9C8877 PVG 14:55 → KHH 17:15`. The raw PVG-arrival → PVG-departure destination window is therefore about **210h20m** before required ground transport and airport-process buffers.
+
+Sources:
 - https://www.expedia.com.tw/lp/flights/khh/pvg/kaohsiung-to-shanghai?flightType=ONE_WAY
 - https://www.expedia.com.tw/en/lp/flights/khh/sha/kaohsiung-to-shanghai?flightType=MULTI_CITY
+- https://en.ch.com/flights/flight-date/num-9C8878/
+- https://en.ch.com/flights/flight-date/num-9C8877/
 
 ## 2. Same-city Shanghai benchmark
 
@@ -40,6 +44,8 @@ Approximate complete required transport cost for the simplest Shanghai-only benc
 - required PVG ↔ central-Shanghai metro: CNY 14 ≈ TWD 67;
 - **effective required transport ≈ TWD 7,054**.
 
+Using only source-backed required ground time, the 210h20m raw destination window loses about two hours to PVG ↔ central-Shanghai metro, leaving roughly **208h20m of ground-adjusted usable destination span**. Immigration, check-in, security, and discretionary local transport are not silently guessed here; a production ranking may subtract standardized verified airport-process buffers separately.
+
 Normal city sightseeing transport and normal hotels are excluded by SSOT. Checked baggage remains unknown unless required by the trip.
 
 Source:
@@ -47,7 +53,7 @@ Source:
 
 ## 3. Gateway + HSR: Shanghai / PVG → Hangzhou
 
-This is the strongest verified mixed expansion in this run.
+This is the strongest **normalized** mixed expansion in this run.
 
 Current rail references show Shanghai Hongqiao → Hangzhou East has 100+ daily trains, generally around 45–70 minutes, with a common second-class fare around CNY 73. A 2026 timetable reference shows service extending late into the evening, but the candidate should not rely on a tight same-night self-transfer after the evening KHH arrival. The practical low-risk shape is to treat Shanghai as a real first stop, then continue to Hangzhou and return toward PVG with adequate buffer before the Taiwan flight.
 
@@ -62,9 +68,11 @@ One practical two-city cost model:
 - required China transport subtotal: about CNY 168 ≈ TWD 808;
 - **effective required transport ≈ TWD 7,795**.
 
-This is only about **TWD 740 more** than the Shanghai-only benchmark while adding a genuine second city. Required transport time is roughly 4–5 hours more than the simplest Shanghai-only airport-transfer benchmark once rail-station access and practical station buffer are counted.
+This is only about **TWD 740 more** than the Shanghai-only benchmark while adding a genuine second city. Required transport time is roughly 4–5 hours more than the simplest Shanghai-only airport-transfer benchmark once rail-station access and a practical station buffer are counted. Against the same 210h20m raw destination window, that leaves roughly **203–204h of usable destination span** after required ground/rail movement, before standardized airport-process buffers.
 
 Risk is **low to moderate** if the return rail segment reaches Shanghai with generous buffer / a prior-night Shanghai stay. A tight same-day rail → separately ticketed international flight should be penalized more heavily.
+
+The HSR corridor, route time and current fare level are verified transport-edge evidence; the exact October target-date train/seat still requires final live revalidation when that date can be searched. Therefore this is the best current mixed-routing candidate, **not yet a fully final-verified October rail booking**.
 
 Sources:
 - https://chinarailguide.com/routes/shanghai-to-hangzhou/
@@ -77,7 +85,7 @@ Nanjing is also a valid transport-edge candidate, but it loses to Hangzhou in th
 
 Current references show 300+ Shanghai–Nanjing high-speed train pairs, a shortest trip around 59 minutes, and second-class fares from about CNY 104. Using the same gateway logic, the rail component alone costs at least about CNY 208 round trip before station/airport metro.
 
-The complete route therefore lands around **TWD 8.1k** using the same KHH-PVG airfare and required Shanghai transfer model, while adding more cost and at least comparable transport friction. It is a valid expansion but currently dominated by Hangzhou.
+The complete route therefore lands around **TWD 8.1k** using the same KHH-PVG airfare and required Shanghai transfer model, while adding more cost and at least comparable transport friction. Ground-adjusted usable time is roughly in the same ~203h class as Hangzhou but with a higher transport bill; exact target-date rail still needs final live revalidation. Nanjing is therefore a valid expansion but currently dominated by Hangzhou.
 
 Source:
 - https://www.travelchinaguide.com/china-trains/high-speed/shanghai-nanjing.htm
@@ -90,7 +98,7 @@ Current Trip.com route evidence shows Shanghai–Wuhan nonstop flights around 1h
 
 Even before those missing required components, combining that route-floor domestic return with the KHH-PVG gateway airfare pushes the airfare-only combination above TWD 10.6k. It also adds materially more required transport time and a separately ticketed connection surface than Hangzhou HSR.
 
-Because the public result did not establish the exact `2026-10-02 → 2026-10-11` domestic component, this remains **exploratory**, not a verified finalist.
+Because the public result did not establish the exact `2026-10-02 → 2026-10-11` domestic component or enough target-date transfer detail to normalize usable time, both current exact complete cost and usable time remain **unknown**. This branch is exploratory, not a verified finalist.
 
 Source:
 - https://www.trip.com/flights/shanghai-to-wuhan/airfares-sha-wuh/
@@ -101,7 +109,7 @@ Nanjing can structurally serve as an open-jaw exit, but the current target-date 
 
 Public route evidence exposed NKG-KHH one-way floors around TWD 4,761–5,318 on other dates, but did not establish an exact current `2026-10-11` NKG-KHH one-way fare. It would be invalid to divide a round-trip fare by two or reuse an unrelated-date headline as the exit component.
 
-Result: **exploratory / final revalidation failed**. The routing topology survives; the price does not.
+Result: **exploratory / final revalidation failed**. Complete effective cost and usable time remain unknown because the essential target-date exit component is unresolved. The routing topology survives; the price does not.
 
 Source:
 - https://www.expedia.com.tw/en/lp/flights/nkg/khh/nanjing-to-kaohsiung?flightType=ONE_WAY
@@ -121,7 +129,7 @@ Current Taiwan fare evidence shows KHH-KNH round-trip floors around **TWD 4,522*
 
 So the KHH→KNH positioning airfare plus only the outbound ferry/fee is already about TWD 5.3k before the return ferry, airport-port transfers, exact target-date sailing match, and mainland onward transport are normalized.
 
-Kinmen remains a potentially valuable **Xiamen/Quanzhou gateway**, especially when mainland direct air is expensive, but this pass did not establish a complete target-date end-to-end candidate that beats the PVG/Hangzhou branch. It is therefore attempted but exploratory, not a verified finalist.
+Kinmen remains a potentially valuable **Xiamen/Quanzhou gateway**, especially when mainland direct air is expensive, but this pass did not establish a complete target-date end-to-end candidate that beats the PVG/Hangzhou branch. Complete effective cost and usable time therefore remain unknown; it is attempted but exploratory, not a verified finalist.
 
 Sources:
 - https://www.expedia.com.tw/en/lp/flights/khh/knh/kaohsiung-to-kinmen-island?flightType=ONE_WAY
@@ -138,28 +146,28 @@ The current Matsu National Scenic Area page confirms the active topology and ope
 - Huangqi service shown as year-round;
 - ticketing/check-in must be completed before sailing and current operation must still be checked.
 
-This run did not establish a defensible exact Taiwan→MFK/LZN positioning fare plus target-date ferry/return combination inside the radar horizon. The Matsu branch is therefore **attempted but incomplete/exploratory**; no complete effective cost is invented.
+This run did not establish a defensible exact Taiwan→MFK/LZN positioning fare plus target-date ferry/return combination inside the radar horizon. Complete effective cost and usable time remain unknown. The Matsu branch is therefore **attempted but incomplete/exploratory**; no missing component is invented.
 
 Source:
 - https://www.matsu-nsa.gov.tw/zh-TW/transport/mini-three-links
 
 ## Live comparison
 
-| Pattern | Current complete effective transport | Extra required transport vs Shanghai-only | Verification result | Run decision |
-|---|---:|---:|---|---|
-| KHH-PVG same-city round trip | ~TWD 7,054 | benchmark | current exact air + current transfer reference | cheapest complete benchmark |
-| PVG gateway + Hangzhou HSR + PVG return | ~TWD 7,795 | ~4–5h | exact gateway air + verified rail/transfer edge | **best verified mixed expansion** |
-| PVG gateway + Nanjing HSR + PVG return | ~TWD 8.1k | higher than Hangzhou | exact gateway air + verified rail/transfer edge | valid but dominated by Hangzhou |
-| PVG gateway + Wuhan domestic flight | >TWD 10.6k airfare-only before missing transfers | materially higher | exact target-date domestic component missing | exploratory only |
-| PVG → Nanjing → KHH open-jaw | unknown | unknown | exact target-date NKG-KHH exit missing | exploratory only |
-| KHH → KNH → Xiamen/Quanzhou | unknown complete total | high gateway friction | current positioning/ferry topology, incomplete target-date end-to-end | exploratory only |
-| Matsu → Fuzhou | unknown | unknown | topology/schedule evidence, Taiwan positioning incomplete | exploratory only |
+| Pattern | Current complete effective transport | Ground-adjusted usable span | Extra required transport vs Shanghai-only | Transfer risk | Current exact revalidation | Run decision |
+|---|---:|---:|---:|---|---|---|
+| KHH-PVG same-city round trip | ~TWD 7,054 | ~208h20m | benchmark | low | exact 10/02→10/11 air + current transfer reference | cheapest complete benchmark |
+| PVG gateway + Hangzhou HSR + PVG return | ~TWD 7,795 | ~203–204h | ~4–5h | low–moderate with buffer | exact gateway air; route-level rail/transfer edge current, target-date rail final check pending | **best normalized mixed expansion** |
+| PVG gateway + Nanjing HSR + PVG return | ~TWD 8.1k | ~203h class | comparable/slightly higher | low–moderate with buffer | exact gateway air; route-level rail edge current, target-date rail final check pending | valid but dominated by Hangzhou |
+| PVG gateway + Wuhan domestic flight | >TWD 10.6k airfare-only before missing transfers | unknown | materially higher | moderate separate-ticket | exact target-date domestic component missing | exploratory only |
+| PVG → Nanjing → KHH open-jaw | unknown | unknown | unknown | unknown until exit fixed | exact target-date NKG-KHH exit missing | exploratory only |
+| KHH → KNH → Xiamen/Quanzhou | unknown complete total | unknown | high gateway friction | medium ferry/separate-ticket | current positioning/ferry topology, incomplete target-date end-to-end | exploratory only |
+| Matsu → Fuzhou | unknown | unknown | unknown | ferry-dependent | topology/schedule evidence, Taiwan positioning incomplete | exploratory only |
 
 ## Result
 
 1. The old KHH-PVG ~TWD 4,755 seed is **not current**; keep it only as prior benchmark provenance, without synthetic history backfill.
 2. The best current exact KHH-PVG pair found is around **TWD 6,987 for 9 nights**, which directly proves that `return_windows.max_nights` cannot be a hard rejection gate.
-3. **PVG should be treated as a gateway.** Hangzhou HSR is the clearest current mixed expansion: roughly TWD 7.8k effective required transport, only ~TWD 740 above the Shanghai-only benchmark.
+3. **PVG should be treated as a gateway.** Hangzhou HSR is the clearest current mixed expansion: roughly TWD 7.8k effective required transport, ~203–204h ground-adjusted usable span, and only ~TWD 740 above the Shanghai-only benchmark. Exact October rail availability still requires final target-date revalidation.
 4. Domestic-flight and open-jaw branches remain eligible search patterns, but this run correctly stops when exact target-date components fail revalidation.
 5. Kinmen and Matsu were attempted for China-mode coverage; neither is silently omitted or promoted from partial cost.
 
