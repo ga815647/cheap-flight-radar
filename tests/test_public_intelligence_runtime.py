@@ -7,6 +7,7 @@ import yaml
 from cheap_flight_radar.fixed_watch_runner import browser_required
 from cheap_flight_radar.public_intelligence import (
     DiscoverySighting,
+    FixedWatch,
     FixedWatchAttempt,
     campaign_identity,
     dedupe_campaign_sightings,
@@ -43,7 +44,7 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
     def test_registry_and_orchestration_contract(self):
         self.assertEqual(
             {watch.id for watch in self.watches},
-            {"tigerair_tw_official", "china_airlines_official", "ptt_japan_travel_info"},
+            {"china_airlines_official", "ptt_japan_travel_info"},
         )
         policy = load_policy(POLICY_PATH)
         validate_orchestration_policy(policy)
@@ -51,37 +52,45 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         self.assertEqual(orchestration["primary_scheduler"], "chatgpt_scheduled_radar_run")
         self.assertFalse(orchestration["independent_github_cron"])
         self.assertIn("freshness_reuse_window", orchestration["cadence_semantics"])
-        self.assertEqual(self.by_id["tigerair_tw_official"].acquisition, "headless")
         self.assertEqual(self.by_id["china_airlines_official"].acquisition, "direct_http")
         self.assertEqual(self.by_id["ptt_japan_travel_info"].acquisition, "direct_http")
 
-    def test_browser_is_required_only_for_headless_subset(self):
-        self.assertTrue(browser_required((self.by_id["tigerair_tw_official"],)))
-        self.assertFalse(browser_required((self.by_id["china_airlines_official"], self.by_id["ptt_japan_travel_info"])))
+    def test_browser_fallback_is_opt_in_not_required_by_current_registry(self):
+        self.assertFalse(browser_required(self.watches))
+        future_headless = FixedWatch(
+            id="future_js_source",
+            markets=("world",),
+            source_type="official_airline",
+            acquisition="headless",
+            entry_url="https://example.test/",
+            cadence_hours=6,
+            coverage_claim="source_attempt_only",
+        )
+        self.assertTrue(browser_required((future_headless,)))
 
     def test_no_success_is_due(self):
         plan = {entry.source_id: entry for entry in plan_fixed_watches(self.watches, (), self.now)}
         self.assertTrue(all(entry.due for entry in plan.values()))
-        self.assertEqual(plan["tigerair_tw_official"].reason, "no_successful_attempt")
+        self.assertEqual(plan["ptt_japan_travel_info"].reason, "no_successful_attempt")
 
     def test_fresh_success_can_be_reused_and_boundary_is_due(self):
-        tiger = self.by_id["tigerair_tw_official"]
-        fresh = self.attempt(tiger.id, "success", 2, "tiger-fresh")
-        entry = next(item for item in plan_fixed_watches((tiger,), (fresh,), self.now) if item.source_id == tiger.id)
+        ptt = self.by_id["ptt_japan_travel_info"]
+        fresh = self.attempt(ptt.id, "success", 2, "ptt-fresh")
+        entry = plan_fixed_watches((ptt,), (fresh,), self.now)[0]
         self.assertFalse(entry.due)
-        self.assertEqual(entry.latest_success_attempt_id, "tiger-fresh")
+        self.assertEqual(entry.latest_success_attempt_id, "ptt-fresh")
         self.assertEqual(entry.reason, "fresh_prior_success")
 
-        boundary = self.attempt(tiger.id, "success", 3, "tiger-boundary")
-        entry = plan_fixed_watches((tiger,), (boundary,), self.now)[0]
+        boundary = self.attempt(ptt.id, "success", 3, "ptt-boundary")
+        entry = plan_fixed_watches((ptt,), (boundary,), self.now)[0]
         self.assertTrue(entry.due)
         self.assertEqual(entry.reason, "cadence_expired")
 
     def test_failed_attempt_does_not_refresh_due_clock(self):
-        tiger = self.by_id["tigerair_tw_official"]
-        expired_success = self.attempt(tiger.id, "success", 4, "old-success")
-        recent_failure = self.attempt(tiger.id, "fetch_failed", 1, "recent-failure")
-        entry = plan_fixed_watches((tiger,), (expired_success, recent_failure), self.now)[0]
+        ptt = self.by_id["ptt_japan_travel_info"]
+        expired_success = self.attempt(ptt.id, "success", 4, "old-success")
+        recent_failure = self.attempt(ptt.id, "fetch_failed", 1, "recent-failure")
+        entry = plan_fixed_watches((ptt,), (expired_success, recent_failure), self.now)[0]
         self.assertTrue(entry.due)
         self.assertEqual(entry.latest_success_attempt_id, "old-success")
 
