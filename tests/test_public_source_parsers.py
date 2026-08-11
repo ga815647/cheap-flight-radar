@@ -28,7 +28,7 @@ class PublicSourceParserTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].source_id, "tigerair_tw_official")
         self.assertIn("促銷", items[0].title)
-        self.assertEqual(items[0].price_text, "1,999")
+        self.assertEqual(items[0].price_text, "NT$1,999")
 
     def test_china_airlines_fixture_extracts_only_promo_signal(self):
         items = self.parse_fixture("china_airlines_official")

@@ -150,11 +150,12 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         self.assertEqual(first, second)
 
     def test_fixed_watch_workflow_has_no_schedule_cron(self):
-        workflow = yaml.safe_load((ROOT / ".github/workflows/fixed-watch-run.yml").read_text(encoding="utf-8"))
+        workflow_path = ROOT / ".github/workflows/fixed-watch-run.yml"
+        text = workflow_path.read_text(encoding="utf-8")
+        workflow = yaml.load(text, Loader=yaml.BaseLoader)
         triggers = workflow["on"]
         self.assertIn("workflow_dispatch", triggers)
         self.assertNotIn("schedule", triggers)
-        text = (ROOT / ".github/workflows/fixed-watch-run.yml").read_text(encoding="utf-8")
         self.assertNotIn("playwright install", text)
 
 
