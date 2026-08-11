@@ -12,6 +12,28 @@ def _unavailable(reason: str, state: str = "unavailable") -> RoutePlan:
     return RoutePlan(entries=(), coverage_state=state, fallback_reason=reason)
 
 
+def _selected_stage_config(
+    request: SearchRequest,
+    selected: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    profile_config = selected.get(request.profile) or {}
+    stage_config = profile_config.get(request.search_stage)
+    if stage_config:
+        return stage_config
+
+    if request.search_stage != "broad_discovery":
+        return None
+
+    shared = (selected.get("shared") or {}).get("broad_discovery")
+    if not shared:
+        return None
+
+    profiles = shared.get("applies_to_profiles") or []
+    if profiles and request.profile not in profiles:
+        return None
+    return shared
+
+
 def build_source_plan(
     request: SearchRequest,
     policy: Mapping[str, Any],
@@ -21,7 +43,7 @@ def build_source_plan(
 
     routing = policy.get("source_routing") or {}
     selected = routing.get("selected_routes") or {}
-    stage_config = ((selected.get(request.profile) or {}).get(request.search_stage))
+    stage_config = _selected_stage_config(request, selected)
     if not stage_config:
         return _unavailable(
             "no production provider selected for this market/stage",
@@ -44,6 +66,20 @@ def build_source_plan(
     provider = stage_config.get("primary_provider")
     if not provider:
         return _unavailable("selected route has no primary provider", state="unconfigured")
+
+    if stage_config.get("execution_mode") == "chatgpt_web_direct":
+        return RoutePlan(
+            entries=(
+                ProviderPlanEntry(
+                    provider=provider,
+                    reason=(
+                        f"selected by SSOT for shared {request.search_stage} via "
+                        "ChatGPT Web"
+                    ),
+                ),
+            ),
+            coverage_state="planned",
+        )
 
     state = provider_states.get(provider)
     if state is None or not state.credential_available:
