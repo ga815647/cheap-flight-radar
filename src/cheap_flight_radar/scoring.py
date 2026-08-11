@@ -26,6 +26,35 @@ def _return_band(one_way_hours: float, bands: Sequence[Mapping[str, object]]) ->
     raise ValueError("return_windows must end with an open-ended band")
 
 
+def departure_lead_time_bucket(
+    days_until_departure: int,
+    price_history_policy: Mapping[str, object],
+) -> str:
+    """Return the configured departure lead-time bucket id.
+
+    Historical fare comparisons should compare like with like. A fare departing
+    next week should not be judged against a 90-day-ahead observation without
+    retaining that lead-time distinction.
+    """
+
+    if days_until_departure < 0:
+        raise ValueError("days_until_departure must be non-negative")
+
+    buckets_obj = price_history_policy["departure_lead_time_buckets_days"]
+    if not isinstance(buckets_obj, Sequence) or not buckets_obj:
+        raise TypeError("departure_lead_time_buckets_days must be a non-empty sequence")
+
+    for bucket in buckets_obj:
+        if not isinstance(bucket, Mapping):
+            raise TypeError("departure lead-time bucket must be a mapping")
+        minimum = int(bucket["min_days"])
+        maximum = int(bucket["max_days"])
+        if minimum <= days_until_departure <= maximum:
+            return str(bucket["id"])
+
+    raise ValueError("days_until_departure is outside configured lead-time buckets")
+
+
 def trip_length_fit(one_way_hours: float, nights: float, policy: Mapping[str, object]) -> float:
     """Return a 0..1 fit score for trip length versus route size.
 
