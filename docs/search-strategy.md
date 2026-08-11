@@ -13,6 +13,13 @@ The central search pattern is:
 5. Benchmark the constructed itinerary against a conventional round trip.
 6. Rank only complete itineraries whose important components can be verified.
 
+Price discovery must answer two different timing questions in parallel:
+
+- **near-term floor** — what is cheap among usable trips departing within the next 30 days?
+- **horizon absolute floor** — how low can a usable trip go anywhere in the full rolling 120-day horizon?
+
+A good near-term fare is not automatically the horizon floor, and a far-future absolute low is not automatically useful to someone who wants to leave soon.
+
 ## Why outbound-first
 
 Searching every origin × destination × departure date × return date × trip length × open-jaw pair is too expensive and too noisy for a daily radar.
@@ -59,9 +66,35 @@ For each configured Taiwan origin, broad discovery should use several query shap
 
 The route is shared across World/Japan/Korea/China profiles so the radar does not repeat the same broad scan four times. Candidate records are then handed to the appropriate specialist profile for deeper expansion.
 
+### Two live fare floors, not one coarse target band
+
+Broad discovery must retain both:
+
+1. the cheapest serious **near-term** candidate departing within 30 days; and
+2. the cheapest serious candidate in the complete **rolling 120-day horizon**.
+
+A coarse heuristic such as "Korea around TWD 5k is cheap" is useful only as an early candidate trigger. It is **not a stopping condition**. The floor scan continues after such a hit because a TWD 5k near-term fare may coexist with a TWD 3–4k fare later in the horizon.
+
+The same distinction applies during historical calibration: price observations should be compared within departure lead-time buckets when possible so a last-minute fare is not judged against a long-lead fare as though supply conditions were identical.
+
 Public fare-index observations remain **discovery evidence**. Indexed prices can be stale, prices can change between observations, and metro-area pages can silently substitute airports. Exact airport/date/price must therefore be revalidated before a candidate is described as verified; checkout/bookability remains a separate confidence level.
 
 This best-effort Web route does **not** claim an exhaustive fare matrix. Its purpose is high cheapness recall at low cost. Fixed watches remain coverage/provenance signals and are not expanded merely to imitate a fare matrix. GitHub Actions is not part of this normal direct-Web path unless a later deterministic collector is empirically justified.
+
+### Korea specialist breadth
+
+The Korea specialist must not equate "Korea" with only Seoul and Busan.
+
+For floor discovery it should actively probe current/relevant Korean airports exposed by public fare indexes and route evidence. Initial non-exhaustive seeds are:
+
+- `ICN` — Incheon,
+- `GMP` — Gimpo,
+- `PUS` — Busan/Gimhae,
+- `CJU` — Jeju,
+- `TAE` — Daegu,
+- `CJJ` — Cheongju.
+
+This list is deliberately a **seed list, not a permanent route whitelist**. If another Korean airport develops a relevant Taiwan fare signal inside the horizon, it remains eligible. The goal is to prevent hotspot bias while avoiding an artificial fixed fare matrix.
 
 ### Origin coverage gate
 
@@ -147,16 +180,21 @@ Do not collapse all user value into one opaque rank.
 
 Always preserve at least:
 
-- Absolute Cheapest — minimum effective total transport cost.
+- Near-Term Cheapest — minimum effective total transport cost for usable trips departing within 30 days.
+- Absolute Cheapest — minimum effective total transport cost anywhere in the current rolling 120-day horizon.
 - Best Value — composite price/time/trip-fit result.
 - Best Short Break — strong cheap trip with low required usable days.
 - Unusual Long-Haul Deal — long route that is abnormally cheap and has adequate trip length.
+
+Historical anomaly evidence is reported alongside these live-price views rather than replacing them. A current horizon floor can be historically ordinary, and a historically exceptional fare can still lose the pure absolute-price view to a cheaper unrelated route.
 
 ## Search horizon
 
 Default: rolling 120 days.
 
 The horizon should move forward each run. Historical observations are retained separately and do not extend the current live search horizon.
+
+The near-term price view is the first 30 days of that same horizon; it is not a second independent scheduler or scan. Historical comparisons should use the configured departure lead-time buckets (`0–14`, `15–30`, `31–60`, `61–120`) when enough evidence exists.
 
 ## Weekdays
 
