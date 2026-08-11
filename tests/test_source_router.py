@@ -29,7 +29,45 @@ class SourceRouterTests(unittest.TestCase):
         values.update(overrides)
         return SearchRequest(**values)
 
-    def test_ssot_selects_only_current_china_deep_slice(self):
+    def test_ssot_selects_shared_broad_discovery_before_promo_only_sources(self):
+        routing = self.policy["source_routing"]
+        broad = routing["selected_routes"]["shared"]["broad_discovery"]
+        self.assertEqual(broad["primary_provider"], "chatgpt_web_public_fare_index")
+        self.assertEqual(broad["execution_mode"], "chatgpt_web_direct")
+        self.assertEqual(
+            broad["applies_to_profiles"], ["world", "japan", "korea", "china"]
+        )
+        self.assertEqual(
+            broad["source_class_order"][0],
+            "public_ota_or_metasearch_route_fare_index",
+        )
+        self.assertIn("official_lcc_promotion_or_event", broad["source_class_order"])
+        self.assertTrue(broad["revalidation_required"])
+        self.assertFalse(broad["full_market_coverage_claim"])
+
+    def test_broad_discovery_plans_direct_chatgpt_web_for_all_profiles(self):
+        for profile in ("world", "japan", "korea", "china"):
+            with self.subTest(profile=profile):
+                plan = build_source_plan(
+                    self.request(
+                        profile=profile,
+                        search_stage="broad_discovery",
+                        origin="TPE",
+                        destination="PUS",
+                        outbound_date="2026-09-21",
+                        return_date=None,
+                    ),
+                    self.policy,
+                    {},
+                )
+                self.assertEqual(plan.coverage_state, "planned")
+                self.assertEqual(
+                    [entry.provider for entry in plan.entries],
+                    ["chatgpt_web_public_fare_index"],
+                )
+                self.assertIn("ChatGPT Web", plan.entries[0].reason)
+
+    def test_ssot_keeps_china_deep_slice_on_flyai(self):
         routing = self.policy["source_routing"]
         deep = routing["selected_routes"]["china"]["deep_search"]
         self.assertEqual(deep["primary_provider"], "flyai")
@@ -79,9 +117,9 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(plan.coverage_state, "unsupported")
         self.assertEqual(plan.entries, ())
 
-    def test_other_market_stage_remains_unconfigured(self):
+    def test_unconfigured_deep_market_stage_remains_explicit(self):
         plan = build_source_plan(
-            self.request(profile="world", search_stage="broad_discovery"),
+            self.request(profile="world", search_stage="deep_search"),
             self.policy,
             {"flyai": ProviderState("flyai", credential_available=True, healthy=True)},
         )
