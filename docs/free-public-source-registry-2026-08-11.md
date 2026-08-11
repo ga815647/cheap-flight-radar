@@ -1,284 +1,184 @@
 # Free public Web/social airfare intelligence research — 2026-08-11
 
-Status: evidence-backed registry checkpoint for Issue #10. This document explains the `public_intelligence` policy now recorded in `flight-radar.yaml`; it does **not** define a final crawler/selector matrix.
+Status: evidence-backed **v1** registry checkpoint for Issue #10. `flight-radar.yaml` is the machine SSOT; this document records the research rationale and live acquisition evidence.
 
 Observation window: 2026-08-11, Asia/Taipei.
 
-## 1. Research question
+## 1. Role model
 
-The daily radar needs a small set of public sources that are intentionally monitored and therefore count toward run coverage, while still allowing broad open-Web/social intelligence without pretending that opportunistic search is complete.
+- `fixed_watch`: deterministic public discovery source required when its latest successful attempt is older than its declared `cadence_hours`; a due source that is unavailable/blocked/fetch-failed/parse-failed reduces fixed-watch coverage.
+- `opportunistic`: ChatGPT/open-Web/public-social/news/forum discovery. Useful sightings are retained, but inability to query a particular opportunistic source does not make fixed coverage incomplete.
+- `verification_only`: airline/OTA/metasearch exact-itinerary surfaces used after a serious candidate exists.
 
-The roles are deliberately separate:
+A fixed-watch success proves only that the declared source contract was successfully read. It does not claim exhaustive airline, market, airport, or fare coverage.
 
-- `fixed_watch`: required on its declared cadence; an unavailable/blocked/fetch/parse failure is a coverage failure for that source.
-- `opportunistic`: Google/Web, public indexed social posts, forums, news, and other public pages. Any useful signal can seed a candidate, but failure to query a particular source is not a coverage failure.
-- `verification_only`: airline/OTA/metasearch exact-itinerary surfaces used only after a serious candidate exists.
+## 2. Scheduler and cadence correction
 
-A fixed-watch source proves only that **that source was attempted**, not that a market, airline set, airport, or fare universe is exhaustive.
+Cheap Flight Radar is orchestrated by a **ChatGPT scheduled radar run**. GitHub Actions is an on-demand deterministic execution/crawler/Gate backend, not the primary scheduler.
 
-## 2. Method and scoring
+`cadence_hours` means the maximum reusable age of the latest **successful** fixed-watch attempt:
 
-Candidates were evaluated on live public evidence plus unattended GitHub Actions probes. No CAPTCHA bypass, login circumvention, cookie harvesting, residential proxying, fingerprint spoofing, or other anti-bot evasion was used. The earlier FlyAI/SearchAPI fixed-basket work was not repeated.
+- no successful prior attempt: due now;
+- successful attempt younger than cadence: ChatGPT may reference that attempt id instead of rerunning it;
+- successful attempt at/older than cadence: due now;
+- failed attempts never refresh freshness.
 
-Qualitative 0–5 dimensions:
+There is no independent Actions cron in v1.
 
-- `signal_yield`: frequency and usefulness of genuinely cheap-fare/promotion signals;
-- `freshness`: observed update cadence and recency;
-- `taiwan_relevance`: Taiwan-origin usefulness, with exact TPE/TSA/RMQ/KHH evidence retained rather than a generic `Taipei` label;
-- `detail`: route/date/price/tax/baggage/fare detail available in the discovery item;
-- `public_access`: access without account or login bypass;
-- `actions_feasibility`: observed GitHub-hosted-runner HTTP/headless usability;
-- `parser_stability`: structural/static-page stability inferred from the accessible surface;
-- `anti_bot_risk`: 0 is low risk; 5 is high risk;
-- `duplicate_risk`: 0 is mostly unique; 5 is commonly repeated elsewhere.
+## 3. Acquisition research and safety boundary
 
-A source is not promoted to `fixed_watch` merely because its content is valuable. The unattended acquisition path must also be sufficiently stable, and it must add incremental value after dedupe.
+Candidates were evaluated with ordinary public HTTP, stock browser rendering, and public Web search. No CAPTCHA bypass, stealth/fingerprint spoofing, proxy rotation, residential IP, login circumvention, or similar anti-bot evasion was used or permitted.
 
-## 3. GitHub Actions feasibility evidence
+Earlier source-feasibility probes showed:
 
-Two temporary research workflows were run on the branch and then removed. The workflow runs remain durable GitHub evidence.
+- China Airlines homepage: ordinary HTTP 200 and rich public HTML;
+- PTT Japan_Travel: ordinary HTTP 200 and stable static board HTML;
+- Tigerair current homepage: HTTP 200 but a very small/current app shell rather than a stable promotion DOM;
+- Peach: stock headless could render expected public content, but incremental fixed-watch yield was not established;
+- T'way/Jeju/EVA: datacenter HTTP/headless probes did not establish stable public content contracts;
+- public Facebook editor pages: useful signals exist in indexed public Web results, but challenge/login markers make them inappropriate for required unattended coverage;
+- Secret Flying/Fly4free: challenge responses and low Taiwan-outbound incremental yield keep them opportunistic.
 
-### 3.1 Direct HTTP probe
+The focused crawler-runtime spike is documented separately in `docs/crawler-runtime-spike-2026-08-11.md`.
 
-Run: `31469129828` on GitHub-hosted Ubuntu 24.04.
+## 4. Live fixed-source integration evidence
 
-Observed results:
+### Run `31473460091`
 
-| Source endpoint | Result | Interpretation |
-|---|---:|---|
-| China Airlines home | HTTP 200, ~1.07 MB | direct HTTP viable; login text was normal page navigation, not a wall |
-| Tigerair Taiwan home | HTTP 200, ~7.7 KB | direct HTTP viable |
-| PTT Japan_Travel board | HTTP 200, ~23.7 KB | direct static HTML viable |
-| CheapFlyTW | HTTP 200, ~120.7 KB, ~8.8 s | viable but relatively slow |
-| Jeju Air events | HTTP 403 | not direct-HTTP fixed-watch material in this probe |
-| T'way events | HTTP 403 | not direct-HTTP fixed-watch material in this probe |
-| EVA Air news | HTTP 403 | not direct-HTTP fixed-watch material in this probe |
-| Peach home | curl rc 92 / HTTP/2 stream error | transport failure, not CAPTCHA evidence; required browser follow-up |
-| Secret Flying Taiwan | HTTP 403 + challenge marker | high anti-bot risk; do not promote |
-| Fly4free Taiwan | HTTP 403 + challenge marker | high anti-bot risk; do not promote |
-| TaiwanAirTkt Facebook page | HTTP 200 but challenge + login markers | public/indexable content does not equal a stable unattended page collector |
+A one-shot GitHub-hosted Ubuntu integration probe used the new Scrapy runner against the original three fixed candidates:
 
-### 3.2 Stock Chrome headless probe
+- **China Airlines**: HTTP 200 and parser success, but the first parser was overly broad. It was subsequently restricted to real event pages and route-price cards.
+- **PTT Japan_Travel**: HTTP 200 and parser success; there were zero matching `[資訊]` airfare/sale posts in that snapshot. Zero observations is valid success when the board contract is intact.
+- **Tigerair Taiwan**: HTTP 200 but no stable public promotion-anchor contract, therefore `parse_failed` rather than false success.
 
-Run: `31469243375` on a GitHub-hosted Ubuntu 24.04 runner using stock `google-chrome --headless=new --dump-dom` only.
+### Run `31473909367`
 
-Observed results:
+The corrected probe used exact source head `86d3bf3e9c3e93ae32a9a8a1cbba5d5475181f12` and vanilla `scrapy-playwright` only for Tigerair:
 
-| Source | Headless result | Decision impact |
-|---|---|---|
-| Peach | rc 0, ~185 KB, content marker present, no challenge/login marker | technically automatable with headless, but incremental value/redirect stability still does not justify required fixed-watch status yet |
-| Jeju Air events | rc 0 but only ~3 KB, expected content marker absent, login text present | not promoted |
-| T'way events | rc 0 but only ~317 B, expected content marker absent | not promoted |
-| EVA Air news | rc 0 but only ~318 B, expected content marker absent | not promoted |
-| TaiwanAirTkt Facebook | rc 0, page marker present, but challenge + login markers present | opportunistic public-indexed intelligence only; no scraping workaround |
+- **China Airlines**: HTTP 200, narrowed parser succeeded, 8 normalized observations in the live snapshot.
+- **PTT Japan_Travel**: HTTP 200, parser succeeded, zero matching current airfare signals.
+- **Tigerair Taiwan**: ordinary Playwright still returned HTTP 200 but did not expose a stable promotion-anchor parser contract; the attempt correctly remained `parse_failed`.
 
-Important: a browser process returning exit code 0 is not treated as successful source coverage if expected public content is absent.
+Public Web discovery at the same checkpoint could find official Tigerair news and `static.tigerairtw.com` campaign/event pages. Therefore Tigerair remains a valuable signal source, but its current homepage is not a reliable deterministic coverage contract.
 
-## 4. Evidence-backed source scorecard
+## 5. v1 source scorecard
 
-Scores are qualitative and role-specific; they are not a universal ranking of websites.
+Scores are qualitative (0–5) and role-specific.
 
-| Source | Signal | Fresh | TW relevance | Detail | Public | Actions | Parser | Anti-bot | Duplicate | Role |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Tigerair Taiwan official | 4 | 5 | 5 | 4 | 5 | 5 | 4 | 1 | 3 | **fixed_watch** |
-| China Airlines official | 4 | 5 | 5 | 4 | 5 | 5 | 4 | 1 | 4 | **fixed_watch** |
-| PTT Japan_Travel `[資訊]` | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 1 | 4 | **fixed_watch (Japan)** |
-| TaiwanAirTkt public Facebook/editor posts | 5 | 5 | 5 | 5 | 3 | 1 | 1 | 5 | 5 | opportunistic |
-| T'way official events | 4 | 5 | 5 | 4 | 5 in normal Web | 1 | 3 | 3 | 3 | opportunistic pending stable acquisition |
-| Jeju Air official events | 4 | 5 | 4 | 4 | 5 in normal Web | 1 | 3 | 3 | 3 | opportunistic pending stable acquisition |
-| Peach official promotions | 4 | 4 | 4 | 5 | 5 | 4 headless | 2 | 2 | 4 | opportunistic; fixed-watch candidate only if incremental yield is measured |
-| EVA Air official promotions/news | 3 | 4 | 5 | 4 | 5 in normal Web | 1 | 3 | 3 | 4 | opportunistic |
-| CheapFlyTW | 2 | 2 | 3 | 4 | 5 | 4 | 4 | 1 | 4 | opportunistic, low frequency |
-| Secret Flying Taiwan | 1 for current Taiwan-outbound | 2 | 2 | 4 | 4 normal Web | 1 | 3 | 5 | 3 | opportunistic, low priority |
-| Fly4free Taiwan | 2 for Taiwan-outbound | 3 | 2 | 4 | 4 normal Web | 1 | 3 | 5 | 3 | opportunistic, low priority |
-| Airline/OTA/metasearch exact-fare pages | n/a discovery | high when queried | exact candidate | potentially 5 | varies | varies | varies | varies | n/a | **verification_only** |
+| Source | Signal | Fresh | TW relevance | Detail | Public | Deterministic Actions | Parser stability | Anti-bot risk | Role |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| China Airlines official | 4 | 5 | 5 | 4 | 5 | 5 | 4 | 1 | **fixed_watch** |
+| PTT Japan_Travel `[資訊]` | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 1 | **fixed_watch (Japan)** |
+| Tigerair Taiwan official | 4 | 5 | 5 | 4 | 5 | 1 for current homepage contract | 1 | 1 | **opportunistic** official Web/news/static events |
+| TaiwanAirTkt public/editor posts | 5 | 5 | 5 | 5 | 3 | 1 | 1 | 5 | opportunistic |
+| Peach official promotions | 4 | 4 | 4 | 5 | 5 | 4 headless | 2 | 2 | opportunistic; possible future fixed candidate if unique yield is measured |
+| T'way official events | 4 | 5 | 5 | 4 | 5 normal Web | 1 | 3 | 3 | opportunistic |
+| Jeju Air official events | 4 | 5 | 4 | 4 | 5 normal Web | 1 | 3 | 3 | opportunistic |
+| EVA Air promotions/news | 3 | 4 | 5 | 4 | 5 normal Web | 1 | 3 | 3 | opportunistic |
+| CheapFlyTW | 2 | 2 | 3 | 4 | 5 | 4 | 4 | 1 | opportunistic, low frequency |
+| Secret Flying / Fly4free Taiwan | 1–2 | 2–3 | 2 | 4 | 4 normal Web | 1 | 3 | 5 | opportunistic, low priority |
+| Airline/OTA/metasearch exact fare pages | n/a discovery | high when queried | exact candidate | potentially 5 | varies | varies | varies | varies | **verification_only** |
 
-### Why the three fixed watches are enough for v0
+The fixed registry is deliberately small. A valuable source is not fixed unless its unattended public acquisition contract is stable enough that failure means something useful about coverage.
 
-The registry intentionally stays small:
+## 6. v1 fixed-watch registry
 
-1. **Tigerair Taiwan official** gives a high-frequency Taiwan LCC first-party signal and has a clean direct-HTTP path.
-2. **China Airlines official** gives a stable FSC first-party signal across Japan/Korea/China/World and visibly publishes time-limited offers and exact Taiwan-origin route fare cards.
-3. **PTT Japan_Travel `[資訊]`** is a static, automation-friendly multi-carrier Japan specialist source. Recent 2026 posts captured Taiwan-origin Scoot and Jetstar promotions with exact fare semantics, date windows and explicit discrepancies between advertisement and current booking-system prices.
+### `china_airlines_official`
 
-Adding every airline or editor would increase failure surface and duplication without proving proportional discovery gain. In particular, T'way/Jeju/EVA were not promoted after datacenter HTTP/headless probes failed to expose their normal public content, Facebook was not promoted despite excellent signal quality because challenge/login markers remain present, and Peach was not promoted merely because stock headless worked: Japan_Travel already captures many Peach/Jetstar/Scoot/Tigerair sale signals and the incremental fixed-watch yield has not yet been measured.
+- markets: Japan, Korea, China, World;
+- cadence/freshness threshold: 6 hours;
+- acquisition: direct HTTP via Scrapy;
+- role: first-party FSC promotion / route-price signal;
+- exact Taiwan airport identity is retained when explicit; no generic `Taipei` inference.
 
-## 5. Market × source-role strategy
+### `ptt_japan_travel_info`
+
+- market: Japan;
+- cadence/freshness threshold: 3 hours;
+- acquisition: direct HTTP via Scrapy;
+- parser contract: public `.r-ent` board rows, only `[資訊]`/`［資訊］` posts with airfare/sale signal text;
+- role: multi-carrier Japan specialist signal, including LCC information.
+
+### Tigerair correction
+
+`tigerair_tw_official` is **not** a v1 fixed watch. The fixed candidate was demoted after both direct HTTP and ordinary Playwright produced HTTP 200 without a stable promotion DOM contract on GitHub-hosted Ubuntu.
+
+Preferred Tigerair discovery is now opportunistic public Web search over official news and official static event pages. These sightings retain official provenance but do not repair fixed-watch coverage.
+
+## 7. Market × role strategy
 
 ### Japan
 
-**Fixed watch**
+Fixed: PTT Japan_Travel (3h), China Airlines (6h).
 
-- PTT Japan_Travel `[資訊]` airfare/sale posts — 3-hour cadence.
-- Tigerair Taiwan official — 3-hour cadence.
-- China Airlines official — 6-hour cadence.
+Opportunistic: Tigerair official news/static campaigns, public airfare editors/social search, Peach/Jetstar/Scoot/AirAsia and other public airline promotion pages, open Web/news/forums.
 
-**Opportunistic**
-
-- public Google/Web discovery;
-- Taiwan airfare editors/public Facebook posts when indexable without bypass;
-- Peach, Jetstar, Scoot, AirAsia and other airline promotion pages discovered through the open Web;
-- other public travel forums/news.
-
-**Verification only**
-
-- exact airline booking/fare page;
-- exact OTA/metasearch itinerary page when useful.
+Verification: exact airline/OTA/metasearch candidate surfaces.
 
 ### Korea
 
-**Fixed watch**
+Fixed: China Airlines (6h).
 
-- Tigerair Taiwan official — 3-hour cadence.
-- China Airlines official — 6-hour cadence.
+Opportunistic: Tigerair official Web discovery, T'way, Jeju Air, public social/editor/Web/news sources. This intentionally does not claim exhaustive Korea LCC coverage.
 
-This is intentionally narrow and does **not** claim exhaustive Korea LCC coverage.
-
-**Opportunistic**
-
-- T'way and Jeju Air official events through ordinary public Web discovery while the unattended paths remain unstable;
-- public social editors, Google/Web, news/forums;
-- other Korea-airline promotion pages.
-
-**Verification only**
-
-- airline/OTA exact itinerary surface; Naver/other comparison surfaces remain candidate-triggered benchmark evidence rather than fixed coverage.
+Verification: exact airline/OTA/metasearch candidate surfaces.
 
 ### China
 
-**Fixed watch**
+Fixed: China Airlines (6h) for first-party Taiwan-origin promotions when present.
 
-- China Airlines official — 6-hour cadence for first-party Taiwan-origin China promotions when published.
+Opportunistic: public airline announcements, social/editor/Web/news sources. China deep-search provider routing remains a separate coverage domain.
 
-No China-local public promo site was promoted merely to make the registry look symmetric. Fixed public intelligence coverage is intentionally narrow; separate provider routing already handles China deep search and must retain its own coverage semantics.
+Verification: exact carrier/OTA fare surfaces.
 
-**Opportunistic**
+### World / other
 
-- public social/editor signals;
-- China Eastern/Air China/Xiamen/other airline public announcements when discoverable;
-- Web/news/forums.
+Fixed: China Airlines (6h).
 
-**Verification only**
+Opportunistic: Tigerair official Web/news/static campaigns, public editors/social, airline promotion pages, CheapFlyTW, and lower-priority Secret Flying/Fly4free signals.
 
-- exact carrier/OTA fare pages. A promotional announcement is not revalidation.
+Verification: exact airline/OTA/metasearch candidate surfaces.
 
-### World / other international
+## 8. Taiwan airport integrity
 
-**Fixed watch**
+- Preserve exact TPE/TSA/RMQ/KHH when explicit.
+- `Taipei` or `台北` is not sufficient to infer TPE or TSA.
+- Source-attempt coverage is separate from whether the current observations contain every Taiwan airport.
+- A source's registry presence never authorizes missing-airport inference.
 
-- China Airlines official — 6-hour cadence.
-- Tigerair Taiwan official — 3-hour cadence for its own international network.
+## 9. Provenance and dedupe
 
-**Opportunistic**
+A deal/candidate is distinct from a sighting.
 
-- public editors/social posts and open-Web search;
-- T'way connecting-network promotions;
-- airline news/promotion pages not in the registry;
-- CheapFlyTW as a low-frequency secondary signal;
-- Secret Flying/Fly4free only as low-priority signals because current Taiwan-outbound yield is weak and the Actions probe encountered challenge pages.
+Discovery provenance keeps immutable `first_seen_at` / `first_discovery_source_id`, append-only discovery sightings, and separate deep-search/revalidation/final-cross-check source records.
 
-**Verification only**
-
-- exact airline, OTA, or metasearch candidate surface.
-
-## 6. Taiwan airport integrity
-
-A source's presence in the registry never authorizes airport inference.
-
-- Exact TPE/TSA/RMQ/KHH must be retained when explicit.
-- `Taipei` or `台北` is not sufficient to assert TPE or TSA.
-- If a promotion covers only TPE/KHH, it cannot be credited as RMQ/TSA coverage.
-- Fixed-watch coverage is recorded per source attempt independently of airport availability in the source's current items.
-
-Current source evidence differs materially by airport. For example, China Airlines' current public offers include specific KHH and RMQ Japan deals, T'way's Taiwan-connection promotion exposes KHH/RMQ connections through ICN, while many editor/forum examples are TPE/KHH-heavy. This is a reason to retain exact airport metadata, not a reason to infer missing airport coverage.
-
-## 7. Provenance and dedupe model
-
-The system must distinguish a **deal/candidate** from a **sighting**.
-
-### 7.1 Discovery provenance
-
-For every normalized candidate retain:
-
-- immutable `first_seen_at`;
-- immutable `first_discovery_source_id`;
-- append-only `discovery_sources[]`, each with source id, source URL/post identity, `observed_at`, claimed price/currency, and claim scope when available;
-- separate `deep_search_sources[]`;
-- separate `revalidation_sources[]`;
-- separate `final_cross_check_sources[]`;
-- `last_seen_at` derived from observations, never by overwriting first-seen evidence.
-
-A popular fare being posted by five editors is one candidate with five discovery sightings, not five deals.
-
-### 7.2 Two identity levels
-
-**Campaign identity** is used before an exact itinerary exists:
+Campaign identity before an exact itinerary:
 
 `carrier + sale period + travel period + normalized route set + promo code when known`
 
-**Exact itinerary identity** is used after itinerary construction/deep search:
+Exact itinerary identity after construction:
 
-`trip type + exact origin airport + exact destination airport when known + outbound date/window + return date/window + flight identity when known`
+`trip type + exact origin + exact destination when known + outbound date/window + return date/window + flight identity when known`
 
-Neither identity includes the discovery source. The exact itinerary identity also deliberately excludes price: a TWD 5,999 sighting and a TWD 6,099 re-observation of the same itinerary are separate fare observations attached to the same candidate, not separate trips.
+Source identity is excluded from both identities. Price is excluded from exact-itinerary identity, so reobserved prices append to the same candidate instead of creating duplicate trips.
 
-Baggage/tax/fare-family differences remain on fare observations and must be considered before comparing prices as equivalent.
+Coverage accounting is independent of dedupe: duplicate opportunistic sightings cannot substitute for a failed due fixed watch.
 
-### 7.3 Coverage is not dedupe
+## 10. Runtime implication
 
-Coverage accounting is a separate run-level structure:
+Current fixed watches are direct HTTP and therefore the normal Actions execution installs only Scrapy. The repo keeps a conditional vanilla `scrapy-playwright` fallback interface for a future source only after repeatable public browser retrieval plus a deterministic fixture establish a real parser contract.
 
-- every required fixed source records success/unavailable/blocked/fetch_failed/parse_failed;
-- opportunistic success cannot replace a failed fixed source;
-- duplicate discovery sightings can raise confidence/provenance richness but never repair missing fixed-watch coverage.
+The repository owns registry/due semantics, attempt/run manifests, normalized sightings, parsers/fixtures, provenance/dedupe, and coverage interpretation. Scrapy owns crawling mechanics.
 
-## 8. Verification boundary
+## 11. Durable checkpoint
 
-Official airline promotion pages can be excellent discovery signals but they are not automatically final fare truth. A candidate becomes revalidated only after a candidate-triggered live/exact fare attempt can establish the requested airport/date/flight/price scope. Missing tax, baggage, fare-family or bookability information remains unknown.
+Issue #10 now has both the role model and the minimal execution plumbing:
 
-Dynamic airline route-fare cards, airline booking/search pages, OTA exact-itinerary pages and metasearch exact-itinerary pages therefore stay `verification_only` even when they are publicly readable.
+1. ChatGPT scheduler / GitHub backend boundary is explicit in SSOT;
+2. cadence is successful-attempt freshness, not cron;
+3. crawler runtime reuse spike selected Scrapy;
+4. fixed registry was reduced from three to two after Tigerair live contract failure;
+5. registry loader/due planner, attempt/run manifest, normalized sightings, provenance/dedupe, source fixtures/parsers, and caller-driven Actions execution are implemented;
+6. one-shot live probe workflow was removed after evidence collection.
 
-## 9. Crawler implications
-
-This checkpoint deliberately does **not** write a DOM-selector matrix.
-
-Implementation may now safely standardize:
-
-- registry parsing from SSOT;
-- fixed-watch attempt/coverage manifest semantics;
-- generic normalized public-intelligence observation/provenance structures;
-- dedupe keys and append-only sightings;
-- deterministic fixtures for the three selected source classes.
-
-Before a real live collector is promoted for any fixed source, add a source-specific fixture and demonstrate that failure/blocked/parse-failed states are visible. If a later source requires headless, it must first show repeatable expected-content retrieval on GitHub-hosted runners; a zero browser exit code alone is not enough.
-
-## 10. Evidence URLs sampled
-
-Representative evidence inspected during this research included:
-
-- China Airlines home/offers: `https://www.china-airlines.com/tw/zh/index.html`
-- China Airlines limited-time sale: `https://flights.china-airlines.com/zh-tw/limited-time_seats_sale`
-- Tigerair Taiwan: `https://www.tigerairtw.com/zh-TW/`
-- PTT Japan_Travel: `https://www.ptt.cc/bbs/Japan_Travel/index.html`
-- T'way events: `https://www.twayair.com/app/promotion/event/being`
-- T'way Taiwan connecting promotion: public event page titled `台灣出發，連接全球`
-- Jeju Air events: `https://www.jejuair.net/zh-tw/event/pastEvent.do`
-- Peach: `https://www.flypeach.com/`
-- EVA Air news: `https://www.evaair.com/zh-tw/about-eva-air/news/`
-- CheapFlyTW: `https://cheapfly.gocarry.tw/`
-- Secret Flying Taiwan: `https://www.secretflying.com/cheap-flights-from/taiwan/`
-- Fly4free Taiwan: `https://www.fly4free.com/flight-deals/taiwan/`
-- TaiwanAirTkt public Facebook page: `https://www.facebook.com/TaiwanAirTkt/`
-
-## 11. Durable checkpoint / next implementation package
-
-Issue #10 research is sufficient to standardize the role model and v0 minimal fixed registry. The next package should implement policy plumbing rather than expand the source list:
-
-1. add machine-readable registry loader/validation;
-2. define fixed-watch attempt/run-manifest and normalized discovery-sighting models;
-3. implement campaign/exact-itinerary dedupe with append-only provenance fixtures/tests;
-4. add deterministic collectors/fixtures starting with direct-HTTP sources only;
-5. run Gate and exact-head CI;
-6. only then decide whether Peach adds enough unique Japan yield to justify a headless fixed-watch collector.
-
-Do not promote T'way, Jeju Air, EVA, Facebook, Secret Flying or Fly4free by adding anti-bot workarounds. If their ordinary public acquisition becomes stable later, re-measure incremental signal yield and reconsider the registry.
+The next atomic package should integrate persisted prior-attempt state / artifact retrieval into the ChatGPT-triggered radar-run interface, then connect normalized fixed-watch observations to opportunistic discovery and downstream deep-search/revalidation without creating an independent GitHub schedule.
