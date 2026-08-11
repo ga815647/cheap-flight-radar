@@ -279,11 +279,37 @@ china:
 
 price_history:
   enabled: true
-  retain_observation_timestamp: true
-  retain_source: true
-  retain_currency_and_original_price: true
-  retain_normalized_twd_price: true
-  distinguish_discovery_from_verified_price: true
+  persistence:
+    observation_log_mode: append_only_events
+    baseline_state: derived_from_observation_log_each_run
+    durable_store_owner: chatgpt_orchestrator_supplied
+    github_actions_may_emit_observation_batch: true
+    github_actions_is_not_durable_history_service: true
+    repository_snapshot_required_for_runtime: false
+  backfill:
+    synthetic_backfill: forbidden
+    derive_only_from_observed_evidence: true
+    unknown_when_evidence_absent: true
+  observation_contract:
+    require_radar_run_id: true
+    retain_observation_timestamp: true
+    retain_source: true
+    retain_currency_and_original_price: true
+    retain_normalized_twd_price: true
+    distinguish_discovery_from_verified_price: true
+    require_exact_origin_airport_for_route_baseline: true
+    require_exact_destination_airport_for_route_baseline: true
+    require_departure_date: true
+    baseline_fare_scope: usable_complete_trip
+    availability_states:
+      - available
+      - stale
+      - disappeared
+    current_floor_eligible_state: available
+    historical_baseline_price_state: available
+    stale_or_disappeared_retained_as_provenance: true
+    prior_available_observation_remains_historical_evidence_after_disappearance: true
+    current_live_views_use_current_radar_run_only: true
   departure_lead_time_buckets_days:
     - id: d0_14
       min_days: 0
@@ -299,9 +325,70 @@ price_history:
       max_days: 120
   comparison_dimensions:
     - exact_route_when_available
+    - trip_type
     - departure_lead_time_bucket
     - season_or_month_when_history_sufficient
     - comparable_trip_length
+  baseline:
+    statistic: median
+    moving_windows_days: [7, 30, 90]
+    primary_recent_window_days: 30
+    fallback_window_order_days: [90, 7]
+    minimum_samples_per_window: 3
+    current_observation_excluded_from_own_baseline: true
+    insufficient_samples_action: return_unknown
+    never_impute_missing_window: true
+  rolling_lows:
+    windows_days: [30, 90, 365]
+    include_all_time: true
+    minimum_samples: 1
+    low_alone_does_not_imply_historical_anomaly: true
+  percentile:
+    enabled: true
+    method: empirical_midrank
+    minimum_samples: 10
+    insufficient_samples_action: return_unknown
+  percentage_below_baseline:
+    enabled: true
+    primary_baseline_window: inherit_price_history_baseline_selection
+    formula: (baseline_twd-current_twd)/baseline_twd*100
+    positive_means_current_is_cheaper: true
+    insufficient_baseline_action: return_unknown
+  historical_low_distance:
+    enabled: true
+    amount_formula: current_twd-historical_low_twd
+    percent_formula: (current_twd-historical_low_twd)/historical_low_twd*100
+    insufficient_low_action: return_unknown
+  confidence:
+    basis: comparable_historical_sample_count
+    levels:
+      none:
+        min_samples: 0
+        max_samples: 0
+      sparse:
+        min_samples: 1
+        max_samples: 2
+      low:
+        min_samples: 3
+        max_samples: 9
+      medium:
+        min_samples: 10
+        max_samples: 29
+      high:
+        min_samples: 30
+        max_samples: null
+  anomaly_labeling:
+    historical_floor:
+      rule: current_price_at_or_below_prior_all_time_low
+      minimum_samples: 10
+    unusually_low:
+      calibration_status: uncalibrated
+      action_until_calibrated: expose_metrics_without_label
+    sparse_history_action: insufficient_history
+  stale_disappeared_provenance:
+    retain_events: true
+    exclude_from_current_floor: true
+    never_treat_as_currently_purchasable: true
   sparse_history_action: label_low_confidence_and_do_not_invent_percentile
   anomaly_views:
     - new_route_low
