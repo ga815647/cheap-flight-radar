@@ -290,7 +290,7 @@ public_intelligence:
   status: evidence_backed_registry_v0
   roles:
     fixed_watch:
-      definition: required_public_discovery_source_on_declared_cadence
+      definition: required_public_discovery_source_with_fresh_success_on_declared_cadence
       failure_affects_coverage: true
     opportunistic:
       definition: best_effort_open_web_or_public_social_signal
@@ -298,8 +298,41 @@ public_intelligence:
     verification_only:
       definition: candidate_triggered_airline_ota_or_fare_search_surface
       failure_affects_discovery_coverage: false
+  orchestration:
+    primary_scheduler: chatgpt_scheduled_radar_run
+    github_actions_role: on_demand_deterministic_execution_crawler_and_gate_backend
+    independent_github_cron: false
+    cadence_semantics: freshness_reuse_window_and_due_threshold_not_actions_schedule
+    due_clock_source: latest_successful_fixed_watch_attempt
+    no_successful_attempt_action: due_now
+    expired_success_action: due_now
+    fresh_success_action: may_reference_prior_success_without_new_attempt
+    failed_attempt_refreshes_due_clock: false
+    chatgpt_run_sequence:
+      - load_registry_and_prior_success_state
+      - determine_due_fixed_watches
+      - trigger_required_github_execution
+      - read_normalized_observations_and_attempt_manifest
+      - perform_opportunistic_web_discovery
+      - perform_deep_search_and_revalidation
+      - produce_final_report
+  runtime:
+    selected: scrapy
+    http_runtime: scrapy
+    js_fallback: scrapy_playwright_opt_in_only
+    js_browser_install_only_when_required: true
+    anti_bot_evasion:
+      captcha_bypass: forbidden
+      stealth_fingerprint: forbidden
+      fingerprint_spoofing: forbidden
+      proxy_rotation: forbidden
+      residential_proxy: forbidden
   coverage:
     fixed_watch_attempts_are_coverage_authority: true
+    cadence_is_maximum_age_of_latest_successful_attempt_hours: true
+    fresh_prior_success_within_cadence_may_satisfy_run_coverage: true
+    failed_attempt_never_refreshes_freshness: true
+    referenced_prior_success_must_include_attempt_id: true
     attempt_statuses:
       - success
       - unavailable
