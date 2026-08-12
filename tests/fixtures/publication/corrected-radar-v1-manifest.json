@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "radar_run_id": "corrected-radar-v1-20260812T125139+0800",
+  "run_at": "2026-08-12T12:51:39+08:00",
+  "history_snapshot_path": "data/price-history/2026/08/12/corrected-radar-v1-20260812T125139-0800.json",
+  "sections": {
+    "best_short_break": "kr-tpe-pus-20260920-20260922",
+    "unusual_long_haul_deal": null
+  },
+  "unusual_long_haul_empty_reason": "No exact current unusual long-haul candidate converged in the corrected run.",
+  "markets": {
+    "japan": [
+      "jp-tpe-oka-20260906-20260911"
+    ],
+    "korea": [
+      "kr-tpe-pus-20260920-20260922",
+      "kr-rmq-icn-20260915-20260916",
+      "kr-khh-gmp-20260929-20261015"
+    ],
+    "china": [
+      "cn-khh-pvg-20260930-20261007",
+      "cn-khh-pvg-20260830-20260904"
+    ],
+    "world": [
+      "world-khh-dmk-20260826-20260909",
+      "world-rmq-han-20260918-20260923",
+      "world-tsa-hkg-20260822-20260826"
+    ]
+  },
+  "candidate_details": {
+    "jp-tpe-oka-20260906-20260911": {"return_date": "2026-09-11"},
+    "kr-tpe-pus-20260831-20260910": {"return_date": "2026-09-10"},
+    "kr-tpe-pus-20260920-20260922": {"return_date": "2026-09-22"},
+    "kr-rmq-icn-20260915-20260916": {"return_date": "2026-09-16"},
+    "kr-khh-gmp-20260905-20260908": {"return_date": "2026-09-08"},
+    "kr-khh-gmp-20260929-20261015": {"return_date": "2026-10-15"},
+    "cn-khh-pvg-20260830-20260904": {"return_date": "2026-09-04"},
+    "cn-khh-pvg-20260930-20261007": {"return_date": "2026-10-07"},
+    "world-khh-dmk-20260826-20260909": {"return_date": "2026-09-09"},
+    "world-khh-dmk-20260909-20260913": {"return_date": "2026-09-13"},
+    "world-tsa-hkg-20260822-20260826": {"return_date": "2026-08-26"},
+    "world-rmq-han-20260918-20260923": {"return_date": "2026-09-23"}
+  },
+  "failed_seeds": [
+    {
+      "route": "TPE–OKA",
+      "price": "about TWD 4,575",
+      "reason": "lower indexed/generic-page signal did not converge on the current exact route surface"
+    },
+    {
+      "route": "KHH–GMP",
+      "price": "about TWD 4,865–4,881",
+      "reason": "lower indexed/generic-page signal did not converge on the current exact route surface"
+    },
+    {
+      "route": "TPE–HKG",
+      "price": "about TWD 5,207",
+      "reason": "lower indexed/generic-page signal did not converge on the current exact route surface"
+    }
+  ],
+  "coverage": {
+    "origins": {
+      "TPE": "attempted",
+      "TSA": "attempted",
+      "RMQ": "attempted",
+      "KHH": "attempted"
+    },
+    "fixed_watch": {
+      "status": "incomplete",
+      "sources": [
+        {"id": "china_airlines_official", "state": "due_not_refreshed"},
+        {"id": "ptt_japan_travel_info", "state": "due_not_refreshed"}
+      ]
+    },
+    "china": {
+      "status": "partial",
+      "modes": {
+        "direct_air": "revalidated",
+        "kinmen": "target_date_non_converged",
+        "matsu": "topology_schedule_verified_but_complete_chain_non_converged"
+      }
+    }
+  },
+  "notes": [
+    "Return-window max_nights is not a hard rejection gate; the corrected run retained longer usable trips.",
+    "Mixed-Taiwan-return/open-jaw permutations were attempted but did not close into a cheaper exact complete itinerary.",
+    "KHH–PVG connection details were not reliable enough for usable-stopover credit, so the credit remained zero.",
+    "China rail target-date inventory was outside the 12306 presale window at observation time; China specialist coverage remains partial."
+  ]
+}
