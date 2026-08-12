@@ -11,7 +11,7 @@ permissions:
 jobs:
   live-substrate-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       TRVL_NO_TELEMETRY: "1"
       DO_NOT_TRACK: "1"
@@ -25,7 +25,8 @@ jobs:
       - name: Install fli
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flights
+          # flights 0.9.0 currently omits click from its wheel metadata even though the CLI imports it.
+          python -m pip install flights click
           fli --help | head -n 30
 
       - name: Probe fli known-route and flexible-date surfaces
@@ -54,7 +55,7 @@ jobs:
           probe tpe_nrt_dates fli dates TPE NRT --from 2026-09-01 --to 2026-10-31 --duration 5 --round --currency TWD --country TW --language zh-TW --format json
           exit 0
 
-      - name: Install trvl latest release
+      - name: Install trvl v1.21.4 release
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +65,8 @@ jobs:
             aarch64|arm64) arch=arm64 ;;
             *) echo "unsupported arch: $arch"; exit 1 ;;
           esac
-          curl -fsSL "https://github.com/MikkoParkkola/trvl/releases/latest/download/trvl_linux_${arch}.tar.gz" -o /tmp/trvl.tgz
+          version=1.21.4
+          curl -fsSL "https://github.com/MikkoParkkola/trvl/releases/download/v${version}/trvl_${version}_linux_${arch}.tar.gz" -o /tmp/trvl.tgz
           tar -xzf /tmp/trvl.tgz -C /tmp
           install -m 0755 /tmp/trvl /usr/local/bin/trvl
           trvl version || trvl --version || true
