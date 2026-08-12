@@ -15,7 +15,20 @@ def _unavailable(reason: str, state: str = "unavailable") -> RoutePlan:
     return RoutePlan(entries=(), coverage_state=state, fallback_reason=reason)
 
 
-def _shared_broad_config(
+def _shared_origin_wide_config(
+    profiles: tuple[str, ...],
+    selected: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    shared = (selected.get("shared") or {}).get("origin_wide_discovery")
+    if not shared:
+        return None
+    applies = set(shared.get("applies_to_profiles") or ())
+    if applies and any(profile not in applies for profile in profiles):
+        return None
+    return shared
+
+
+def _shared_known_route_config(
     profiles: tuple[str, ...],
     selected: Mapping[str, Any],
 ) -> Mapping[str, Any] | None:
@@ -37,7 +50,7 @@ def _selected_stage_config(
     if stage_config:
         return stage_config
     if request.search_stage in KNOWN_ROUTE_WEB_STAGES:
-        return _shared_broad_config((request.profile,), selected)
+        return _shared_known_route_config((request.profile,), selected)
     return None
 
 
@@ -48,28 +61,28 @@ def build_source_plan(
 ) -> RoutePlan:
     """Return the ordered provider plan without silently degrading query fidelity.
 
-    ``OriginSweepRequest`` is the only valid Stage A broad-discovery request.
-    A legacy ``SearchRequest(search_stage="broad_discovery")`` already contains a
-    destination and therefore cannot establish outbound-first coverage.
+    ``OriginSweepRequest`` is the only valid Stage A discovery request. A legacy
+    ``SearchRequest(search_stage="broad_discovery")`` already contains a caller-
+    selected destination and therefore cannot establish outbound-first coverage.
     """
 
     routing = policy.get("source_routing") or {}
     selected = routing.get("selected_routes") or {}
 
     if isinstance(request, OriginSweepRequest):
-        stage_config = _shared_broad_config(request.profiles, selected)
+        stage_config = _shared_origin_wide_config(request.profiles, selected)
         if not stage_config:
             return _unavailable(
-                "no shared production provider selected for origin sweep",
+                "no shared production provider selected for origin-wide discovery",
                 state="unconfigured",
             )
         return _plan_stage(
             stage_config=stage_config,
             provider_states=provider_states,
             reason=(
-                f"selected by SSOT for destination-free {request.origin} "
-                "origin sweep via ChatGPT Web"
+                f"selected by SSOT for destination-free {request.origin} origin sweep"
             ),
+            include_fallback=True,
         )
 
     if request.search_stage == "broad_discovery":
@@ -121,16 +134,23 @@ def _plan_stage(
     stage_config: Mapping[str, Any],
     provider_states: Mapping[str, ProviderState],
     reason: str,
+    include_fallback: bool = False,
 ) -> RoutePlan:
     provider = stage_config.get("primary_provider")
     if not provider:
         return _unavailable("selected route has no primary provider", state="unconfigured")
 
     if stage_config.get("execution_mode") == "chatgpt_web_direct":
-        return RoutePlan(
-            entries=(ProviderPlanEntry(provider=provider, reason=reason),),
-            coverage_state="planned",
-        )
+        entries = [ProviderPlanEntry(provider=provider, reason=reason)]
+        fallback = stage_config.get("fallback_provider") if include_fallback else None
+        if fallback and fallback != provider:
+            entries.append(
+                ProviderPlanEntry(
+                    provider=str(fallback),
+                    reason="best-effort fallback after primary origin-wide surface failure",
+                )
+            )
+        return RoutePlan(entries=tuple(entries), coverage_state="planned")
 
     state = provider_states.get(provider)
     if state is None or not state.credential_available:
