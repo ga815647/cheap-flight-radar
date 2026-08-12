@@ -6,12 +6,15 @@ This document closes the focused convergence package that follows `docs/fujian-g
 
 ## Evidence contract
 
-The current SSOT already contains the required behavior, so this closeout does not change `flight-radar.yaml`:
+At the time of the original closeout, the SSOT required exact priced ground components. A later same-day policy clarification now excludes **short local taxi-equivalent access** from both comparative cost and comparative transport time. Historical acquisition below is retained as evidence, but missing short local taxi fare/minutes are no longer blockers.
 
-- every priced required segment needs a current price;
-- every time-sensitive ferry / ground / rail segment needs current schedule evidence;
+The current rule is therefore:
+
+- every material priced required segment needs a current price;
+- every material time-sensitive ferry / rail / intercity ground segment needs current schedule evidence;
+- short local taxi-equivalent access needs only practical connection feasibility, not exact fare/time;
 - unavoidable transport-caused overnight cost is part of complete effective transport cost;
-- an essential unknown keeps the route exploratory rather than final-verified;
+- an essential material unknown keeps the route exploratory rather than final-verified;
 - no proxy rotation, stealth/fingerprint spoofing, CAPTCHA bypass, residential proxy, or equivalent anti-bot workaround is permitted.
 
 The immediately preceding convergence checkpoint is treated as durable input for components already acquired there. Those components are not re-searched or numerically reconstructed here. Where a prior exact value was not yet persisted into the repository, this closeout records its state as `exact-known (prior convergence checkpoint)` rather than inventing or backfilling the value.
@@ -144,7 +147,7 @@ No new SSOT gap was discovered. `flight-radar.yaml` remains unchanged.
 Both serious ferry gateways still fail closed, but for sharply bounded reasons rather than broad-search uncertainty:
 
 - **MFK:** official/public surface for Huangqi ↔ Fuzhou target-date priced transfer, then a target-date Beigan overnight booking surface caused by the required early return crossing.
-- **KNH:** official or otherwise exact-booking domestic-air surface for the connectable `08/20` outbound and `08/23` reverse fare; ferry and Xiamen-side transport evidence are now materially stronger.
+- **KNH:** official or otherwise exact-booking domestic-air surface for the connectable `08/20` outbound and `08/23` reverse fare. Short local KNH/Xiamen taxi-equivalent access is no longer a cost/time blocker; only practical connection feasibility matters.
 - **Rail:** a legitimate target-date rail ticketing/inventory surface; the 12306 GitHub-runner experiment does not justify an adapter.
 
 The next atomic package should research **the official ticketing / shuttle / booking surfaces that directly resolve those exact components**. It should not repeat a Fujian broad search and should not add general crawler infrastructure unless one specific official/public blocker surface first demonstrates a deterministic, compliant acquisition path.

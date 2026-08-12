@@ -12,7 +12,7 @@ A low fare also has to be interpreted against **when the trip departs**. A fare 
 
 ### 1. Effective total price
 
-Use the normalized TWD cost defined in `flight-radar.yaml`, including transport components that are required to make the proposed itinerary work.
+Use the normalized TWD cost defined in `flight-radar.yaml`, including material transport components that are required to make the proposed itinerary work. Short local taxi-equivalent first/last-mile access is excluded because comparable same-city itineraries also incur local airport/port access and the user does not value that small difference.
 
 The system should retain both original-currency values and normalized TWD values when possible.
 
@@ -46,7 +46,9 @@ Transport efficiency penalizes itinerary friction, especially:
 - expensive positioning segments,
 - avoidable overnight costs caused by transport.
 
-A direct or efficient one-stop itinerary should usually beat a similarly priced itinerary that burns a large fraction of the trip in transit.
+Short local taxi-equivalent access is not counted as comparative transport time and does not reduce usable time. Connection feasibility still matters when that local movement feeds a fixed departure.
+
+A direct or efficient one-stop itinerary should usually beat a similarly priced itinerary that burns a large fraction of the trip in material transit.
 
 ## Provisional composite
 
