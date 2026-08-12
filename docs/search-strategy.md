@@ -6,15 +6,16 @@ Cheap Flight Radar is a **deal discovery system**, not a fixed-destination booki
 
 The central search pattern is:
 
-1. Discover unusually cheap outbound one-way fares from Taiwan.
-2. Expand only promising outbound candidates into complete trips.
-3. Search multiple return dates appropriate to route length.
-4. Consider same-city return, open-jaw return, different Taiwan return airports, and practical positioning segments.
-5. Treat verified usable stopovers as travel time rather than automatically treating every long connection as wasted time.
-6. Benchmark the constructed itinerary against a conventional round trip.
-7. Rank only complete itineraries whose important components can be verified.
+1. discover unusually cheap outbound one-way fares from Taiwan;
+2. expand only promising outbound candidates into complete trips;
+3. search multiple return dates appropriate to route length;
+4. consider same-city return, open-jaw return, different Taiwan return airports, and practical positioning segments;
+5. treat verified usable stopovers as travel time rather than automatically treating every long connection as wasted time;
+6. benchmark the constructed itinerary against a conventional round trip;
+7. retain only complete itineraries whose important components can be verified for user-facing deal views;
+8. persist the completed run before deriving historical publication metrics.
 
-Price discovery must answer two different timing questions in parallel:
+Price discovery answers two timing questions in parallel:
 
 - **near-term floor** — what is cheap among usable trips departing within the next 30 days?
 - **horizon absolute floor** — how low can a usable trip go anywhere in the full rolling 120-day horizon?
@@ -23,7 +24,7 @@ A good near-term fare is not automatically the horizon floor, and a far-future a
 
 ## Why outbound-first
 
-Searching every origin × destination × departure date × return date × trip length × open-jaw pair is too expensive and too noisy for a daily radar.
+Searching every origin × destination × departure date × return date × trip length × open-jaw pair is too expensive and noisy for a daily radar.
 
 A cheap outbound fare is an efficient discovery signal. Most destinations do not need expensive deep search on every run.
 
@@ -31,16 +32,16 @@ Outbound-first does **not** mean two one-way tickets are assumed cheaper. The ro
 
 ## Daily radar profiles
 
-The default daily run uses one shared discovery engine with four views rather than four unrelated full searches:
+The default daily run uses one shared discovery engine with four specialist views rather than four unrelated full searches:
 
-1. **World** — broad global discovery. Japan, Korea, and China remain eligible discovery destinations, but this profile does not spend deep-expansion budget on them because specialist profiles handle that work.
-2. **Japan** — specialist deep search for Japan, including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
-3. **Korea** — specialist deep search for Korea, including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
-4. **China** — specialist deep search for China. This is the only default profile that activates Kinmen/Matsu ferry gateway expansion and the full China multimodal coverage gate.
+1. **World** — broad global discovery. Japan, Korea, and China remain eligible discovery destinations, but World does not spend specialist deep-expansion budget on them.
+2. **Japan** — specialist deep search including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
+3. **Korea** — specialist deep search including alternate airports, open-jaw itineraries, and practical domestic flight/rail/bus positioning.
+4. **China** — specialist deep search. This is the default profile that activates Kinmen/Matsu ferry gateway expansion and the China multimodal coverage gate.
 
-The profiles share Taiwan-origin coverage and normalized candidate records. They should not perform the same broad discovery work four independent times when a shared result can be reused.
+The profiles share Taiwan-origin coverage and normalized candidate records. They should not repeat the same broad discovery four independent times when a shared result can be reused.
 
-The final daily report merges the profiles into a unified ranking while preserving dedicated Japan, Korea, China, and World-other sections. World discovery may still surface Japan/Korea/China seeds, but those countries should be represented by their specialist expansion results in the dedicated sections.
+The final public report preserves dedicated Japan, Korea, China, and World sections. It does not publish a composite `Best Value` winner. Composite scoring may remain an internal ordering heuristic for allocating deep-search effort.
 
 ## Stage A — broad discovery
 
@@ -52,20 +53,22 @@ The shared production broad-discovery route is intentionally different from fixe
 
 ChatGPT performs this stage directly with public Web fare-index evidence. The preferred source order is:
 
-1. public OTA/metasearch **route fare indexes** that expose actual origin/destination/date/price observations;
+1. public OTA/metasearch **route fare indexes** exposing actual origin/destination/date/price observations;
 2. indexed exact-fare results;
 3. official LCC promotion/event pages;
 4. public deal editors/forums as additional seeds.
 
-This ordering exists because a promotion announcement is not the same thing as a cheap fare observation. A carrier event page may prove that a sale, route, date range, or coupon exists while exposing no absolute price at all. It is useful intelligence, but it cannot by itself tell the radar which route/date is currently cheapest.
+A promotion announcement is not the same thing as a cheap fare observation. A carrier event page can prove a sale, route, date range, or coupon while exposing no absolute price. It can seed investigation but cannot establish the current fare floor by itself.
 
-For each configured Taiwan origin, broad discovery should use several query shapes rather than one generic sale search:
+For each configured Taiwan origin, broad discovery should use several query shapes:
 
-- **origin floor scan** — exact origin IATA + rolling-horizon month/date context + cheap-flight/fare-index intent, preferably in TWD, to discover low destination floors;
-- **exact route probe** — exact origin IATA + candidate destination IATA + month/date window + one-way and round-trip intent;
-- **LCC carrier probe** — exact route/date context plus relevant low-cost carrier when route coverage is known and the generic fare index may under-surface it.
+- **origin floor scan** — exact origin IATA + rolling-horizon month/date context + cheap-flight/fare-index intent, preferably in TWD;
+- **exact route probe** — exact origin IATA + candidate destination IATA + month/date window + one-way/round-trip intent;
+- **LCC carrier probe** — exact route/date context plus a relevant low-cost carrier when generic fare indexes under-surface it.
 
-The route is shared across World/Japan/Korea/China profiles so the radar does not repeat the same broad scan four times. Candidate records are then handed to the appropriate specialist profile for deeper expansion.
+Public fare-index observations remain **discovery evidence**. Indexed prices can be stale, prices can change, and metro-area pages can silently substitute airports. Exact airport/date/price therefore must be revalidated before a candidate is described as verified.
+
+This best-effort Web route does not claim an exhaustive fare matrix. Fixed watches remain separate coverage/provenance signals and are not expanded merely to imitate a fare matrix. GitHub Actions is not part of this normal direct-Web stage unless ChatGPT delegates a deterministic execution surface.
 
 ### Two live fare floors, not one coarse target band
 
@@ -74,190 +77,170 @@ Broad discovery must retain both:
 1. the cheapest serious **near-term** candidate departing within 30 days; and
 2. the cheapest serious candidate in the complete **rolling 120-day horizon**.
 
-A coarse heuristic such as "Korea around TWD 5k is cheap" is useful only as an early candidate trigger. It is **not a stopping condition**. The floor scan continues after such a hit because a TWD 5k near-term fare may coexist with a TWD 3–4k fare later in the horizon.
+A coarse heuristic such as "Korea around TWD 5k is cheap" is only an early candidate trigger. It is not a stopping condition. The floor scan continues because a TWD 5k near-term fare can coexist with a TWD 3–4k fare later in the horizon.
 
-The same distinction applies during historical calibration: price observations should be compared within departure lead-time buckets when possible so a last-minute fare is not judged against a long-lead fare as though supply conditions were identical.
-
-Public fare-index observations remain **discovery evidence**. Indexed prices can be stale, prices can change between observations, and metro-area pages can silently substitute airports. Exact airport/date/price must therefore be revalidated before a candidate is described as verified; checkout/bookability remains a separate confidence level.
-
-This best-effort Web route does **not** claim an exhaustive fare matrix. Its purpose is high cheapness recall at low cost. Fixed watches remain coverage/provenance signals and are not expanded merely to imitate a fare matrix. GitHub Actions is not part of this normal direct-Web path unless a later deterministic collector is empirically justified.
+The same distinction matters for history: observations should be compared within departure lead-time buckets where possible so a fare seen a week before departure is not treated as equivalent to a 90-day-ahead observation.
 
 ### Korea specialist breadth
 
 The Korea specialist must not equate "Korea" with only Seoul and Busan.
 
-For floor discovery it should actively probe current/relevant Korean airports exposed by public fare indexes and route evidence. Initial non-exhaustive seeds are:
-
-- `ICN` — Incheon,
-- `GMP` — Gimpo,
-- `PUS` — Busan/Gimhae,
-- `CJU` — Jeju,
-- `TAE` — Daegu,
-- `CJJ` — Cheongju.
-
-This list is deliberately a **seed list, not a permanent route whitelist**. If another Korean airport develops a relevant Taiwan fare signal inside the horizon, it remains eligible. The goal is to prevent hotspot bias while avoiding an artificial fixed fare matrix.
+Initial non-exhaustive floor-scan seeds include ICN, GMP, PUS, CJU, TAE, and CJJ. This is a seed list, not a permanent route whitelist. Any other relevant Korean airport remains eligible when current route/fare evidence exists.
 
 ### Origin coverage gate
 
-Every configured airport in `search.origin_airports` must receive a discovery attempt before a run may be described as a **full global radar**.
+Every configured airport in `search.origin_airports` must receive a discovery attempt before a run may be described as a **full global radar**:
 
-For v0.1 that means independent coverage attempts for:
+- TPE;
+- TSA;
+- RMQ;
+- KHH.
 
-- `TPE`,
-- `TSA`,
-- `RMQ`,
-- `KHH`.
-
-A source that only exposes Taipei results does not count as Taiwan-wide coverage. Results from all successfully searched origins are merged before candidate ranking, and mixed Taiwan airports may still be used for outbound and return when allowed by policy.
-
-If an origin cannot be searched or returns unavailable data, record it as `missing` or `unavailable`. Do not silently substitute another airport and do not present the run as complete. The report should expose origin coverage so incomplete discovery is visible.
+A source that only exposes a metro-level "Taipei" result does not count as Taiwan-wide coverage. Failed/missing origins remain visible as missing/unavailable rather than being silently replaced.
 
 ### Taiwan return closure is broader than outbound discovery
 
-The configured broad-discovery origins are **not** a whitelist of acceptable return airports.
+Configured outbound-discovery origins are not a whitelist of acceptable return airports.
 
-A complete itinerary may end at **any public passenger airport on Taiwan's main island** when there is live evidence that the proposed return flight operates. `TPE`, `TSA`, `RMQ`, and `KHH` remain the primary return-search airports because they carry the highest-value international coverage, but a serious candidate may opportunistically return through another main-island airport instead of being discarded simply because that airport is not a routine outbound discovery origin.
+A complete itinerary may end at **any public passenger airport on Taiwan's main island** when live evidence shows the proposed return flight operates. TPE/TSA/RMQ/KHH remain primary return-search airports, but a serious candidate can opportunistically return through another main-island airport.
 
-Different Taiwan airports on outbound and return are explicitly valid. Examples include `TPE → destination → KHH`, `TSA → destination → RMQ`, or the reverse direction.
+Different Taiwan airports on outbound and return are first-class candidates. Once the itinerary reaches an eligible Taiwan main-island airport, the trip is considered returned to Taiwan. Do not add a mandatory domestic positioning segment merely to get back to the original outbound airport or a presumed home city.
 
-Once the itinerary reaches an eligible Taiwan main-island airport, the radar considers the trip returned to Taiwan. It does **not** add a mandatory intercity positioning segment back to the original outbound airport or to a presumed home city. Ordinary onward movement inside Taiwan after that final arrival is outside the compared trip transport product.
-
-This broader return closure does not change the global origin coverage gate: full-radar coverage still means the configured outbound origins received their required discovery attempts. The radar does not need to scan every main-island airport as an outbound origin merely because those airports are allowed as opportunistic return endpoints.
+This broader return closure does not expand the global origin-coverage gate: full-radar coverage still concerns the configured outbound origins.
 
 ### Taiwan airport display labels
 
-User-visible Taiwan airport labels must remain airport-specific. Do not collapse `TPE` and `TSA` into the ambiguous city label `Taipei` / `台北`.
+User-visible Taiwan airport labels must remain airport-specific. Do not collapse TPE and TSA into `Taipei` / `台北`.
 
 Default labels are:
 
-- `TPE` → `桃園（TPE）`,
-- `TSA` → `松山（TSA）`,
-- `RMQ` → `台中（RMQ）`,
+- `TPE` → `桃園（TPE）`;
+- `TSA` → `松山（TSA）`;
+- `RMQ` → `台中（RMQ）`;
 - `KHH` → `高雄（KHH）`.
 
-This rule applies to both outbound and return segments. If a source exposes only a metro-area label such as `Taipei` but the actual airport cannot be resolved, mark the airport as unknown rather than publishing the candidate as though `TPE` or `TSA` had been identified.
+If a source exposes only a metro label and the actual airport cannot be resolved, mark the airport unknown rather than publishing a candidate as though TPE or TSA had been identified.
 
-Capture at minimum:
-
-- origin and destination,
-- departure timestamp,
-- displayed price and currency,
-- carrier when available,
-- stop count,
-- source,
-- observation timestamp,
-- whether the result is cached/discovery-only or revalidated.
-
-Do not discard a route merely because it is long-haul. Long-haul candidates are evaluated with longer return windows and minimum useful trip lengths.
+Capture at minimum origin/destination, departure timestamp or date, displayed price/currency, carrier when available, stop count, source, observation time, and evidence/verification state.
 
 ## Stage B — candidate expansion
 
-For the cheapest/highest-potential outbound candidates, search returns over the configured route-time-dependent window.
+For the cheapest/highest-potential outbound candidates, search returns over route-time-dependent windows.
 
-Candidate return forms:
+Candidate return forms include:
 
-1. same destination → Taiwan,
-2. nearby/practical alternate city → Taiwan,
-3. a different Taiwan main-island return airport,
-4. an opportunistic return to another live-served Taiwan main-island passenger airport,
+1. same destination → Taiwan;
+2. nearby/practical alternate city → Taiwan;
+3. a different primary Taiwan return airport;
+4. an opportunistic return to another live-served Taiwan main-island passenger airport;
 5. one positioning segment by domestic flight, rail, bus, or ferry where allowed.
 
-Do not force a return to the outbound Taiwan airport. A mixed-airport return is a first-class candidate, not a fallback error state.
+Do not force a return to the outbound Taiwan airport.
+
+### Return-window semantics
+
+`return_windows` are search and scoring guidance, **not hard maximum-trip-length rejection rules**.
+
+Trips below a minimum useful stay can be heavily penalized. Trips in the ideal range can receive full fit. Longer trips do not receive endless extra reward, but they remain eligible when otherwise usable. Duration alone must not reproduce the previously corrected hard-`max_nights` bug.
 
 ### Long connections and usable stopovers
 
 Do not reject or heavily penalize a connection merely because its scheduled duration is long.
 
-When a connection is long enough to permit a real excursion, determine how much of it is **verified usable stopover time** after preserving:
+When a connection is long enough to permit a real excursion, determine how much is **verified usable stopover time** after preserving:
 
-- entry/document feasibility,
-- safe minimum connection and recheck buffers,
-- practical airport/station-to-city access,
-- baggage and recheck constraints.
+- entry/document feasibility;
+- safe connection/recheck buffers;
+- practical airport/station access;
+- baggage/recheck constraints.
 
-Only the verified excursion portion becomes `usable_stopover_hours`. The remainder remains ordinary connection/waiting time. If the usable portion cannot be verified, fail conservatively and treat that unverified portion as connection time rather than assuming the traveler can sightsee.
+Only the verified excursion portion becomes `usable_stopover_hours`. The remainder remains ordinary connection/waiting time. If usable time cannot be verified, fail conservatively and treat it as waiting rather than assuming sightseeing.
 
-Usable stopover hours may reduce the connection-time penalty and count as usable trip time, but they cannot make a deliberately inefficient routing score better than the practical efficient-travel baseline. Self-transfer, re-entry, baggage, and missed-connection risks remain separate.
+Usable stopover hours can reduce connection-time penalty and count as usable trip time, but cannot make an intentionally inefficient routing outperform the practical efficient-travel baseline. Self-transfer, re-entry, baggage, and missed-connection risks remain separate.
 
-An overnight stop is treated the same way: usable time may be valuable and unusable waiting may be friction, but **lodging cost is not added to effective transport price**. Trip nights and usable-time semantics already represent the itinerary consequence of staying longer.
-
-Specialist profiles may spend more expansion budget inside their target country than the World profile. The World profile prioritizes geographic breadth and unusual long-haul opportunities; Japan/Korea/China profiles prioritize depth within their country.
-
-The system should avoid combinatorial explosion. Nearby/alternate exits should be generated from a curated transport graph or verified live transport options, not arbitrary geographic proximity.
+Overnight lodging cost remains outside effective transport price. The itinerary consequence is represented by trip length and usable/unusable time instead of an invented required hotel price.
 
 ## Stage C — complete-trip normalization
 
-Normalize each candidate into a comparable itinerary record:
+Normalize each serious candidate into a comparable itinerary record including:
 
-- all required transport segments,
-- total required transport cost, excluding lodging and ordinary short local access under the SSOT,
-- first departure from Taiwan,
-- arrival at first real destination,
-- departure from final real destination,
-- final return to an eligible Taiwan main-island airport,
-- total transit/connection time,
-- verified usable stopover hours,
-- remaining unusable connection/waiting time,
-- usable destination hours,
-- baggage assumptions,
-- transfer risks,
+- all required transport segments;
+- total required transport cost, excluding lodging and ordinary short local access under the SSOT;
+- first departure from Taiwan;
+- arrival at first real destination;
+- departure from final real destination;
+- final return to an eligible Taiwan main-island airport;
+- total transit/connection time when available;
+- verified usable stopover hours;
+- remaining unusable waiting time;
+- usable destination hours when available;
+- baggage assumptions;
+- transfer risks;
 - verification state.
 
-Do not add a domestic Taiwan segment after final main-island arrival merely to return the traveler to the outbound airport.
+Unknown essential components remain unknown; do not fill plausible values.
 
 ## Stage D — round-trip benchmark
 
 For each serious candidate, compare against a conventional round trip on the relevant route/dates when a comparable fare can be obtained.
 
-If a normal round trip is cheaper and comparably usable, it should win even when the discovery path began with a one-way fare. The benchmark does not invalidate a mixed-Taiwan-airport itinerary merely because its endpoint differs; compare the simplest practical complete alternatives available for the same travel intent.
+If a normal round trip is cheaper and comparably usable, it should win even when discovery began with a one-way fare. The benchmark does not invalidate a mixed-Taiwan-airport itinerary merely because its endpoint differs; compare the simplest practical complete alternatives available for the same travel intent.
 
-## Stage E — ranking and views
+## Stage E — explicit views and market sections
 
-Do not collapse all user value into one opaque rank.
+Do not collapse user value into one opaque rank.
 
-Always preserve at least:
+The required user-facing live views are:
 
-- Near-Term Cheapest — minimum effective total transport cost for usable trips departing within 30 days.
-- Absolute Cheapest — minimum effective total transport cost anywhere in the current rolling 120-day horizon.
-- Best Value — composite price/time/trip-fit result.
-- Best Short Break — strong cheap trip with low required usable days.
-- Unusual Long-Haul Deal — long route that is abnormally cheap and has adequate trip length.
+- **Near-Term Cheapest** — minimum effective total transport cost for usable trips departing within 30 days;
+- **Absolute Cheapest** — minimum effective total transport cost anywhere in the rolling 120-day horizon;
+- **Best Short Break** — strong cheap trip that becomes worthwhile with relatively few usable days;
+- **Unusual Long-Haul Deal** — unusually cheap long route with adequate trip length.
 
-Historical anomaly evidence is reported alongside these live-price views rather than replacing them. A current horizon floor can be historically ordinary, and a historically exceptional fare can still lose the pure absolute-price view to a cheaper unrelated route.
+There is deliberately **no user-facing Best Value view**. The provisional composite may still help internally order candidates before/deep-search work, but publication does not name its winner.
+
+Japan/Korea/China/World notable candidates are published in dedicated sections. A section may explicitly contain no winner when nothing converged.
+
+Historical anomaly evidence is reported alongside live-price views rather than replacing them. A current horizon floor can be historically ordinary, while a higher-priced route can still be a stronger historical anomaly.
+
+## Stage F — persist before publication
+
+After a Radar run has finished current discovery/deep-search/revalidation work:
+
+1. persist one immutable validated run snapshot on `history/price-observations`;
+2. derive current floors and historical metrics from persisted history;
+3. append one presentation manifest on `publication/radar-reports`;
+4. let the manifest push trigger the disposable static build/deploy backend.
+
+The publication manifest never becomes fare history. Failed/non-converged cheap seeds, view selections, and coverage/freshness are presentation/provenance state; fare prices and historical calculations come from evidence snapshots.
+
+See `docs/publication.md` for the complete Pages contract.
 
 ## Search horizon
 
-Default: rolling 120 days.
+Default: rolling 120 days. The horizon moves forward each run. Historical observations are retained separately and do not extend current live search state.
 
-The horizon should move forward each run. Historical observations are retained separately and do not extend the current live search horizon.
-
-The near-term price view is the first 30 days of that same horizon; it is not a second independent scheduler or scan. Historical comparisons should use the configured departure lead-time buckets (`0–14`, `15–30`, `31–60`, `61–120`) when enough evidence exists.
+The near-term price view is the first 30 days of the same horizon, not a second scheduler or scan. Historical comparisons use configured departure lead-time buckets (`0–14`, `15–30`, `31–60`, `61–120`) when evidence exists.
 
 ## Weekdays
 
-v0.1 has no weekday hard gate.
-
-Weekday, weekend, and potential leave-day information may be displayed later, but should not suppress an otherwise exceptional fare unless policy explicitly changes.
+v0.1 has no weekday hard gate. Weekday/weekend/leave-day information may be displayed, but should not suppress an otherwise exceptional fare unless policy explicitly changes.
 
 ## Price verification
 
-Search-result and metasearch prices are discovery signals, not promises.
+Search-result/metasearch prices are discovery signals, not promises.
 
-Before calling a result a verified deal, re-check the fare through a source capable of showing the actual itinerary and current price. When final checkout cannot be verified, label the confidence/state accurately.
+Before calling a result a verified deal, re-check through a source capable of showing the actual itinerary and current price. When checkout cannot be verified, label confidence/state accurately.
 
 ## Current source-router slice
 
-Production source routing remains intentionally **partial**, but broad discovery is no longer left undefined.
+Production source routing remains intentionally **partial**:
 
-The SSOT now selects two different execution slices:
+1. **shared broad discovery** across World/Japan/Korea/China — `chatgpt_web_public_fare_index`, executed directly by ChatGPT Web using public fare-index/query-shape policy; no credential or GitHub runner is required for the normal path;
+2. **China deep search** — exact round trip through FlyAI with formal `FLYAI_API_KEY` when that route is used.
 
-1. **shared broad discovery** across World/Japan/Korea/China — `chatgpt_web_public_fare_index`, executed directly by ChatGPT Web using the ordered public fare-index/query-shape policy above; no credential and no GitHub runner are required for the normal path;
-2. **China deep search** — exact round trip through FlyAI with formal `FLYAI_API_KEY`.
+The router reads these selections from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or unconfigured market/stage yields explicit unavailable/unsupported coverage and must not silently degrade while claiming provider coverage.
 
-The router reads these selections from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or otherwise unconfigured market/stage yields an explicit unavailable/unsupported coverage state. It must not silently substitute a lower-fidelity source while still claiming provider coverage.
+The shared Web route is best-effort discovery, not a deterministic full-market matrix and not checkout verification. Serious candidates require separate revalidation.
 
-The shared Web route is also explicit about its limits: it is a best-effort discovery backend, not a deterministic full-market matrix and not checkout verification. A cheap indexed fare may be promoted to deep search, but only a separate revalidation observation can upgrade its confidence.
-
-FlyAI results pass a strict returned-segment airport/date gate before normalization. A `TSA-SHA` request whose returned itinerary uses `PVG`, for example, is rejected rather than relabeled. Observed FlyAI `ticketPrice` remains a raw provider value because the formal response did not expose verified currency, tax, baggage, or fare-family semantics; those normalized fields remain unknown.
-
-FlyAI is **not** currently selected for broad discovery, true revalidation, final cross-check, or one combined open-jaw fare. Independent SearchAPI/Google Flights reference evidence found multiple low-price exact itineraries whose flight-number components were absent from the FlyAI formal exact result set, so a FlyAI-only run must never claim complete China airfare coverage. Deeper World/Japan/Korea provider-backed routing remains unconfigured until sufficient evidence justifies a production provider.
+FlyAI results pass a strict returned-segment airport/date gate before normalization. Observed FlyAI `ticketPrice` remains a raw provider value where currency/tax/baggage/fare-family semantics are unknown. FlyAI is not selected for broad discovery, true revalidation, final cross-check, or combined open-jaw fare, and a FlyAI-only run must never claim complete China airfare coverage.
