@@ -5,6 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS = frozenset(
+    {"TPE", "TSA", "RMQ", "KHH", "TNN", "CYI", "HUN", "TTT", "HCN"}
+)
+
+
 @dataclass(frozen=True)
 class SearchRequest:
     profile: str
@@ -92,6 +97,17 @@ class LiveReturnAirport:
     live_route_evidence: bool
     source_id: str | None = None
     source_url: str | None = None
+
+    def __post_init__(self) -> None:
+        if len(self.airport) != 3 or self.airport != self.airport.upper():
+            raise ValueError("return airport must be an exact uppercase IATA airport")
+        if (
+            self.live_route_evidence
+            and self.airport not in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
+        ):
+            raise ValueError(
+                "opportunistic return airport must be on Taiwan main island"
+            )
 
 
 @dataclass(frozen=True)
