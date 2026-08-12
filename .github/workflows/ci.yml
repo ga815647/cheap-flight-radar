@@ -26,3 +26,20 @@ jobs:
 
       - name: Test
         run: python -m unittest discover -s tests -v
+
+  fujian-rail-probe:
+    if: github.event_name == 'pull_request' && github.head_ref == 'chatdev/fujian-gateway-convergence-20260812'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe public 12306 Xiamen North to Fuzhou South
+        run: python scripts/rail_12306_probe.py --date 2026-08-20 --from-code XKS --to-code FYS
