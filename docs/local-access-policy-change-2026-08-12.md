@@ -1,6 +1,6 @@
 # Local access normalization policy — 2026-08-12
 
-User preference clarified during Fujian gateway convergence: short local taxi-equivalent movement should not affect comparative trip cost or time because a conventional same-city itinerary also requires airport/port access.
+Comparison policy clarified during Fujian gateway convergence: short local taxi-equivalent movement should not affect comparative trip cost or time because a conventional same-city itinerary also requires airport/port access.
 
 Policy effect:
 

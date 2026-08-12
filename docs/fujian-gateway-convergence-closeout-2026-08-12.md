@@ -142,7 +142,7 @@ This closeout produced **no new observation that satisfies the current historica
 
 ## 7. Closeout decision and next atomic package
 
-No new SSOT gap was discovered. `flight-radar.yaml` remains unchanged.
+The original convergence closeout found no SSOT gap under the policy then in force. The later same-day local-access clarification is a deliberate policy change and is now encoded in `flight-radar.yaml`.
 
 Both serious ferry gateways still fail closed, but for sharply bounded reasons rather than broad-search uncertainty:
 
