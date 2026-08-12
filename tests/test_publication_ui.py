@@ -11,6 +11,7 @@ from cheap_flight_radar.publication import build_site
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "publication"
 POLICY = ROOT / "flight-radar.yaml"
+PAGES_WORKFLOW = ROOT / ".github" / "workflows" / "radar-pages.yml"
 
 
 class PublicationUiTests(unittest.TestCase):
@@ -85,6 +86,16 @@ class PublicationUiTests(unittest.TestCase):
                 (site / "latest" / "index.html").read_bytes(),
                 run_page.read_bytes(),
             )
+
+    def test_pages_rebuilds_for_new_reports_and_main_presentation_changes(self) -> None:
+        text = PAGES_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("- publication/radar-reports", text)
+        self.assertIn("- main", text)
+        self.assertIn('"publication/runs/*.json"', text)
+        self.assertIn('"src/cheap_flight_radar/publication.py"', text)
+        self.assertIn('"flight-radar.yaml"', text)
+        self.assertIn('".github/workflows/radar-pages.yml"', text)
+        self.assertNotIn("schedule:", text)
 
 
 if __name__ == "__main__":
