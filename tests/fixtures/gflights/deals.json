@@ -1,0 +1,27 @@
+[
+  {
+    "origin_iata": "TPE",
+    "destination_iata": "NRT",
+    "destination_city": "Tokyo",
+    "destination_country": "Japan",
+    "outbound_date": "2026-09-10",
+    "return_date": "2026-09-14",
+    "price": 6500,
+    "typical_price": 10000,
+    "discount_pct": 35,
+    "airline_code": "IT",
+    "airline_name": "Tigerair Taiwan",
+    "booking_url": "https://example.invalid/google-flights-deal"
+  },
+  {
+    "origin_iata": "TPE",
+    "destination_iata": "LAX",
+    "destination_city": "Los Angeles",
+    "destination_country": "United States",
+    "outbound_date": "2026-09-10",
+    "return_date": "2026-09-16",
+    "price": 12000,
+    "typical_price": 20000,
+    "discount_pct": 40
+  }
+]
