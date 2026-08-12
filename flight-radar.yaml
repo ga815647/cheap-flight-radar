@@ -163,7 +163,7 @@ routing:
       - intercity_or_cross_region_transfer
       - ferry_or_mainland_rail_or_domestic_flight
       - required_connection_wait_or_checkin
-      - unavoidable_transport_caused_overnight
+      - required_overnight_connection_wait
 
 return_windows:
   # Based on typical one-way travel time. These are search windows, not mandatory trip lengths.
@@ -222,11 +222,10 @@ cost:
     - required_ferry
     - material_required_airport_or_port_transfer_excluding_short_local_access
     - required_baggage
-    - unavoidable_transport_caused_overnight_cost
   exclude_by_default:
     - short_local_taxi_or_equivalent_access_cost
     - normal_local_sightseeing_transport
-    - hotels_not_caused_by_transport
+    - lodging_including_transport_caused_overnight
     - meals
 
 ranking:
@@ -262,7 +261,7 @@ penalties:
   usable_stopover:
     long_duration_alone_penalty: none
     self_transfer_and_reentry_risks_still_apply: true
-    unavoidable_transport_caused_overnight_cost_still_included: true
+    lodging_cost_is_not_transport_cost: true
     cannot_raise_transport_efficiency_above_practical_baseline: true
   insufficient_trip_length_for_route:
     enabled: true
