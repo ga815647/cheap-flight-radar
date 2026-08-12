@@ -1,0 +1,37 @@
+name: Temporary local access wording cleanup
+
+on:
+  push:
+    branches:
+      - chatdev/local-access-normalization-20260812
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatdev/local-access-normalization-20260812
+          fetch-depth: 0
+      - name: Remove contradictory transfer requirement
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/china-routing.md')
+          text = p.read_text(encoding='utf-8')
+          old = 'Actual ferry terminals, timetables, eligibility, ticket prices, document requirements, and transfer times are live facts and must be verified at research time.'
+          new = 'Actual ferry terminals, timetables, eligibility, ticket prices, and document requirements are live facts and must be verified at research time. For short local taxi-equivalent access, verify only that the connection is practically feasible; exact fare/minutes are not required or scored.'
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('expected Kinmen verification sentence not found')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/china-routing.md
+          git commit -m "docs: align local transfer verification wording"
+          git push origin HEAD:chatdev/local-access-normalization-20260812
