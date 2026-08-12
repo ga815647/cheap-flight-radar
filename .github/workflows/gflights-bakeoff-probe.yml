@@ -1,0 +1,59 @@
+name: gflights-bakeoff-probe
+
+on:
+  pull_request:
+    branches:
+      - chatdev/product-intent-20260813
+
+permissions:
+  contents: read
+
+jobs:
+  live-gflights-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install gflights
+        run: python -m pip install gflights==0.3.0
+      - name: Probe exact, explore, deals, flexible dates, and open-jaw
+        shell: bash
+        run: |
+          python - <<'PY'
+          import asyncio, json, traceback
+          from gflights import Client
+
+          client = Client(currency="TWD", lang="zh-TW", country="TW")
+
+          async def probe(name, awaitable):
+              print(f"::group::gflights {name}")
+              try:
+                  result = await asyncio.wait_for(awaitable, timeout=90)
+                  rows = [x.to_dict() if hasattr(x, "to_dict") else repr(x) for x in result]
+                  print("ok", len(rows))
+                  print(json.dumps(rows[:8], ensure_ascii=False, default=str)[:12000])
+              except Exception as e:
+                  print("error", type(e).__name__, str(e))
+                  traceback.print_exc()
+              print("::endgroup::")
+
+          async def main():
+              await probe("tpe_nrt_rt", client.search("TPE", "NRT", "2026-09-15", "2026-09-20"))
+              await probe("tsa_gmp_rt", client.search("TSA", "GMP", "2026-09-16", "2026-09-20"))
+              await probe("rmq_hkg_rt", client.search("RMQ", "HKG", "2026-09-17", "2026-09-21"))
+              await probe("khh_pvg_rt", client.search("KHH", "PVG", "2026-09-18", "2026-09-22"))
+              await probe("tpe_syd_rt", client.search("TPE", "SYD", "2026-10-15", "2026-10-22"))
+              for origin in ("TPE", "TSA", "RMQ", "KHH"):
+                  await probe(f"{origin.lower()}_explore", client.explore(origin, month=9, duration="week"))
+                  await probe(f"{origin.lower()}_deals", client.deals(origin, "2026-09-15", "2026-09-20"))
+              await probe("tpe_nrt_cheapest_dates", client.cheapest_dates("TPE", "NRT", "2026-09-01", months=3, trip_duration_days=5))
+              await probe("open_jaw", client.multi_city_search([
+                  ("TPE", "NRT", "2026-09-15"),
+                  ("KIX", "KHH", "2026-09-20"),
+              ]))
+
+          asyncio.run(main())
+          PY
