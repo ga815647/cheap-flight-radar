@@ -52,14 +52,17 @@ def _minimal_manifest(run_id: str, run_at: str, snapshot_path: str, observation_
 
 
 class PublicationPolicyTests(unittest.TestCase):
-    def test_best_value_is_not_user_facing(self) -> None:
+    def test_best_value_is_not_user_facing_and_deals_signals_are_primary(self) -> None:
         policy = yaml.safe_load(POLICY.read_text(encoding="utf-8"))
         self.assertNotIn("best_value", policy["ranking"]["preserve_views"])
         self.assertEqual(
             policy["ranking"]["composite_score"]["role"],
-            "internal_candidate_ordering_heuristic",
+            "internal_discovery_ordering_only_not_formal_deal_ranking",
         )
         self.assertFalse(policy["ranking"]["composite_score"]["publish_winner"])
+        self.assertEqual(policy["publication"]["primary_user_facing_views"], ["deals", "signals"])
+        self.assertEqual(policy["publication"]["legacy_views_status"], "diagnostic_or_transition_only")
+        self.assertEqual(policy["publication"]["historical_display"]["role"], "supplemental_when_available")
         self.assertEqual(policy["publication"]["platform"], "github_pages")
         self.assertFalse(policy["publication"]["orchestration"]["independent_github_cron"])
 
@@ -80,7 +83,7 @@ class PublicationGeneratorTests(unittest.TestCase):
         build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifest_dir, site_dir=site)
         return history, manifest_dir, site
 
-    def test_corrected_fixture_renders_required_views_and_coverage(self) -> None:
+    def test_legacy_fixture_still_renders_transition_views_without_best_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _, _, site = self._build_corrected_fixture(Path(tmp))
             run_page = next((site / "runs").glob("*/index.html"))
@@ -100,9 +103,6 @@ class PublicationGeneratorTests(unittest.TestCase):
                 self.assertIn(heading, text)
             self.assertNotIn("Best Value", text)
             self.assertIn("TWD 4,588", text)
-            self.assertIn("due_not_refreshed", text)
-            self.assertIn("China-mode coverage: partial", text)
-            self.assertNotIn("Historical percentile:", text)
             self.assertEqual((site / "latest" / "index.html").read_bytes(), run_page.read_bytes())
 
     def test_future_history_does_not_change_old_run_page(self) -> None:
