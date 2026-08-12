@@ -2,33 +2,43 @@
 
 ## Purpose
 
-Price history exists to answer a different question from the live floor scan.
+Price history answers a different question from the live floor scan.
 
 The radar keeps three independent price views:
 
-1. **near-term floor** — the lowest usable complete trip in the current radar run departing within 0–30 days;
-2. **rolling-horizon absolute floor** — the lowest usable complete trip in the current radar run across the complete 0–120 day horizon;
+1. **near-term floor** — the lowest usable complete trip in the current run departing within 0–30 days;
+2. **rolling-horizon absolute floor** — the lowest usable complete trip in the current run across the complete 0–120 day horizon;
 3. **historical anomaly evidence** — how a current usable fare compares with prior comparable observations for the same route and departure lead-time conditions.
 
-These views must not be collapsed. A fare can be excellent for travel next week while still being far above a cheaper departure 70 days away. Conversely, the current 120-day floor can be historically ordinary for that route, while another higher-priced route may be a new historical low.
+These views must not be collapsed. A fare can be excellent for travel next week while still being above a cheaper departure 70 days away. Conversely, the current 120-day floor can be historically ordinary while another higher-priced route is a new observed route low.
+
+## Evidence state versus presentation state
+
+The durable source of truth for fare history is **GitHub repository data on `history/price-observations`**, not ChatGPT memory, a GitHub Actions artifact, a rendered Pages file, or a publication manifest.
+
+Publication is deliberately separate:
+
+- `history/price-observations` contains immutable fare-evidence snapshots;
+- `publication/radar-reports` contains append-only presentation manifests selecting report sections and recording coverage/failed seeds;
+- GitHub Pages contains deterministic HTML derived from those two inputs plus policy/code on `main`.
+
+A presentation manifest never becomes a historical price sample. A failed/non-converged seed can be shown publicly without fabricating a fare-history observation.
 
 ## State model
 
-The durable source of truth for fare history is **GitHub repository data**, not ChatGPT memory and not GitHub Actions artifacts.
-
-The SSOT uses a dedicated durable ref, `history/price-observations`, containing immutable per-radar-run snapshots. The default path shape is:
+The SSOT uses a dedicated durable evidence ref, `history/price-observations`, containing immutable per-radar-run snapshots. The default path shape is:
 
 `data/price-history/YYYY/MM/DD/{radar_run_id}.json`
 
-Each radar run creates one new snapshot file and never rewrites an older run snapshot. Baselines are derived from those snapshots on each radar run; the derived median/percentile/low values are not a second authoritative state store.
+Each run creates one new snapshot file and never rewrites an older run snapshot. Baselines, percentiles, and lows are derived from snapshots when needed; derived values are not a second authoritative state store.
 
-ChatGPT remains scheduler/orchestrator/decision layer. It may create a small validated snapshot directly through the GitHub connector. When data volume or aggregation work justifies it, ChatGPT may delegate a short-lived GitHub Action to read the history ref, compute results, and/or commit one validated snapshot. The Action is still disposable compute; **the repository ref is the durable store**.
+ChatGPT remains scheduler/orchestrator/decision layer. It may create a validated snapshot directly through the GitHub connector. When data volume or aggregation justifies it, ChatGPT may delegate short-lived GitHub Actions compute. The Action remains disposable compute; the evidence ref is the durable store.
 
-GitHub Actions artifacts remain short-term handoff/evidence only and must not be the 365-day/all-time history source.
+GitHub Actions artifacts are short-term handoff/deployment material only and must not become the 365-day/all-time history source.
 
-If the history ref does not yet exist, initialize an empty history without fabricated backfill. Synthetic historical backfill is forbidden. If the radar has not actually observed enough comparable fares, the corresponding baseline, percentile, or anomaly label is unknown.
+If the history ref does not exist, initialize empty history without fabricated backfill. Synthetic historical backfill is forbidden. Missing evidence remains unknown.
 
-Validated history-snapshot writes are data-only updates. They do not authorize policy/code changes or merge the current code PR.
+Validated history-snapshot writes are data-only updates. They do not authorize policy/code changes or imply a merge to `main`.
 
 ## Observation contract
 
@@ -51,24 +61,24 @@ Original currency/price is retained when available.
 Availability states are:
 
 - `available` — the observation exposed a usable fare at observation time;
-- `stale` — the signal remains useful provenance but must not be treated as a current fare;
-- `disappeared` — a previously observed fare can no longer be found in the follow-up observation.
+- `stale` — the signal remains provenance but must not be treated as current;
+- `disappeared` — a previously observed fare can no longer be found on follow-up.
 
-`stale` and `disappeared` events remain in history. They are excluded from current live floors. A prior `available` event does not disappear from history merely because a later event says the fare disappeared; it remains evidence that the fare was once observed.
+Stale/disappeared events remain in history. They are excluded from current live floors. A prior `available` observation remains evidence that the fare was once observed even after it later disappears.
 
 ## Current live floors
 
-Current live floors use observations belonging to the **current `radar_run_id` only**. Historical events from older runs cannot silently satisfy the current floor.
+Current live floors use observations belonging to the **current `radar_run_id` only**. Older history cannot silently satisfy a current floor.
 
 Only current-run events with:
 
-- `availability_state=available`,
-- `fare_scope=usable_complete_trip`, and
+- `availability_state=available`;
+- `fare_scope=usable_complete_trip`; and
 - a valid normalized TWD price
 
 are eligible.
 
-The near-term floor uses departures 0–30 days from the run time. The absolute floor uses departures 0–120 days from the run time. The two winners may be different observations.
+Near-term floor uses departures 0–30 days from run time. Absolute floor uses 0–120 days. Winners may differ.
 
 ## Comparable historical sample
 
@@ -79,24 +89,24 @@ For v0.1, the mandatory comparison key is:
 - trip type;
 - departure lead-time bucket.
 
-The lead-time buckets are the SSOT values:
+The SSOT lead-time buckets are:
 
 - `d0_14` — 0–14 days;
 - `d15_30` — 15–30 days;
 - `d31_60` — 31–60 days;
 - `d61_120` — 61–120 days.
 
-Each historical observation is bucketed using **its own observation time versus its own departure date**. This prevents a fare seen 7 days before departure from being naively compared with one seen 90 days before departure.
+Each observation is bucketed using **its own observation time versus its own departure date**. This prevents a fare seen 7 days before departure from being naively compared with one seen 90 days before departure.
 
-A radar run contributes at most **one comparable price sample** for the same exact route + trip type + lead-time bucket. Multiple Web query permutations, editors, OTAs, or duplicate sightings in that run remain append-only provenance and must not inflate sample count/confidence. When one run contains multiple usable complete-trip observations for the same comparison key, the run-level historical sample is the lowest observed usable complete-trip price. This is consistent with the existing candidate-dedupe rule that duplicate sightings are evidence, not separate deals.
+A radar run contributes at most **one comparable price sample** for the same exact route + trip type + lead-time bucket. Multiple Web query permutations, editors, OTAs, or duplicate sightings in the same run are provenance, not independent market samples. If a run contains multiple usable complete-trip observations for one comparison key, the run-level historical sample is the lowest observed usable complete-trip price.
 
-Season/month and comparable trip length are additional dimensions only when enough history exists. They must never be applied by shrinking a sample below the configured minimum and then pretending the smaller result is precise.
+Season/month and comparable trip length are additional dimensions only when enough history exists. They must not shrink a sample below thresholds and then pretend the smaller result is precise.
 
-The current observation is excluded from its own historical baseline. Only earlier observation timestamps may contribute.
+The current observation is excluded from its own baseline. Only observations with timestamps earlier than the current observation can contribute. This time ordering is also what guarantees that a future low cannot alter the historical metrics on an older permanent run page.
 
 ## Moving robust baseline
 
-The robust baseline statistic is the median, not the mean.
+The robust baseline statistic is the median.
 
 The system independently computes moving medians from comparable observations seen in the prior:
 
@@ -104,9 +114,9 @@ The system independently computes moving medians from comparable observations se
 - 30 days;
 - 90 days.
 
-A window requires at least **3 comparable observations**. With fewer than 3, that window returns unknown rather than an imputed value.
+A window requires at least **3 comparable observations**. Fewer than 3 returns unknown rather than an imputed value.
 
-The primary recent baseline is the 30-day median. If it is unavailable, the fallback order is 90-day then 7-day. The fallback does not manufacture a missing 30-day baseline; reporting should preserve which window was actually used.
+Primary recent baseline is the 30-day median. If unavailable, fallback order is 90-day then 7-day. Reporting preserves which actual window was selected.
 
 ## Rolling lows
 
@@ -117,15 +127,15 @@ The system independently computes comparable historical lows over:
 - 365 days;
 - all observed history.
 
-A rolling low can be reported from one real prior observation because it is a factual minimum, but it must carry the associated sample count/confidence. A one-sample low is **not** enough to call a fare a historical anomaly or "神價".
+A rolling low can be reported from one real prior observation because it is a factual minimum, but it must carry sample count/confidence. A one-sample low is not enough to call a fare a historical anomaly.
 
 ## Historical percentile
 
-The route-specific percentile is an empirical midrank percentile over the full comparable prior sample.
+Route-specific percentile is an empirical midrank percentile over the full comparable prior sample.
 
-It requires at least **10 comparable historical observations**. Below 10, percentile is unknown.
+It requires at least **10 comparable prior observations** under the current SSOT. Below 10, percentile is unknown and the public page must **omit the numeric percentile**, not print a fabricated placeholder.
 
-Lower percentiles mean cheaper relative to history. The metric is evidence, not a market-level fixed TWD threshold.
+Lower percentiles mean cheaper relative to comparable history. The metric is evidence, not a fixed TWD threshold.
 
 ## Percentage below baseline
 
@@ -133,9 +143,7 @@ For the selected recent median baseline:
 
 `percent_below_baseline = (baseline_twd - current_twd) / baseline_twd * 100`
 
-Positive values mean the current fare is cheaper than the baseline. If no recent median is available, the value is unknown.
-
-The result must preserve the selected baseline window and sample count so a percentage cannot appear more precise than its evidence.
+Positive values mean current is cheaper than baseline. If no qualifying median exists, the percentage is unknown. The report preserves baseline window and evidence density.
 
 ## Distance from historical low
 
@@ -144,53 +152,53 @@ When a prior comparable low exists:
 - amount distance = `current_twd - historical_low_twd`;
 - percentage distance = `(current_twd - historical_low_twd) / historical_low_twd * 100`.
 
-A value of zero means the current fare ties the prior low; a negative value means it establishes a new observed low. The low and its sample count must be reported together.
+Zero ties the prior low; negative establishes a new observed low. The prior low and sample count must be interpreted together.
 
 ## Confidence
 
-Confidence is based on the number of comparable historical price observations:
+Confidence is evidence density, not a promise of bookability:
 
-- `none`: 0;
+- `none`: 0 comparable prior samples;
 - `sparse`: 1–2;
 - `low`: 3–9;
 - `medium`: 10–29;
 - `high`: 30+.
 
-This is evidence-density confidence, not a promise that a discovery fare is bookable. Verification state remains a separate axis and should be reported alongside the sample count.
+Verification state remains a separate axis and is shown alongside historical confidence.
 
 ## Historical anomaly labels
 
-The system may call a current fare a `historical_floor` only when:
+A current fare may be called `historical_floor` only when:
 
 - it is at or below the prior all-time comparable low; and
-- there are at least 10 prior comparable price observations.
+- at least 10 prior comparable price observations exist.
 
-`unusually_low` is intentionally **uncalibrated** in the current SSOT. Until accumulated evidence supports a threshold, the system exposes percentile, median delta, rolling lows, and confidence without inventing an `unusually_low` cutoff.
+`unusually_low` remains intentionally **uncalibrated** in the current SSOT. Until evidence supports a threshold, publish the underlying percentile/median delta/lows/confidence rather than inventing an `unusually_low` cutoff.
 
-Sparse history returns `insufficient_history` rather than a percentile or historical-low claim.
+Sparse history returns insufficient-history semantics rather than false precision.
 
 ## Staleness and disappearance provenance
 
-A later stale/disappeared event should reference the prior observation when possible. This permits the report to answer:
+A later stale/disappeared event should reference the prior observation when possible so the system can answer where a fare was first seen, last available, and later stale/disappeared.
 
-- where the fare was first seen;
-- when it was last seen available;
-- when it became stale or disappeared;
-- which source produced each state transition.
+A stale/disappeared event never makes an old fare currently purchasable. It remains historical provenance only.
 
-A stale/disappeared event never makes the old fare currently purchasable again. It is retained only as historical provenance.
+## Radar-run persistence and publication sequence
 
-## Radar-run update sequence
+For each scheduled ChatGPT Radar run:
 
-For each scheduled ChatGPT radar run:
+1. load fixed-watch state and perform current fixed-watch/opportunistic/deep-search/revalidation work according to orchestration policy;
+2. normalize usable fare observations and stale/disappeared follow-up events;
+3. validate and **persist one immutable current-run snapshot first** on `history/price-observations`;
+4. reload/read persisted history needed for comparison;
+5. compute current-run 0–30 day and 0–120 day live floors;
+6. compare serious current fares with prior route + trip-type + lead-time-matched history;
+7. derive median windows, rolling lows, percentile only when supported, baseline delta, low distance, sample count/confidence, and provenance;
+8. append the run's presentation manifest on `publication/radar-reports`;
+9. let the manifest push invoke the disposable static build/deploy workflow.
 
-1. read the GitHub history ref needed for the requested comparison window, using disposable compute only when bulk aggregation is useful;
-2. perform current fixed-watch/opportunistic/deep-search/revalidation work according to the existing orchestrator policy;
-3. normalize usable fare observations and stale/disappeared follow-up events;
-4. compute the current-run 0–30 day and 0–120 day live floors;
-5. compare serious current fares with prior route + lead-time-matched history;
-6. write one immutable validated run snapshot to the GitHub history ref;
-7. expose median windows, rolling lows, percentile where supported, baseline delta, low distance, sample count/confidence, and provenance;
-8. leave the formal SSOT unchanged unless accumulated evidence justifies a methodology change.
+This ordering intentionally differs from treating a rendered report as state. If deployment fails, the validated fare evidence has already been persisted and can be republished without searching fares again.
 
-A single market swing therefore changes observations and derived metrics, not the system's methodology.
+Adding later history must not rewrite an older run's historical meaning. The static generator enforces this by comparing each run only to observations whose timestamps are earlier than that run; deterministic tests rebuild an old page after adding a later much-lower fare and require byte-identical output.
+
+See `docs/publication.md` for Pages paths, manifest semantics, and deployment architecture.
