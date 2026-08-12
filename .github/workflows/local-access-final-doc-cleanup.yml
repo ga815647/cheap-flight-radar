@@ -1,0 +1,49 @@
+name: Temporary local access closeout cleanup
+
+on:
+  push:
+    branches:
+      - chatdev/local-access-normalization-20260812
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatdev/local-access-normalization-20260812
+          fetch-depth: 0
+      - name: Align closeout wording
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('docs/fujian-gateway-convergence-closeout-2026-08-12.md')
+          text = p.read_text(encoding='utf-8')
+          old = 'No new SSOT gap was discovered. `flight-radar.yaml` remains unchanged.'
+          new = 'The original convergence closeout found no SSOT gap under the policy then in force. The later same-day local-access clarification is a deliberate policy change and is now encoded in `flight-radar.yaml`.'
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('expected closeout sentence not found')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          q = Path('docs/local-access-policy-change-2026-08-12.md')
+          qtext = q.read_text(encoding='utf-8')
+          qtext = qtext.replace(
+              'User preference clarified during Fujian gateway convergence:',
+              'Comparison policy clarified during Fujian gateway convergence:',
+              1,
+          )
+          if not qtext.endswith('\n'):
+              qtext += '\n'
+          q.write_text(qtext, encoding='utf-8')
+          PY
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/fujian-gateway-convergence-closeout-2026-08-12.md docs/local-access-policy-change-2026-08-12.md
+          git commit -m "docs: align local access policy history"
+          git push origin HEAD:chatdev/local-access-normalization-20260812
