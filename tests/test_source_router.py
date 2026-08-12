@@ -29,24 +29,39 @@ class SourceRouterTests(unittest.TestCase):
         values.update(overrides)
         return SearchRequest(**values)
 
-    def test_ssot_selects_shared_broad_discovery_before_promo_only_sources(self):
+    def test_ssot_selects_expedia_as_primary_destination_free_stage_a_surface(self):
         routing = self.policy["source_routing"]
-        broad = routing["selected_routes"]["shared"]["broad_discovery"]
+        origin_wide = routing["selected_routes"]["shared"]["origin_wide_discovery"]
+        self.assertEqual(
+            origin_wide["primary_provider"], "expedia_tw_airport_origin_surface"
+        )
+        self.assertEqual(
+            origin_wide["fallback_provider"], "chatgpt_web_public_fare_index"
+        )
+        self.assertEqual(origin_wide["execution_mode"], "chatgpt_web_direct")
+        self.assertEqual(
+            origin_wide["query_scope"], "destination_free_origin_airport_anywhere"
+        )
+        self.assertTrue(origin_wide["destination_input_forbidden"])
+        self.assertTrue(
+            origin_wide["round_trip_deal_must_not_be_divided_into_one_way_price"]
+        )
+        self.assertTrue(origin_wide["exact_one_way_probe_required_before_floor_or_serious_candidate"])
+        provider = routing["providers"]["expedia_tw_airport_origin_surface"]
+        self.assertEqual(
+            set(provider["origin_entry_urls"]), {"TPE", "TSA", "RMQ", "KHH"}
+        )
+
+    def test_post_seed_known_route_web_is_not_mislabeled_as_origin_sweep(self):
+        broad = self.policy["source_routing"]["selected_routes"]["shared"]["broad_discovery"]
         self.assertEqual(broad["primary_provider"], "chatgpt_web_public_fare_index")
-        self.assertEqual(broad["execution_mode"], "chatgpt_web_direct")
-        self.assertEqual(
-            broad["applies_to_profiles"], ["world", "japan", "korea", "china"]
-        )
-        self.assertEqual(
-            broad["source_class_order"][0],
-            "public_ota_or_metasearch_route_fare_index",
-        )
-        self.assertIn("origin_floor_scan", broad["query_shapes"])
+        self.assertEqual(broad["query_scope"], "post_seed_known_route_public_fare_index")
+        self.assertNotIn("origin_floor_scan", broad["query_shapes"])
         self.assertIn("exact_route_probe", broad["query_shapes"])
         self.assertTrue(broad["revalidation_required"])
         self.assertFalse(broad["full_market_coverage_claim"])
 
-    def test_destination_free_origin_sweep_plans_one_shared_direct_web_stage(self):
+    def test_destination_free_origin_sweep_plans_primary_then_best_effort_fallback(self):
         request = OriginSweepRequest(
             origin="TPE",
             horizon_start="2026-08-12",
@@ -59,9 +74,10 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(plan.coverage_state, "planned")
         self.assertEqual(
             [entry.provider for entry in plan.entries],
-            ["chatgpt_web_public_fare_index"],
+            ["expedia_tw_airport_origin_surface", "chatgpt_web_public_fare_index"],
         )
         self.assertIn("destination-free", plan.entries[0].reason)
+        self.assertIn("fallback", plan.entries[1].reason)
 
     def test_preselected_destination_cannot_claim_broad_discovery_contract(self):
         plan = build_source_plan(
@@ -87,13 +103,17 @@ class SourceRouterTests(unittest.TestCase):
                 search_stage="outbound_probe",
                 origin="TPE",
                 destination="ICN",
-                outbound_date="2026-09-30",
+                outbound_date="2026-09-16",
                 return_date=None,
             ),
             self.policy,
             {},
         )
         self.assertEqual(plan.coverage_state, "planned")
+        self.assertEqual(
+            [entry.provider for entry in plan.entries],
+            ["chatgpt_web_public_fare_index"],
+        )
         self.assertIn("known-route outbound_probe", plan.entries[0].reason)
 
     def test_return_expansion_requires_exact_return_date(self):
@@ -103,7 +123,7 @@ class SourceRouterTests(unittest.TestCase):
                 search_stage="return_expansion",
                 origin="TPE",
                 destination="ICN",
-                outbound_date="2026-09-30",
+                outbound_date="2026-09-16",
                 return_date=None,
             ),
             self.policy,
