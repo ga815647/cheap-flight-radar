@@ -13,20 +13,19 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
         cls.spec = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
         cls.public = cls.spec["public_intelligence"]
 
-    def test_fixed_watch_registry_is_minimal_and_explicit(self) -> None:
+    def test_fixed_watch_registry_is_minimal_signal_only_and_explicit(self) -> None:
         registry = self.public["fixed_watch_registry"]
-        self.assertEqual(
-            {source["id"] for source in registry},
-            {
-                "china_airlines_official",
-                "ptt_japan_travel_info",
-            },
-        )
-        for source in registry:
-            self.assertGreater(source["cadence_hours"], 0)
-            self.assertIn(source["acquisition"], {"direct_http", "headless"})
-            self.assertTrue(source["markets"])
-            self.assertTrue(source["coverage_claim"].endswith("_attempt_only"))
+        self.assertEqual({source["id"] for source in registry}, {"china_airlines_official"})
+        source = registry[0]
+        self.assertEqual(source["role"], "signal_only")
+        self.assertEqual(source["cadence_hours"], 24)
+        self.assertIn(source["acquisition"], {"direct_http", "headless"})
+        self.assertTrue(source["markets"])
+        self.assertTrue(source["coverage_claim"].endswith("_attempt_only"))
+
+    def test_ptt_is_not_an_active_fixed_watch(self) -> None:
+        fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}
+        self.assertNotIn("ptt_japan_travel_info", fixed_ids)
 
     def test_tigerair_is_opportunistic_after_live_runner_contract_failed(self) -> None:
         fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}
@@ -39,12 +38,14 @@ class PublicIntelligenceSpecTests(unittest.TestCase):
         )
         self.assertFalse(exclusion["anti_bot_evasion_allowed"])
 
-    def test_opportunistic_sources_cannot_repair_fixed_coverage(self) -> None:
+    def test_fixed_watch_is_not_deal_coverage_authority(self) -> None:
         coverage = self.public["coverage"]
-        self.assertTrue(coverage["fixed_watch_attempts_are_coverage_authority"])
-        self.assertTrue(coverage["failed_fixed_watch_must_be_reported"])
-        self.assertTrue(coverage["opportunistic_source_cannot_substitute_fixed_watch_coverage"])
+        self.assertFalse(coverage["fixed_watch_attempts_are_coverage_authority"])
+        self.assertFalse(coverage["opportunistic_source_cannot_substitute_fixed_watch_coverage"])
         self.assertTrue(coverage["fixed_registry_does_not_claim_market_exhaustiveness"])
+        role = self.public["roles"]["fixed_watch"]
+        self.assertEqual(role["definition"], "optional_recurring_signal_source_not_deal_truth_authority")
+        self.assertFalse(role["failure_affects_coverage"])
 
     def test_dedupe_preserves_provenance_without_counting_sources_as_deals(self) -> None:
         provenance = self.public["provenance"]
