@@ -65,8 +65,13 @@ class AirfareLeg:
 class AirfareRecord:
     """Provider-independent airfare evidence.
 
-    No gflights (or other provider) object is retained here.  The record keeps
-    only normalized domain facts plus reproduction/evidence identifiers.
+    No gflights (or other provider) object is retained here. The record keeps
+    normalized domain facts plus reproduction/evidence identifiers.
+
+    For gflights round-trip exact search, the public result exposes the chosen
+    outbound segments while ``offer()`` locks and prices both directions. The
+    requested return date therefore remains part of the exact search context;
+    it must not be inferred from the last outbound connection segment.
     """
 
     record_id: str
@@ -95,10 +100,21 @@ class AirfareRecord:
 
     @property
     def return_date(self) -> str | None:
+        # gflights round-trip ``search`` returns outbound-choice segments only.
+        # The requested return date is nevertheless part of the exact priced
+        # search/offer context, so use it instead of mistaking an outbound
+        # connection date for the trip return date.
+        if self.surface == "exact":
+            requested = self.reproducible_search.get("return_date")
+            if isinstance(requested, str) and requested:
+                return requested
+            return None
         return self.legs[-1].date if len(self.legs) > 1 else None
 
     @property
     def is_round_trip(self) -> bool:
+        if self.surface == "exact":
+            return self.return_date is not None
         return len(self.legs) >= 2 and self.legs[-1].destination == self.origin.iata
 
     @property
@@ -107,6 +123,20 @@ class AirfareRecord:
             leg.departure_time is not None and leg.arrival_time is not None
             for leg in self.legs
         )
+
+    @property
+    def provider_segments_cover_complete_trip(self) -> bool:
+        """Whether normalized provider segments themselves cover the full trip.
+
+        A round-trip exact record may still be a complete priced/revalidated
+        airfare when this is false: gflights 0.3.0 ``offer()`` internally locks
+        the return choice but does not expose those return segments publicly.
+        """
+        if not self.has_provider_leg_identity:
+            return False
+        if self.is_round_trip:
+            return self.legs[-1].destination == self.origin.iata
+        return True
 
 
 @dataclass(frozen=True)

@@ -89,6 +89,10 @@ class GFlightsAdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(record.legs[0].destination, "NRT")
         self.assertEqual(record.legs[0].departure_time, "06:35")
         self.assertEqual(record.reproducible_search["return_date"], "2026-09-14")
+        self.assertEqual(record.return_date, "2026-09-14")
+        self.assertTrue(record.is_round_trip)
+        self.assertTrue(record.has_provider_leg_identity)
+        self.assertFalse(record.provider_segments_cover_complete_trip)
         self.assertEqual(record.reproducible_search["search_price_twd"], 6800)
 
     async def test_explore_is_weak_seed_not_deal_truth(self):
