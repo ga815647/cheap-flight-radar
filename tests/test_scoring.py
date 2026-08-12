@@ -34,6 +34,24 @@ class ScoringPolicyTests(unittest.TestCase):
             "mark_missing_and_do_not_claim_full_radar",
         )
 
+    def test_return_to_taiwan_accepts_any_live_main_island_passenger_airport(self):
+        return_policy = self.policy["search"]["return_to_taiwan"]
+        self.assertEqual(
+            return_policy["completion_scope"],
+            "any_public_passenger_airport_on_taiwan_main_island",
+        )
+        self.assertTrue(return_policy["outbound_discovery_origin_scope_is_separate"])
+        self.assertEqual(
+            set(return_policy["primary_return_search_airports"]),
+            {"TPE", "TSA", "RMQ", "KHH"},
+        )
+        self.assertTrue(return_policy["opportunistic_main_island_return_airports_allowed"])
+        self.assertTrue(return_policy["different_return_airport_allowed"])
+        self.assertTrue(return_policy["final_main_island_arrival_counts_as_trip_complete"])
+        self.assertTrue(return_policy["post_arrival_main_island_ground_access_is_not_required_component"])
+        self.assertTrue(return_policy["coverage_gate_applies_to_outbound_origins_not_every_possible_return_airport"])
+        self.assertTrue(self.policy["fare_policy"]["allow_mixed_taiwan_airports"])
+
     def test_taiwan_airport_labels_are_airport_specific(self):
         display = self.policy["search"]["display_policy"]
         self.assertEqual(
@@ -121,6 +139,56 @@ class ScoringPolicyTests(unittest.TestCase):
         efficient = transport_efficiency(8.0, 9.0)
         inefficient = transport_efficiency(8.0, 20.0)
         self.assertGreater(efficient, inefficient)
+
+    def test_verified_usable_stopover_reduces_wait_penalty_without_bonus(self):
+        pure_wait = transport_efficiency(8.0, 20.0)
+        partly_usable = transport_efficiency(8.0, 20.0, usable_stopover_hours=10.0)
+        fully_credited = transport_efficiency(8.0, 20.0, usable_stopover_hours=20.0)
+        self.assertAlmostEqual(pure_wait, 0.4)
+        self.assertAlmostEqual(partly_usable, 0.8)
+        self.assertEqual(fully_credited, 1.0)
+
+    def test_usable_stopover_policy_requires_verified_excursion_not_duration_alone(self):
+        usable = self.policy["usable_time"]["usable_stopover"]
+        self.assertTrue(self.policy["usable_time"]["penalize_unusable_connection_time"])
+        self.assertTrue(self.policy["usable_time"]["long_connection_duration_alone_is_not_penalty"])
+        self.assertTrue(usable["enabled"])
+        self.assertTrue(usable["verified_excursion_hours_reduce_connection_penalty"])
+        self.assertTrue(usable["qualifying_hours_count_as_usable_trip_time"])
+        self.assertTrue(usable["do_not_convert_entire_scheduled_layover_to_usable_time"])
+        self.assertEqual(usable["uncertainty_action"], "treat_unverified_portion_as_connection_time")
+        self.assertEqual(
+            set(usable["qualification_requires"]),
+            {
+                "entry_and_document_requirements_feasible",
+                "minimum_connection_and_recheck_buffers_preserved",
+                "local_access_practically_allows_excursion",
+                "baggage_and_recheck_constraints_compatible",
+            },
+        )
+        connection_penalty = self.policy["penalties"]["excessive_connection_time"]
+        self.assertEqual(
+            connection_penalty["applies_to"],
+            "unusable_connection_time_after_verified_usable_stopover_hours",
+        )
+        self.assertEqual(self.policy["penalties"]["usable_stopover"]["long_duration_alone_penalty"], "none")
+
+    def test_usable_stopover_cannot_hide_self_transfer_risk(self):
+        plain = transport_efficiency(8.0, 20.0, usable_stopover_hours=12.0)
+        self_transfer = transport_efficiency(
+            8.0,
+            20.0,
+            usable_stopover_hours=12.0,
+            self_transfer_count=1,
+        )
+        self.assertEqual(plain, 1.0)
+        self.assertLess(self_transfer, plain)
+
+    def test_invalid_usable_stopover_hours_are_rejected(self):
+        with self.assertRaises(ValueError):
+            transport_efficiency(8.0, 10.0, usable_stopover_hours=-1.0)
+        with self.assertRaises(ValueError):
+            transport_efficiency(8.0, 10.0, usable_stopover_hours=11.0)
 
     def test_self_transfer_adds_friction_penalty(self):
         plain = transport_efficiency(8.0, 10.0)
