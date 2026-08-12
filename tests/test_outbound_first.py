@@ -10,6 +10,7 @@ from cheap_flight_radar.models import (
     OutboundProbe,
     ReturnFare,
     RoundTripBenchmark,
+    SearchRequest,
     SeriousOutbound,
 )
 from cheap_flight_radar.outbound_first import (
@@ -64,7 +65,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             one_way_hours=one_way_hours,
             source_id="exact_web_probe",
             source_url="https://example.test/exact",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
         )
 
     def serious(self, probe):
@@ -90,9 +91,9 @@ class OutboundFirstContractTests(unittest.TestCase):
                 )
             )
         one_way, round_trip, destination_only = normalized
-        self.assertEqual(seed_one_way_price_twd(one_way), 2442)
+        self.assertEqual(seed_one_way_price_twd(one_way), 2347)
         self.assertIsNone(seed_one_way_price_twd(round_trip))
-        self.assertEqual(round_trip.displayed_price_twd, 5556)
+        self.assertEqual(round_trip.displayed_price_twd, 5079)
         self.assertIsNone(seed_one_way_price_twd(destination_only))
 
     def test_origin_sweep_is_structurally_destination_free_and_covers_all_origins(self):
@@ -101,6 +102,23 @@ class OutboundFirstContractTests(unittest.TestCase):
         coverage = outbound_first_coverage(requests, self.policy["search"]["origin_airports"])
         self.assertTrue(coverage.can_claim_outbound_first)
         self.assertEqual(coverage.missing_origins, ())
+        self.assertEqual(coverage.invalid_request_count, 0)
+
+    def test_preselected_destination_requests_cannot_establish_outbound_first_coverage(self):
+        requests = [
+            SearchRequest(
+                profile="world",
+                search_stage="broad_discovery",
+                origin=origin,
+                destination="PUS",
+                outbound_date="2026-09-21",
+            )
+            for origin in ("TPE", "TSA", "RMQ", "KHH")
+        ]
+        coverage = outbound_first_coverage(requests, self.policy["search"]["origin_airports"])
+        self.assertFalse(coverage.can_claim_outbound_first)
+        self.assertEqual(coverage.covered_origins, ())
+        self.assertEqual(coverage.invalid_request_count, 4)
 
     def test_seed_creates_first_known_destination_probe(self):
         seed = make_outbound_seed(
@@ -110,11 +128,11 @@ class OutboundFirstContractTests(unittest.TestCase):
             market="korea",
             source_id="expedia_tw_airport_origin_surface",
             source_url="https://www.expedia.com.tw/en/lp/airports/tpe/flights-from-taoyuan-intl-airport",
-            observed_at="2026-08-12T20:30:00+08:00",
-            evidence_kind="one_way_fare",
-            displayed_price_twd=2442,
+            observed_at="2026-08-12T20:43:00+08:00",
+            evidence_kind="round_trip_deal",
+            displayed_price_twd=5079,
         )
-        request = outbound_probe_request(seed, "2026-09-30")
+        request = outbound_probe_request(seed, "2026-09-16")
         self.assertEqual(request.destination, "ICN")
         self.assertEqual(request.search_stage, "outbound_probe")
 
@@ -149,15 +167,15 @@ class OutboundFirstContractTests(unittest.TestCase):
             market="korea",
             source_id="origin",
             source_url="https://example.test/origin",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
             evidence_kind="round_trip_deal",
-            displayed_price_twd=4935,
+            displayed_price_twd=5079,
         )
         probe = self.probe(
             seed_id="s1",
             market="korea",
             destination="ICN",
-            outbound_date="2026-09-30",
+            outbound_date="2026-09-16",
             price=2442,
         )
         validate_outbound_probe(seed, probe)
@@ -170,7 +188,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             seed_id="s1",
             market="korea",
             destination="ICN",
-            outbound_date="2026-09-30",
+            outbound_date="2026-09-16",
             price=2442,
             one_way_hours=2.5,
         )
@@ -185,6 +203,7 @@ class OutboundFirstContractTests(unittest.TestCase):
         dates = {request.return_date for request in requests}
         airports = {request.taiwan_return_airport for request in requests}
         self.assertGreaterEqual(len(dates), 2)
+        self.assertIn("2026-09-22", dates)
         self.assertTrue({"TPE", "TSA", "RMQ", "KHH", "TNN"}.issubset(airports))
         self.assertNotIn("HUN", airports)
 
@@ -204,7 +223,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             price_twd=2800,
             source_id="return-web",
             source_url="https://example.test/return",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
         )
         benchmark = RoundTripBenchmark(
             origin="TPE",
@@ -214,12 +233,36 @@ class OutboundFirstContractTests(unittest.TestCase):
             price_twd=4935,
             source_id="rt-web",
             source_url="https://example.test/rt",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
         )
         candidate = complete_candidate(self.serious(outbound), return_fare, benchmark)
         self.assertEqual(candidate.constructed_total_twd, 5242)
         self.assertEqual(candidate.selected_kind, "conventional_round_trip")
         self.assertEqual(candidate.selected_total_twd, 4935)
+
+    def test_usable_round_trip_can_complete_when_separate_return_one_way_does_not_converge(self):
+        outbound = self.probe(
+            seed_id="live-icn",
+            market="korea",
+            destination="ICN",
+            outbound_date="2026-09-16",
+            price=2442,
+            one_way_hours=2.5,
+        )
+        benchmark = RoundTripBenchmark(
+            origin="TPE",
+            destination="ICN",
+            outbound_date="2026-09-16",
+            return_date="2026-09-22",
+            price_twd=5079,
+            source_id="expedia_exact_route",
+            source_url="https://www.expedia.com.tw/en/lp/flights/tpe/icn/taipei-to-seoul",
+            observed_at="2026-08-12T20:43:00+08:00",
+        )
+        candidate = complete_candidate(self.serious(outbound), None, benchmark)
+        self.assertEqual(candidate.selected_kind, "conventional_round_trip")
+        self.assertEqual(candidate.selected_total_twd, 5079)
+        self.assertIsNone(candidate.constructed_total_twd)
 
     def test_open_jaw_and_china_specialist_are_post_benchmark_modes(self):
         outbound = self.probe(
@@ -237,7 +280,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             price_twd=2500,
             source_id="return",
             source_url="https://example.test/return",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
         )
         benchmark = RoundTripBenchmark(
             origin="TPE",
@@ -247,7 +290,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             price_twd=5000,
             source_id="rt",
             source_url="https://example.test/rt",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
         )
         candidate = complete_candidate(self.serious(outbound), return_fare, benchmark)
         modes = downstream_expansion_modes(candidate, profile="china")
@@ -261,7 +304,7 @@ class OutboundFirstContractTests(unittest.TestCase):
         signal = public_indexed_social_seed(
             source_id="facebook_public_index",
             source_url="https://www.facebook.com/public-example",
-            observed_at="2026-08-12T20:30:00+08:00",
+            observed_at="2026-08-12T20:43:00+08:00",
             route_signal="TPE-KIX",
             date_signal="September",
             promo_signal="sale",
@@ -275,7 +318,7 @@ class OutboundFirstContractTests(unittest.TestCase):
             public_indexed_social_seed(
                 source_id="private",
                 source_url="https://www.facebook.com/private",
-                observed_at="2026-08-12T20:30:00+08:00",
+                observed_at="2026-08-12T20:43:00+08:00",
                 route_signal="TPE-KIX",
                 publicly_indexed_without_login=False,
             )
