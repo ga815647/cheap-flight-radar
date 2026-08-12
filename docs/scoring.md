@@ -1,3 +1,20 @@
+# Current Deal ranking policy — 2026-08-13 substrate convergence
+
+This section supersedes older formal ranking rules below that combine airfare with trip-length fit, transport efficiency, connection/self-transfer penalties, or an opaque composite winner. The older sections remain as historical design evidence. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative.
+
+Formal Deal ordering is deliberately simple and explainable:
+
+1. route-relative anomaly strength, descending;
+2. current complete airfare in TWD, ascending.
+
+Qualified anomaly truth is selected by explicit authority priority and never averaged across conflicting sources:
+
+`google_flight_deals` → `google_flights_exact_price_insight` → `own_price_history`.
+
+Connections, self-transfer, airline brand, red-eye timing, trip-length preference, transport efficiency, visa friction and lodging cost may be displayed as facts or used during exploratory search, but they do not determine whether an airfare is a Deal and do not demote a formal Deal in the user-facing ranking. Composite scoring, if retained, is internal discovery ordering only. Absolute-cheapest/near-term views are diagnostic or transition views, not first-class Deal semantics.
+
+---
+
 # Scoring
 
 ## Principle

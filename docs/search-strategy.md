@@ -1,3 +1,21 @@
+# Current search policy — 2026-08-13 substrate convergence
+
+This section supersedes any older mandatory outbound-one-way-first, global-scope, market-specific deep-pipeline, ferry-gateway, or fixed 120-day product semantics below. The older material remains in this file as design history. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative; see `docs/substrate-bakeoff-2026-08-13.md` for live evidence.
+
+Current search architecture:
+
+- production scope is Asia/Oceania; Japan, Korea and China are priority coverage slices, not separate mandatory algorithms;
+- attempt destination-free discovery independently from TPE/TSA/RMQ/KHH;
+- primary surface is qualified Google Flight Deals, with Google Explore and public Expedia/Kiwi/Skyscanner surfaces as recall/fallback seeds;
+- direct complete round-trip Deal discovery is first-class and does not require reconstruction from a one-way fare;
+- cheap one-way/Explore/Signal observations may seed investigation, but only competitive endpoints receive flexible return/open-jaw expansion;
+- exact/flexible/multi-city Google Flights is the normal completion substrate; `fli` is a comparator/fallback;
+- do not brute-force every city × date × city combination; add specialist pipelines only after measured recall evidence justifies them;
+- 120 days is the normal compute budget, not a durable product boundary;
+- ferry gateways are outside the airfare-Deal product.
+
+---
+
 # Search Strategy
 
 ## Goal
