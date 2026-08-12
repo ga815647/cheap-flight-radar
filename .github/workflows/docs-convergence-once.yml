@@ -1,0 +1,45 @@
+name: docs-convergence-once
+
+on:
+  pull_request:
+    branches:
+      - chatdev/product-intent-20260813
+
+permissions:
+  contents: write
+
+jobs:
+  converge-docs:
+    if: github.event.pull_request.head.ref == 'chatdev/substrate-bakeoff-20260813'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Prepend current-policy sections without erasing historical design evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          sections = {
+            'docs/search-strategy.md': '''# Current search policy — 2026-08-13 substrate convergence\n\nThis section supersedes any older mandatory outbound-one-way-first, global-scope, market-specific deep-pipeline, ferry-gateway, or fixed 120-day product semantics below. The older material remains in this file as design history. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative; see `docs/substrate-bakeoff-2026-08-13.md` for live evidence.\n\nCurrent search architecture:\n\n- production scope is Asia/Oceania; Japan, Korea and China are priority coverage slices, not separate mandatory algorithms;\n- attempt destination-free discovery independently from TPE/TSA/RMQ/KHH;\n- primary surface is qualified Google Flight Deals, with Google Explore and public Expedia/Kiwi/Skyscanner surfaces as recall/fallback seeds;\n- direct complete round-trip Deal discovery is first-class and does not require reconstruction from a one-way fare;\n- cheap one-way/Explore/Signal observations may seed investigation, but only competitive endpoints receive flexible return/open-jaw expansion;\n- exact/flexible/multi-city Google Flights is the normal completion substrate; `fli` is a comparator/fallback;\n- do not brute-force every city × date × city combination; add specialist pipelines only after measured recall evidence justifies them;\n- 120 days is the normal compute budget, not a durable product boundary;\n- ferry gateways are outside the airfare-Deal product.\n\n---\n\n''',
+            'docs/scoring.md': '''# Current Deal ranking policy — 2026-08-13 substrate convergence\n\nThis section supersedes older formal ranking rules below that combine airfare with trip-length fit, transport efficiency, connection/self-transfer penalties, or an opaque composite winner. The older sections remain as historical design evidence. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative.\n\nFormal Deal ordering is deliberately simple and explainable:\n\n1. route-relative anomaly strength, descending;\n2. current complete airfare in TWD, ascending.\n\nQualified anomaly truth is selected by explicit authority priority and never averaged across conflicting sources:\n\n`google_flight_deals` → `google_flights_exact_price_insight` → `own_price_history`.\n\nConnections, self-transfer, airline brand, red-eye timing, trip-length preference, transport efficiency, visa friction and lodging cost may be displayed as facts or used during exploratory search, but they do not determine whether an airfare is a Deal and do not demote a formal Deal in the user-facing ranking. Composite scoring, if retained, is internal discovery ordering only. Absolute-cheapest/near-term views are diagnostic or transition views, not first-class Deal semantics.\n\n---\n\n''',
+            'docs/price-history.md': '''# Current price-history role — 2026-08-13 substrate convergence\n\nPrice history remains durable evidence, but it is no longer the mandatory or preferred anomaly engine. This section supersedes older text below where repository history appears to be required to decide whether a fare is unusually cheap. Existing immutable observations and comparison code are retained rather than deleted.\n\nCurrent authority order:\n\n1. qualified Google Flight Deals typical-price / discount evidence;\n2. qualified Google Flights exact price insight when available;\n3. repository `history/price-observations` comparable history as fallback and supplemental context.\n\nAn external source qualifies only when the relevant surface is stable enough for production use, the current price can be reproduced closely enough to identify the same airfare, and it exposes a typical price or explicit route-relative anomaly magnitude. Conflicting qualified sources are resolved by the explicit priority above; values are never averaged. A formal Deal does not require repository history when a higher-priority qualified authority already supplies anomaly truth.\n\nRepository history still supports provenance, route observations that lack external typical-price context, fallback percentile/baseline metrics, disappearance/staleness analysis, and future source audits. Synthetic backfill remains forbidden.\n\n---\n\n''',
+          }
+
+          marker = '# Current '
+          for name, prefix in sections.items():
+              path = Path(name)
+              old = path.read_text(encoding='utf-8')
+              if old.startswith(marker):
+                  continue
+              path.write_text(prefix + old, encoding='utf-8')
+          PY
+          rm .github/workflows/docs-convergence-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/search-strategy.md docs/scoring.md docs/price-history.md .github/workflows/docs-convergence-once.yml
+          git commit -m 'Align search scoring and history docs with substrate decision'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
