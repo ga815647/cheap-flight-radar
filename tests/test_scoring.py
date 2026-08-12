@@ -46,6 +46,7 @@ class ScoringPolicyTests(unittest.TestCase):
             {"TPE", "TSA", "RMQ", "KHH"},
         )
         self.assertTrue(return_policy["opportunistic_main_island_return_airports_allowed"])
+        self.assertTrue(return_policy["live_route_evidence_required_for_non_primary_return_airport"])
         self.assertTrue(return_policy["different_return_airport_allowed"])
         self.assertTrue(return_policy["final_main_island_arrival_counts_as_trip_complete"])
         self.assertTrue(return_policy["post_arrival_main_island_ground_access_is_not_required_component"])
@@ -172,6 +173,18 @@ class ScoringPolicyTests(unittest.TestCase):
             "unusable_connection_time_after_verified_usable_stopover_hours",
         )
         self.assertEqual(self.policy["penalties"]["usable_stopover"]["long_duration_alone_penalty"], "none")
+
+    def test_overnight_lodging_is_not_effective_transport_cost(self):
+        cost = self.policy["cost"]
+        self.assertNotIn(
+            "unavoidable_transport_caused_overnight_cost",
+            cost["effective_total_transport_price_includes"],
+        )
+        self.assertIn(
+            "lodging_including_transport_caused_overnight",
+            cost["exclude_by_default"],
+        )
+        self.assertTrue(self.policy["penalties"]["usable_stopover"]["lodging_cost_is_not_transport_cost"])
 
     def test_usable_stopover_cannot_hide_self_transfer_risk(self):
         plain = transport_efficiency(8.0, 20.0, usable_stopover_hours=12.0)
