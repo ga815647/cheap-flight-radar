@@ -14,6 +14,8 @@ A low fare also has to be interpreted against **when the trip departs**. A fare 
 
 Use the normalized TWD cost defined in `flight-radar.yaml`, including material transport components that are required to make the proposed itinerary work. Short local taxi-equivalent first/last-mile access is excluded because comparable same-city itineraries also incur local airport/port access and the user does not value that small difference.
 
+**Lodging is not part of effective transport price, including a hotel night caused by an overnight connection.** Nights are already represented by trip length and usable-time semantics; charging lodging again inside transport cost would double-count the same itinerary consequence. A bad overnight can still rank worse through unusable connection time or trip-length fit, but not through an invented or mandatory hotel-cost surcharge.
+
 The system should retain both original-currency values and normalized TWD values when possible.
 
 ### 2. Route value
@@ -22,7 +24,7 @@ Route value asks: **for the amount of travel obtained, is the price unusually go
 
 v0.1 uses travel time as the initial route-size proxy because it is broadly available. Historical route pricing should eventually become the stronger signal.
 
-Do not use raw `hours / price` as the sole ranking rule; that would systematically favor inefficient or excessively long itineraries. Route value should use efficient one-way travel time, while excessive connection time is penalized separately.
+Do not use raw `hours / price` as the sole ranking rule; that would systematically favor inefficient or excessively long itineraries. Route value should use efficient one-way travel time, while unusable connection time is penalized separately.
 
 ### 3. Trip-length fit
 
@@ -36,19 +38,26 @@ The configured return windows define minimum and ideal trip lengths by typical o
 
 Usable destination time is preferred over label-based "X days Y nights" when timestamps are available.
 
+Verified excursion time during a long connection may be tracked separately as `usable_stopover_hours` and counted as usable trip time. Do not blindly count the whole scheduled layover: only the portion that remains genuinely usable after immigration/entry feasibility, airport or station access, baggage/recheck needs, and safe connection buffers may receive that treatment.
+
 ### 4. Transport efficiency
 
-Transport efficiency penalizes itinerary friction, especially:
+Transport efficiency measures itinerary friction, especially:
 
-- excessive connection time,
+- unusable connection or waiting time,
 - unnecessary backtracking,
 - risky self-transfers,
-- expensive positioning segments,
-- avoidable overnight costs caused by transport.
+- expensive positioning segments.
+
+A **long connection is not inherently inefficient**. If a connection provides a verified practical stopover that can be used to visit the connection city, the usable excursion hours are removed from the waiting-time penalty. This credit is capped at the practical efficient-travel baseline: a deliberately longer routing cannot score better than an otherwise equivalent efficient itinerary merely because more stopover hours were inserted.
+
+For example, an itinerary with an efficient baseline of 8 hours and 20 elapsed transport/connection hours normally has a time-efficiency ratio of `8 / 20 = 0.4`. If 10 of those hours are verified usable stopover time, the penalized transport time becomes 10 hours and the time ratio becomes `8 / 10 = 0.8`. If enough usable stopover time would reduce penalized transport below 8 hours, efficiency remains capped at `1.0` rather than receiving a bonus.
+
+Self-transfer, re-entry, missed-connection, baggage, and similar risks remain separate penalties. A pleasant stopover does not erase those risks. Overnight lodging, whether optional or forced by the timetable, remains outside effective transport price; only the time itself is judged as usable stopover time or unusable waiting time.
 
 Short local taxi-equivalent access is not counted as comparative transport time and does not reduce usable time. Connection feasibility still matters when that local movement feeds a fixed departure.
 
-A direct or efficient one-stop itinerary should usually beat a similarly priced itinerary that burns a large fraction of the trip in material transit.
+A direct or efficient one-stop itinerary should usually beat a similarly priced itinerary that burns a large fraction of the trip in truly unusable transit. It should not automatically beat a cheaper itinerary whose longer connection is substantially usable as a stopover.
 
 ## Provisional composite
 
@@ -127,6 +136,7 @@ Every ranked item should be able to answer:
 - Is it a near-term low, the current 120-day absolute floor, a historical anomaly, or more than one of these?
 - How many days until departure, and which lead-time bucket applies?
 - How many usable destination hours/days are there?
+- Did any connection contain verified `usable_stopover_hours`, and what portion remained pure waiting time?
 - What is the efficient travel time and actual transit time?
 - Which penalties were applied?
 - Was the fare discovery-only or revalidated?

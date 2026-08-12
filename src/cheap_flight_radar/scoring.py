@@ -91,24 +91,38 @@ def transport_efficiency(
     efficient_transport_hours: float,
     actual_transport_hours: float,
     *,
+    usable_stopover_hours: float = 0.0,
     self_transfer_count: int = 0,
     self_transfer_multiplier: float = 0.85,
 ) -> float:
     """Return a 0..1 transport-efficiency score.
 
     ``efficient_transport_hours`` is the practical baseline for the itinerary;
-    ``actual_transport_hours`` includes connections and positioning time.
-    Self-transfers apply an additional multiplicative risk/friction penalty.
+    ``actual_transport_hours`` is elapsed required transport/connection time.
+    Verified ``usable_stopover_hours`` are the subset of a connection that can
+    genuinely be used as an excursion after preserving entry, baggage, local
+    access, recheck, and minimum-connection buffers. Those hours avoid the pure
+    waiting-time penalty, but can never raise efficiency above the practical
+    baseline. Self-transfers remain a separate multiplicative risk/friction
+    penalty even when the stopover itself is usable.
     """
 
     if efficient_transport_hours <= 0 or actual_transport_hours <= 0:
         raise ValueError("transport hours must be positive")
+    if usable_stopover_hours < 0:
+        raise ValueError("usable_stopover_hours must be non-negative")
+    if usable_stopover_hours > actual_transport_hours:
+        raise ValueError("usable_stopover_hours cannot exceed actual_transport_hours")
     if self_transfer_count < 0:
         raise ValueError("self_transfer_count must be non-negative")
     if not 0 < self_transfer_multiplier <= 1:
         raise ValueError("self_transfer_multiplier must be in (0, 1]")
 
-    time_ratio = _clamp(efficient_transport_hours / actual_transport_hours)
+    penalized_transport_hours = max(
+        efficient_transport_hours,
+        actual_transport_hours - usable_stopover_hours,
+    )
+    time_ratio = _clamp(efficient_transport_hours / penalized_transport_hours)
     return time_ratio * (self_transfer_multiplier**self_transfer_count)
 
 

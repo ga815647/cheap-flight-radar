@@ -9,9 +9,10 @@ The central search pattern is:
 1. Discover unusually cheap outbound one-way fares from Taiwan.
 2. Expand only promising outbound candidates into complete trips.
 3. Search multiple return dates appropriate to route length.
-4. Consider same-city return, open-jaw return, and practical positioning segments.
-5. Benchmark the constructed itinerary against a conventional round trip.
-6. Rank only complete itineraries whose important components can be verified.
+4. Consider same-city return, open-jaw return, different Taiwan return airports, and practical positioning segments.
+5. Treat verified usable stopovers as travel time rather than automatically treating every long connection as wasted time.
+6. Benchmark the constructed itinerary against a conventional round trip.
+7. Rank only complete itineraries whose important components can be verified.
 
 Price discovery must answer two different timing questions in parallel:
 
@@ -111,6 +112,18 @@ A source that only exposes Taipei results does not count as Taiwan-wide coverage
 
 If an origin cannot be searched or returns unavailable data, record it as `missing` or `unavailable`. Do not silently substitute another airport and do not present the run as complete. The report should expose origin coverage so incomplete discovery is visible.
 
+### Taiwan return closure is broader than outbound discovery
+
+The configured broad-discovery origins are **not** a whitelist of acceptable return airports.
+
+A complete itinerary may end at **any public passenger airport on Taiwan's main island** when there is live evidence that the proposed return flight operates. `TPE`, `TSA`, `RMQ`, and `KHH` remain the primary return-search airports because they carry the highest-value international coverage, but a serious candidate may opportunistically return through another main-island airport instead of being discarded simply because that airport is not a routine outbound discovery origin.
+
+Different Taiwan airports on outbound and return are explicitly valid. Examples include `TPE → destination → KHH`, `TSA → destination → RMQ`, or the reverse direction.
+
+Once the itinerary reaches an eligible Taiwan main-island airport, the radar considers the trip returned to Taiwan. It does **not** add a mandatory intercity positioning segment back to the original outbound airport or to a presumed home city. Ordinary onward movement inside Taiwan after that final arrival is outside the compared trip transport product.
+
+This broader return closure does not change the global origin coverage gate: full-radar coverage still means the configured outbound origins received their required discovery attempts. The radar does not need to scan every main-island airport as an outbound origin merely because those airports are allowed as opportunistic return endpoints.
+
 ### Taiwan airport display labels
 
 User-visible Taiwan airport labels must remain airport-specific. Do not collapse `TPE` and `TSA` into the ambiguous city label `Taipei` / `台北`.
@@ -145,8 +158,28 @@ Candidate return forms:
 
 1. same destination → Taiwan,
 2. nearby/practical alternate city → Taiwan,
-3. different Taiwan return airport,
-4. one positioning segment by domestic flight, rail, bus, or ferry where allowed.
+3. a different Taiwan main-island return airport,
+4. an opportunistic return to another live-served Taiwan main-island passenger airport,
+5. one positioning segment by domestic flight, rail, bus, or ferry where allowed.
+
+Do not force a return to the outbound Taiwan airport. A mixed-airport return is a first-class candidate, not a fallback error state.
+
+### Long connections and usable stopovers
+
+Do not reject or heavily penalize a connection merely because its scheduled duration is long.
+
+When a connection is long enough to permit a real excursion, determine how much of it is **verified usable stopover time** after preserving:
+
+- entry/document feasibility,
+- safe minimum connection and recheck buffers,
+- practical airport/station-to-city access,
+- baggage and recheck constraints.
+
+Only the verified excursion portion becomes `usable_stopover_hours`. The remainder remains ordinary connection/waiting time. If the usable portion cannot be verified, fail conservatively and treat that unverified portion as connection time rather than assuming the traveler can sightsee.
+
+Usable stopover hours may reduce the connection-time penalty and count as usable trip time, but they cannot make a deliberately inefficient routing score better than the practical efficient-travel baseline. Self-transfer, re-entry, baggage, and missed-connection risks remain separate.
+
+An overnight stop is treated the same way: usable time may be valuable and unusable waiting may be friction, but **lodging cost is not added to effective transport price**. Trip nights and usable-time semantics already represent the itinerary consequence of staying longer.
 
 Specialist profiles may spend more expansion budget inside their target country than the World profile. The World profile prioritizes geographic breadth and unusual long-haul opportunities; Japan/Korea/China profiles prioritize depth within their country.
 
@@ -157,22 +190,26 @@ The system should avoid combinatorial explosion. Nearby/alternate exits should b
 Normalize each candidate into a comparable itinerary record:
 
 - all required transport segments,
-- total required transport cost,
+- total required transport cost, excluding lodging and ordinary short local access under the SSOT,
 - first departure from Taiwan,
 - arrival at first real destination,
 - departure from final real destination,
-- final return to Taiwan,
+- final return to an eligible Taiwan main-island airport,
 - total transit/connection time,
+- verified usable stopover hours,
+- remaining unusable connection/waiting time,
 - usable destination hours,
 - baggage assumptions,
 - transfer risks,
 - verification state.
 
+Do not add a domestic Taiwan segment after final main-island arrival merely to return the traveler to the outbound airport.
+
 ## Stage D — round-trip benchmark
 
 For each serious candidate, compare against a conventional round trip on the relevant route/dates when a comparable fare can be obtained.
 
-If a normal round trip is cheaper and comparably usable, it should win even when the discovery path began with a one-way fare.
+If a normal round trip is cheaper and comparably usable, it should win even when the discovery path began with a one-way fare. The benchmark does not invalidate a mixed-Taiwan-airport itinerary merely because its endpoint differs; compare the simplest practical complete alternatives available for the same travel intent.
 
 ## Stage E — ranking and views
 
