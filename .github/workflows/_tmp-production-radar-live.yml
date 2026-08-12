@@ -43,7 +43,7 @@ jobs:
           if [[ -d _history/data/price-history ]]; then
             history_args=(--history-dir _history)
           fi
-          python -m cheap_flight_radar.production_radar \
+          python -m cheap_flight_radar.production_runtime \
             --policy flight-radar.yaml \
             "${history_args[@]}" \
             --output-dir live-run
