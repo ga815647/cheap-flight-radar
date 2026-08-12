@@ -161,7 +161,7 @@ class CompleteCandidate:
     taiwan_return_airport: str
     selected_kind: str
     selected_total_twd: int
-    constructed_total_twd: int
+    constructed_total_twd: int | None
     round_trip_benchmark_twd: int
     benchmark_source_id: str
 
