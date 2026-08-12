@@ -1,40 +1,36 @@
 version: 0.1
 status: experimental
-
 project:
   name: cheap-flight-radar
-  objective: >-
-    Discover unusually cheap, actually usable trips from Taiwan by finding cheap
-    outbound opportunities first, then constructing and ranking complete return
-    or open-jaw itineraries.
+  objective: Find real, abnormally cheap airfare Deals from Taiwan, ranked first by route-relative anomaly strength
+    and then by current complete airfare, while retaining weaker promotional observations separately as Signals.
   currency: TWD
   timezone: Asia/Taipei
-
 search:
   horizon_days: 120
   origin_country: TW
   origin_airports:
-    - TPE
-    - TSA
-    - RMQ
-    - KHH
+  - TPE
+  - TSA
+  - RMQ
+  - KHH
   return_to_taiwan:
     completion_scope: any_public_passenger_airport_on_taiwan_main_island
     outbound_discovery_origin_scope_is_separate: true
     primary_return_search_airports:
-      - TPE
-      - TSA
-      - RMQ
-      - KHH
+    - TPE
+    - TSA
+    - RMQ
+    - KHH
     opportunistic_main_island_return_airports_allowed: true
     live_route_evidence_required_for_non_primary_return_airport: true
     different_return_airport_allowed: true
     final_main_island_arrival_counts_as_trip_complete: true
     post_arrival_main_island_ground_access_is_not_required_component: true
     coverage_gate_applies_to_outbound_origins_not_every_possible_return_airport: true
-  destination_scope: global
+  destination_scope: asia_oceania
   weekday_restriction: none
-  discovery_strategy: outbound_one_way_first
+  discovery_strategy: destination_free_deal_round_trip_or_one_way_sweep
   deep_search_candidate_limit: 20
   final_shortlist_limit: 10
   round_trip_benchmark: true
@@ -45,31 +41,33 @@ search:
     configured_origin_sweep_required: true
     caller_preselected_destination_invalidates_outbound_first_coverage_claim: true
     seed_evidence_kinds:
-      - one_way_fare
-      - round_trip_deal
-      - destination_only
+    - one_way_fare
+    - round_trip_deal
+    - destination_only
     round_trip_deal_must_not_be_divided_into_one_way_price: true
-    serious_seed_requires_exact_outbound_one_way_probe: true
+    serious_seed_requires_exact_outbound_one_way_probe: false
     exact_outbound_probe_requires:
-      - exact_origin_airport
-      - exact_destination_airport
-      - exact_outbound_date
-      - explicit_one_way_fare_scope
-      - positive_current_price
+    - exact_origin_airport
+    - exact_destination_airport
+    - exact_outbound_date
+    - explicit_one_way_fare_scope
+    - positive_current_price
     floor_windows_days:
       near_term: 30
       horizon_absolute: 120
     reserve_serious_candidate_breadth_across_markets:
-      - japan
-      - korea
-      - china
-      - world
-    only_serious_outbounds_enter_return_expansion: true
+    - japan
+    - korea
+    - china
+    - world
+    only_serious_outbounds_enter_return_expansion: false
     return_expansion_searches_multiple_reasonable_dates: true
     conventional_round_trip_benchmark_required: true
     usable_round_trip_may_complete_candidate_when_separate_return_one_way_does_not_converge: true
     open_jaw_and_mixed_taiwan_return_after_baseline_completion: true
-    china_specialist_multimodal_expansion_after_baseline_completion: true
+    china_specialist_multimodal_expansion_after_baseline_completion: false
+    status: legacy_compatibility_only
+    round_trip_deal_may_be_formal_candidate_without_one_way_split: true
   price_time_views:
     near_term:
       enabled: true
@@ -86,7 +84,6 @@ search:
     require_attempt_for_each_origin_airport: true
     incomplete_origin_coverage_action: mark_missing_and_do_not_claim_full_radar
     report_origin_coverage: true
-
   display_policy:
     taiwan_airport_labels:
       TPE: 桃園
@@ -97,10 +94,9 @@ search:
     require_airport_specific_taiwan_label: true
     forbid_taipei_alias_for_tpe_or_tsa: true
     forbidden_ambiguous_taiwan_origin_labels:
-      - 台北
-      - Taipei
+    - 台北
+    - Taipei
     unresolved_metro_area_action: mark_airport_unknown_and_do_not_publish_as_airport_specific_deal
-
   daily_profiles:
     enabled: true
     shared_origin_coverage: true
@@ -108,73 +104,94 @@ search:
     profiles:
       world:
         enabled: true
-        destination_scope: global
-        mode: broad_discovery
+        destination_scope: asia_oceania
+        mode: priority_coverage_with_shared_pipeline
         include_specialist_countries_in_discovery: true
         specialist_country_deep_expansion: false
         specialist_countries:
-          - JP
-          - KR
-          - CN
+        - JP
+        - KR
+        - CN
         report_section: world_other_surprises
       japan:
         enabled: true
         destination_countries:
-          - JP
-        mode: specialist_deep
+        - JP
+        mode: priority_coverage_with_shared_pipeline
         allow_open_jaw: true
         onward_modes:
-          - domestic_flight
-          - rail
-          - bus
+        - domestic_flight
+        - rail
+        - bus
       korea:
         enabled: true
         destination_countries:
-          - KR
-        mode: specialist_deep
+        - KR
+        mode: priority_coverage_with_shared_pipeline
         allow_open_jaw: true
         floor_scan_policy: all_relevant_korean_airports_not_only_seoul_or_busan
-        floor_scan_seed_airports: [ICN, GMP, PUS, CJU, TAE, CJJ]
+        floor_scan_seed_airports:
+        - ICN
+        - GMP
+        - PUS
+        - CJU
+        - TAE
+        - CJJ
         floor_scan_seed_list_exhaustive: false
         onward_modes:
-          - domestic_flight
-          - rail
-          - bus
+        - domestic_flight
+        - rail
+        - bus
       china:
         enabled: true
         destination_countries:
-          - CN
-        mode: specialist_deep
+        - CN
+        mode: priority_coverage_with_shared_pipeline
         allow_open_jaw: true
-        enable_multimodal_gateways: true
+        enable_multimodal_gateways: false
         onward_modes:
-          - domestic_flight
-          - high_speed_rail
-          - rail
-          - bus
-          - ferry
-
+        - domestic_flight
+        - rail
+        - bus
+  horizon_semantics: default_compute_budget_not_product_bound
+  horizon_extension_allowed_when_provider_surface_is_cheap: true
+  search_architecture:
+    stage_a: destination_free_sweep_from_each_taiwan_origin
+    accepted_seed_kinds:
+    - qualified_round_trip_deal
+    - round_trip_fare
+    - one_way_fare
+    - destination_only
+    direct_qualified_round_trip_deal_can_skip_return_construction: true
+    cheap_one_way_or_explore_seed_requires_endpoint_specific_completion: true
+    expand_open_jaw_only_for_competitive_endpoints: true
+    brute_force_city_date_city_matrix: forbidden_by_default
+    market_specialist_pipeline_required: false
+    market_priority_order:
+    - japan
+    - korea
+    - china
+    - other_asia_oceania
 fare_policy:
   include_low_cost_carriers: true
   include_full_service_carriers: true
   allow_one_stop_international: true
   allow_self_transfer: true
-  self_transfer_penalty: true
+  self_transfer_penalty: false
   allow_mixed_carriers: true
   allow_mixed_taiwan_airports: true
   baggage:
     normalization_mode: required_trip_baggage
     default_assumption: personal_item_or_cabin_bag_only
     add_checked_baggage_only_when_needed: true
-
+  formal_deal_ranking_ignores_connection_brand_schedule_friction: true
 routing:
   open_jaw: true
   allow_positioning_segments: true
   positioning_modes:
-    - domestic_flight
-    - rail
-    - bus
-    - ferry
+  - domestic_flight
+  - rail
+  - bus
   max_extra_flight_segments_default: 1
   prefer_domestic_positioning_over_cross_border_self_transfer: true
   reject_unverified_connections: true
@@ -183,47 +200,55 @@ routing:
     exact_fare_or_duration_required: false
     can_fail_closed: false
     practical_connection_feasibility_required_when_time_sensitive: true
-    definition: >-
-      Short local first/last-mile or intra-gateway-area movement that can normally
-      be handled by taxi or ordinary local transit and is not itself the travel
-      product being compared.
+    definition: Short local first/last-mile or intra-gateway-area movement that can normally be handled by taxi
+      or ordinary local transit and is not itself the travel product being compared.
     examples:
-      - airport_to_same_city_or_gateway_area
-      - port_to_same_city_or_gateway_area
-      - short_airport_to_port_or_port_to_airport
+    - airport_to_same_city_or_gateway_area
+    - port_to_same_city_or_gateway_area
+    - short_airport_to_port_or_port_to_airport
     does_not_apply_to:
-      - intercity_or_cross_region_transfer
-      - ferry_or_mainland_rail_or_domestic_flight
-      - required_connection_wait_or_checkin
-      - required_overnight_connection_wait
-
+    - intercity_or_cross_region_transfer
+    - ferry_or_mainland_rail_or_domestic_flight
+    - required_connection_wait_or_checkin
+    - required_overnight_connection_wait
+  ferry_in_product_scope: false
 return_windows:
-  # Based on typical one-way travel time. These are search windows, not mandatory trip lengths.
-  - max_one_way_hours: 2.5
-    min_nights: 2
-    max_nights: 6
-    ideal_nights: [2, 4]
-  - max_one_way_hours: 4.0
-    min_nights: 3
-    max_nights: 8
-    ideal_nights: [3, 5]
-  - max_one_way_hours: 6.0
-    min_nights: 4
-    max_nights: 10
-    ideal_nights: [4, 6]
-  - max_one_way_hours: 9.0
-    min_nights: 5
-    max_nights: 12
-    ideal_nights: [6, 8]
-  - max_one_way_hours: 12.0
-    min_nights: 6
-    max_nights: 14
-    ideal_nights: [7, 10]
-  - max_one_way_hours: null
-    min_nights: 8
-    max_nights: 18
-    ideal_nights: [9, 14]
-
+- max_one_way_hours: 2.5
+  min_nights: 2
+  max_nights: 6
+  ideal_nights:
+  - 2
+  - 4
+- max_one_way_hours: 4.0
+  min_nights: 3
+  max_nights: 8
+  ideal_nights:
+  - 3
+  - 5
+- max_one_way_hours: 6.0
+  min_nights: 4
+  max_nights: 10
+  ideal_nights:
+  - 4
+  - 6
+- max_one_way_hours: 9.0
+  min_nights: 5
+  max_nights: 12
+  ideal_nights:
+  - 6
+  - 8
+- max_one_way_hours: 12.0
+  min_nights: 6
+  max_nights: 14
+  ideal_nights:
+  - 7
+  - 10
+- max_one_way_hours: null
+  min_nights: 8
+  max_nights: 18
+  ideal_nights:
+  - 9
+  - 14
 usable_time:
   primary_measure: usable_destination_hours
   derive_usable_days_from_hours: true
@@ -238,41 +263,37 @@ usable_time:
     do_not_convert_entire_scheduled_layover_to_usable_time: true
     never_reward_transport_efficiency_above_practical_baseline: true
     qualification_requires:
-      - entry_and_document_requirements_feasible
-      - minimum_connection_and_recheck_buffers_preserved
-      - local_access_practically_allows_excursion
-      - baggage_and_recheck_constraints_compatible
+    - entry_and_document_requirements_feasible
+    - minimum_connection_and_recheck_buffers_preserved
+    - local_access_practically_allows_excursion
+    - baggage_and_recheck_constraints_compatible
     uncertainty_action: treat_unverified_portion_as_connection_time
   do_not_reward_excess_trip_length_beyond_ideal: true
-
+  formal_deal_ranking_role: none
 cost:
   effective_total_transport_price_includes:
-    - international_airfare
-    - required_domestic_airfare
-    - required_rail
-    - required_bus
-    - required_ferry
-    - material_required_airport_or_port_transfer_excluding_short_local_access
-    - required_baggage
+  - international_airfare
+  - required_domestic_airfare
+  - required_baggage
   exclude_by_default:
-    - short_local_taxi_or_equivalent_access_cost
-    - normal_local_sightseeing_transport
-    - lodging_including_transport_caused_overnight
-    - meals
-
+  - short_local_taxi_or_equivalent_access_cost
+  - normal_local_sightseeing_transport
+  - lodging_including_transport_caused_overnight
+  - meals
+  formal_deal_price_semantics: complete_airfare_only
 ranking:
   preserve_views:
-    - near_term_cheapest
-    - absolute_cheapest
-    - best_short_break
-    - unusual_long_haul_deal
+  - near_term_cheapest
+  - absolute_cheapest
+  - best_short_break
+  - unusual_long_haul_deal
   price_view_semantics:
     near_term_cheapest: lowest_usable_complete_trip_price_departing_within_30_days
     absolute_cheapest: lowest_usable_complete_trip_price_in_rolling_120_day_horizon
     historical_anomaly: separate_evidence_axis_not_a_synonym_for_absolute_cheapest
   composite_score:
     enabled: true
-    role: internal_candidate_ordering_heuristic
+    role: internal_discovery_ordering_only_not_formal_deal_ranking
     publish_winner: false
     user_facing_view: false
   primary_recommendation_components:
@@ -281,17 +302,30 @@ ranking:
     trip_length_fit: 0.25
     transport_efficiency: 0.15
   weights_status: provisional_until_historical_calibration
-  price_priority_rule: >-
-    Absolute price and explicit user-facing views must never be hidden by the
-    composite score. Composite scoring may order internal search candidates but
-    must not publish a Best Value winner.
-
+  price_priority_rule: Absolute price and explicit user-facing views must never be hidden by the composite score.
+    Composite scoring may order internal search candidates but must not publish a Best Value winner.
+  formal_deal_order:
+  - relative_anomaly_strength_desc
+  - current_complete_airfare_twd_asc
+  primary_user_facing_views:
+  - deals
+  - signals
+  legacy_absolute_price_views_status: diagnostic_only_not_first_class_deal_views
+  formal_deal_ignores:
+  - trip_length_fit
+  - transport_efficiency
+  - connection_count
+  - self_transfer
+  - airline_brand
+  - red_eye
+  - visa_friction
+  - lodging_cost
 penalties:
   self_transfer:
-    enabled: true
+    enabled: false
     severity: moderate
   excessive_connection_time:
-    enabled: true
+    enabled: false
     applies_to: unusable_connection_time_after_verified_usable_stopover_hours
     severity: high
   usable_stopover:
@@ -300,7 +334,7 @@ penalties:
     lodging_cost_is_not_transport_cost: true
     cannot_raise_transport_efficiency_above_practical_baseline: true
   insufficient_trip_length_for_route:
-    enabled: true
+    enabled: false
     severity: high
   excessive_positioning_cost:
     enabled: true
@@ -308,7 +342,7 @@ penalties:
   unverifiable_price_or_schedule:
     enabled: true
     severity: reject
-
+  applies_to_formal_deal_ranking: false
 china:
   enabled: true
   activation_profile: china
@@ -316,24 +350,22 @@ china:
   direct_air: true
   gateway_modes:
     kinmen:
-      enabled: true
+      enabled: false
       taiwan_airport: KNH
       onward_mode: ferry
       mainland_gateway_area: Xiamen_Quanzhou
     matsu:
-      enabled: true
+      enabled: false
       taiwan_airports:
-        - MFK
-        - LZN
+      - MFK
+      - LZN
       onward_mode: ferry
       mainland_gateway_area: Fuzhou
   coverage_gate:
-    enabled: true
+    enabled: false
     applies_only_when_profile: china
     required_modes:
-      - direct_air
-      - kinmen
-      - matsu
+    - direct_air
     incomplete_mode_coverage_action: mark_missing_and_do_not_claim_full_china_radar
     report_mode_coverage: true
   ferry_data_policy:
@@ -344,6 +376,7 @@ china:
     passenger_eligibility_must_be_live: true
     document_requirements_must_be_live: true
     do_not_store_operational_timetable_as_constant: true
+    status: retained_historical_reference_not_active_product_policy
   ferry_evaluation:
     compare_against_simplest_comparable_air_itinerary: true
     count_total_door_to_door_transport_time: true
@@ -355,11 +388,12 @@ china:
     evaluate_extra_transport_time_share_of_usable_trip: true
     disruption_risk_model: qualitative_until_history_exists
     qualitative_levels:
-      - low
-      - medium
-      - high
+    - low
+    - medium
+    - high
     penalize_missed_connection_cascade_risk: true
     never_invent_cancellation_probability: true
+    status: retained_historical_reference_not_active_product_policy
   allow_mainland_domestic_flight: true
   allow_mainland_high_speed_rail: true
   allow_mainland_rail: true
@@ -368,8 +402,8 @@ china:
     return_window_semantics: search_and_scoring_reference_not_hard_rejection
     gateway_expansion:
       trigger_when:
-        - serious_gateway_seed_has_current_exact_fare_evidence
-        - verified_practical_onward_or_open_jaw_edge_exists
+      - serious_gateway_seed_has_current_exact_fare_evidence
+      - verified_practical_onward_or_open_jaw_edge_exists
       do_not_require_trip_within_default_return_window: true
     second_city_selection:
       require_verified_transport_edge: true
@@ -378,10 +412,10 @@ china:
       use_domestic_flight_when: verified_rail_is_absent_or_materially_worse_for_total_required_transport_time
       consider_open_jaw_when: verified_exit_reduces_backtracking_or_complete_transport_cost_or_time
     stop_expansion_when:
-      - next_required_component_cannot_be_currently_revalidated
-      - complete_effective_cost_or_required_transport_time_cannot_be_normalized
-      - candidate_no_longer_competes_with_round_trip_benchmark_or_existing_expansions
-      - deep_search_candidate_limit_reached
+    - next_required_component_cannot_be_currently_revalidated
+    - complete_effective_cost_or_required_transport_time_cannot_be_normalized
+    - candidate_no_longer_competes_with_round_trip_benchmark_or_existing_expansions
+    - deep_search_candidate_limit_reached
     final_revalidation:
       round_trip_benchmark_required: true
       exact_airport_and_date_required_for_air_segments: true
@@ -391,7 +425,7 @@ china:
       essential_unknown_action: exploratory_not_verified
   document_requirements_must_be_verified_live: true
   ferry_schedule_must_be_verified_live: true
-
+  ferry_in_product_scope: false
 price_history:
   enabled: true
   persistence:
@@ -424,44 +458,52 @@ price_history:
     require_departure_date: true
     baseline_fare_scope: usable_complete_trip
     availability_states:
-      - available
-      - stale
-      - disappeared
+    - available
+    - stale
+    - disappeared
     current_floor_eligible_state: available
     historical_baseline_price_state: available
     stale_or_disappeared_retained_as_provenance: true
     prior_available_observation_remains_historical_evidence_after_disappearance: true
     current_live_views_use_current_radar_run_only: true
   departure_lead_time_buckets_days:
-    - id: d0_14
-      min_days: 0
-      max_days: 14
-    - id: d15_30
-      min_days: 15
-      max_days: 30
-    - id: d31_60
-      min_days: 31
-      max_days: 60
-    - id: d61_120
-      min_days: 61
-      max_days: 120
+  - id: d0_14
+    min_days: 0
+    max_days: 14
+  - id: d15_30
+    min_days: 15
+    max_days: 30
+  - id: d31_60
+    min_days: 31
+    max_days: 60
+  - id: d61_120
+    min_days: 61
+    max_days: 120
   comparison_dimensions:
-    - exact_route_when_available
-    - trip_type
-    - departure_lead_time_bucket
-    - season_or_month_when_history_sufficient
-    - comparable_trip_length
+  - exact_route_when_available
+  - trip_type
+  - departure_lead_time_bucket
+  - season_or_month_when_history_sufficient
+  - comparable_trip_length
   baseline:
     statistic: median
-    moving_windows_days: [7, 30, 90]
+    moving_windows_days:
+    - 7
+    - 30
+    - 90
     primary_recent_window_days: 30
-    fallback_window_order_days: [90, 7]
+    fallback_window_order_days:
+    - 90
+    - 7
     minimum_samples_per_window: 3
     current_observation_excluded_from_own_baseline: true
     insufficient_samples_action: return_unknown
     never_impute_missing_window: true
   rolling_lows:
-    windows_days: [30, 90, 365]
+    windows_days:
+    - 30
+    - 90
+    - 365
     include_all_time: true
     minimum_samples: 1
     low_alone_does_not_imply_historical_anomaly: true
@@ -513,10 +555,22 @@ price_history:
     never_treat_as_currently_purchasable: true
   sparse_history_action: label_low_confidence_and_do_not_invent_percentile
   anomaly_views:
-    - new_route_low
-    - percentile_vs_route_history
-    - percentage_below_recent_baseline
-
+  - new_route_low
+  - percentile_vs_route_history
+  - percentage_below_recent_baseline
+  role: supplemental_evidence_and_fallback_anomaly_truth
+  required_for_formal_deal: false
+  external_anomaly_truth:
+    preferred: true
+    qualification_requires:
+    - stable_surface
+    - current_price_reproducibility
+    - typical_price_or_explicit_anomaly_magnitude
+    conflict_resolution: explicit_source_priority_never_average
+    priority:
+    - google_flight_deals
+    - google_flights_exact_price_insight
+    - own_price_history
 publication:
   enabled: true
   platform: github_pages
@@ -538,20 +592,20 @@ publication:
     permanent_per_run_url: true
     future_history_must_not_change_prior_run_metrics: true
   user_facing_views:
-    - absolute_cheapest
-    - near_term_cheapest
-    - best_short_break
-    - unusual_long_haul_deal
+  - absolute_cheapest
+  - near_term_cheapest
+  - best_short_break
+  - unusual_long_haul_deal
   required_market_sections:
-    - japan
-    - korea
-    - china
-    - world
+  - japan
+  - korea
+  - china
+  - world
   required_operational_sections:
-    - failed_non_converged_cheap_seeds
-    - origin_coverage
-    - fixed_watch_coverage_and_freshness
-    - china_mode_coverage
+  - failed_non_converged_cheap_seeds
+  - origin_coverage
+  - fixed_watch_coverage_and_freshness
+  - china_mode_coverage
   historical_display:
     derive_from_evidence_ref: true
     show_all_time_and_rolling_low_when_supported: true
@@ -560,27 +614,30 @@ publication:
     always_show_sample_count_and_confidence: true
     sparse_history_explanation_required: true
     synthetic_backfill: forbidden
+    role: supplemental_when_available
   write_sequence:
-    - persist_immutable_history_snapshot
-    - read_history_and_derive_comparable_metrics
-    - append_publication_manifest
-    - generate_per_run_latest_and_index_pages
-    - deploy_github_pages
+  - persist_immutable_history_snapshot
+  - read_history_and_derive_comparable_metrics
+  - append_publication_manifest
+  - generate_per_run_latest_and_index_pages
+  - deploy_github_pages
   orchestration:
     primary_scheduler: chatgpt_scheduled_radar_run
     publication_trigger: presentation_manifest_push
     github_actions_role: disposable_static_build_gate_and_deploy_backend
     independent_github_cron: false
     github_actions_is_not_scheduler: true
-
+  primary_user_facing_views:
+  - deals
+  - signals
+  legacy_views_status: diagnostic_or_transition_only
 notifications:
   enabled_when_automation_exists: true
   notify_on:
-    - new_top_ranked_deal
-    - meaningful_new_route_low
-    - unusually_cheap_long_haul
+  - new_top_ranked_deal
+  - meaningful_new_route_low
+  - unusually_cheap_long_haul
   suppress_routine_no_change_runs: true
-
 verification:
   discovery_price_is_not_bookable_price: true
   final_candidate_revalidation_required: true
@@ -588,13 +645,12 @@ verification:
   record_source_url_or_source_id: true
   record_fare_conditions_when_available: true
   never_invent_missing_components: true
-
 public_intelligence:
   status: evidence_backed_registry_v1
   roles:
     fixed_watch:
-      definition: required_public_discovery_source_with_fresh_success_on_declared_cadence
-      failure_affects_coverage: true
+      definition: optional_recurring_signal_source_not_deal_truth_authority
+      failure_affects_coverage: false
     opportunistic:
       definition: best_effort_open_web_or_public_social_signal
       failure_affects_coverage: false
@@ -612,16 +668,16 @@ public_intelligence:
     fresh_success_action: may_reference_prior_success_without_new_attempt
     failed_attempt_refreshes_due_clock: false
     chatgpt_run_sequence:
-      - load_registry_and_prior_success_state
-      - determine_due_fixed_watches
-      - trigger_required_github_execution
-      - read_normalized_observations_and_attempt_manifest
-      - perform_opportunistic_web_discovery
-      - perform_deep_search_and_revalidation
-      - persist_immutable_price_history_snapshot
-      - derive_historical_metrics_from_persisted_history
-      - append_publication_manifest
-      - publish_static_report
+    - load_registry_and_prior_success_state
+    - determine_due_fixed_watches
+    - trigger_required_github_execution
+    - read_normalized_observations_and_attempt_manifest
+    - perform_opportunistic_web_discovery
+    - perform_deep_search_and_revalidation
+    - persist_immutable_price_history_snapshot
+    - derive_historical_metrics_from_persisted_history
+    - append_publication_manifest
+    - publish_static_report
   runtime:
     selected: scrapy
     http_runtime: scrapy
@@ -633,20 +689,22 @@ public_intelligence:
       fingerprint_spoofing: forbidden
       proxy_rotation: forbidden
       residential_proxy: forbidden
+      rotating_browser_user_agent: forbidden_for_production
+      ordinary_fixed_user_agent_header: allowed
   coverage:
-    fixed_watch_attempts_are_coverage_authority: true
+    fixed_watch_attempts_are_coverage_authority: false
     cadence_is_maximum_age_of_latest_successful_attempt_hours: true
     fresh_prior_success_within_cadence_may_satisfy_run_coverage: true
     failed_attempt_never_refreshes_freshness: true
     referenced_prior_success_must_include_attempt_id: true
     attempt_statuses:
-      - success
-      - unavailable
-      - blocked
-      - fetch_failed
-      - parse_failed
+    - success
+    - unavailable
+    - blocked
+    - fetch_failed
+    - parse_failed
     failed_fixed_watch_must_be_reported: true
-    opportunistic_source_cannot_substitute_fixed_watch_coverage: true
+    opportunistic_source_cannot_substitute_fixed_watch_coverage: false
     fixed_registry_does_not_claim_market_exhaustiveness: true
   provenance:
     first_seen_immutable: true
@@ -660,51 +718,48 @@ public_intelligence:
     source_identity_excluded_from_candidate_identity: true
     price_excluded_from_itinerary_identity: true
     exact_itinerary_key_components:
-      - trip_type
-      - exact_origin_airport
-      - exact_destination_airport_when_known
-      - outbound_date_or_window
-      - return_date_or_window
-      - operating_or_marketing_flight_identity_when_known
+    - trip_type
+    - exact_origin_airport
+    - exact_destination_airport_when_known
+    - outbound_date_or_window
+    - return_date_or_window
+    - operating_or_marketing_flight_identity_when_known
     campaign_key_components:
-      - carrier
-      - sale_period
-      - travel_period
-      - route_set
-      - promo_code_when_known
+    - carrier
+    - sale_period
+    - travel_period
+    - route_set
+    - promo_code_when_known
     fare_observations_append_to_existing_candidate: true
     never_count_duplicate_sightings_as_separate_deals: true
   fixed_watch_registry:
-    - id: china_airlines_official
-      markets: [japan, korea, china, world]
-      source_type: official_airline
-      acquisition: direct_http
-      entry_url: https://www.china-airlines.com/tw/zh/index.html
-      cadence_hours: 6
-      carrier_scope: china_airlines_and_mandarin_promotions_only
-      taiwan_origin_evidence: [TPE, TSA, RMQ, KHH]
-      lcc_coverage: false
-      fsc_coverage: true
-      coverage_claim: source_attempt_only
-    - id: ptt_japan_travel_info
-      markets: [japan]
-      source_type: public_forum
-      acquisition: direct_http
-      entry_url: https://www.ptt.cc/bbs/Japan_Travel/index.html
-      content_filter: information_posts_with_airfare_or_sale_signals
-      cadence_hours: 3
-      carrier_scope: multi_carrier_user_reported_promotions
-      taiwan_origin_evidence: [TPE, KHH]
-      lcc_coverage: true
-      fsc_coverage: partial
-      coverage_claim: board_attempt_only
+  - id: china_airlines_official
+    markets:
+    - japan
+    - korea
+    - china
+    - world
+    source_type: official_airline
+    acquisition: direct_http
+    entry_url: https://www.china-airlines.com/tw/zh/index.html
+    cadence_hours: 24
+    carrier_scope: china_airlines_and_mandarin_promotions_only
+    taiwan_origin_evidence:
+    - TPE
+    - TSA
+    - RMQ
+    - KHH
+    lcc_coverage: false
+    fsc_coverage: true
+    coverage_claim: source_attempt_only
+    role: signal_only
   fixed_watch_research_exclusions:
     tigerair_tw_official:
       role: opportunistic
       reason: no_stable_public_promotion_dom_from_current_homepage_on_ubuntu_runner
       evidence:
-        - direct_http_200_but_parser_contract_absent
-        - vanilla_playwright_200_but_parser_contract_absent
+      - direct_http_200_but_parser_contract_absent
+      - vanilla_playwright_200_but_parser_contract_absent
       preferred_discovery: public_web_indexed_official_news_and_static_event_pages
       anti_bot_evasion_allowed: false
   opportunistic_policy:
@@ -716,103 +771,96 @@ public_intelligence:
     public_social_seed_contract:
       public_indexed_without_login_required: true
       may_supply:
-        - route_signal
-        - date_signal
-        - promo_signal
-        - price_text
+      - route_signal
+      - date_signal
+      - promo_signal
+      - price_text
       verification_state: seed_only
       can_establish_verified_fare: false
       serious_candidate_requires_separate_exact_fare_probe: true
     examples_researched_not_required_coverage:
-      - tigerair_tw_official_news_and_static_events
-      - taiwan_airfare_editor_facebook_pages
-      - peach_official_promotions
-      - tway_official_events
-      - jejuair_official_events
-      - eva_air_official_promotions
-      - cheapflytw
-      - secret_flying
-      - fly4free
+    - tigerair_tw_official_news_and_static_events
+    - taiwan_airfare_editor_facebook_pages
+    - peach_official_promotions
+    - tway_official_events
+    - jejuair_official_events
+    - eva_air_official_promotions
+    - cheapflytw
+    - secret_flying
+    - fly4free
   verification_only_policy:
     trigger_after_serious_candidate: true
     source_classes:
-      - airline_booking_or_exact_fare_page
-      - ota_exact_itinerary_page
-      - metasearch_exact_itinerary_page
+    - airline_booking_or_exact_fare_page
+    - ota_exact_itinerary_page
+    - metasearch_exact_itinerary_page
     verify_when_possible:
-      - exact_airports
-      - exact_dates
-      - flight_identity
-      - current_price
-      - tax_scope
-      - baggage_scope
-      - fare_family
+    - exact_airports
+    - exact_dates
+    - flight_identity
+    - current_price
+    - tax_scope
+    - baggage_scope
+    - fare_family
     unknown_components_remain_unknown: true
-
 source_routing:
-  status: partial
+  status: bakeoff_selected_v2
   strict_no_silent_degradation: true
   unconfigured_market_stage_action: mark_source_unavailable_and_do_not_claim_coverage
   selected_routes:
     shared:
       origin_wide_discovery:
-        primary_provider: expedia_tw_airport_origin_surface
-        fallback_provider: chatgpt_web_public_fare_index
-        execution_mode: chatgpt_web_direct
+        primary_provider: gflights_google_flight_deals
+        fallback_provider: expedia_tw_airport_origin_surface
+        secondary_seed_providers:
+        - gflights_google_explore
+        - kiwi_anywhere_web
+        - skyscanner_everywhere_web
+        execution_mode: keyless_http_client
+        credential_required: false
         query_scope: destination_free_origin_airport_anywhere
         request_contract: OriginSweepRequest
         destination_input_forbidden: true
-        applies_to_profiles: [world, japan, korea, china]
+        applies_to_profiles:
+        - world
+        - japan
+        - korea
+        - china
         shared_across_profiles: true
         require_origin_attempt_for_each_configured_airport: true
         evidence_kinds:
-          - one_way_fare
-          - round_trip_deal
-          - destination_only
-        round_trip_deal_must_not_be_divided_into_one_way_price: true
-        exact_one_way_probe_required_before_floor_or_serious_candidate: true
+        - qualified_round_trip_deal
+        - round_trip_fare
+        - one_way_fare
+        - destination_only
         full_market_coverage_claim: false
       broad_discovery:
-        primary_provider: chatgpt_web_public_fare_index
-        execution_mode: chatgpt_web_direct
-        query_scope: post_seed_known_route_public_fare_index
-        role: exact_outbound_return_and_round_trip_probe_after_origin_seed
-        applies_to_profiles: [world, japan, korea, china]
+        primary_provider: gflights_google_exact
+        fallback_provider: fli_google_exact
+        execution_mode: keyless_http_client
+        credential_required: false
+        query_scope: known_route_exact_or_flexible_completion
+        role: complete_selected_seed_and_revalidate_current_airfare
+        applies_to_profiles:
+        - world
+        - japan
+        - korea
+        - china
         shared_across_profiles: true
-        require_exact_origin_airport: true
-        query_shapes:
-          - exact_route_probe
-          - lcc_carrier_probe
-        query_requirements:
-          use_exact_origin_iata: true
-          include_rolling_horizon_month_or_date_window: true
-          prefer_local_currency: TWD
-          retain_one_way_outbound_seed: true
-          retain_round_trip_benchmark_when_available: true
-          retain_near_term_floor: true
-          retain_horizon_absolute_floor: true
-          continue_floor_scan_after_coarse_target_band_hit: true
-        source_class_order:
-          - public_ota_or_metasearch_route_fare_index
-          - indexed_exact_fare_result
-          - official_lcc_promotion_or_event
-          - public_deal_editor_or_forum
-        evidence_state: discovery
-        full_market_coverage_claim: false
+        combined_open_jaw: supported
         revalidation_required: true
     china:
       deep_search:
-        primary_provider: flyai
-        query_scope: exact_round_trip
-        credential_required: FLYAI_API_KEY
-        exact_returned_airport_and_date_gate: true
-        combined_open_jaw: unsupported_by_tested_interface
-        fallback_provider: null
-        incomplete_coverage_action: mark_missing_and_do_not_claim_full_china_airfare_coverage
+        primary_provider: gflights_google_exact
+        execution_mode: keyless_http_client
+        credential_required: false
+        query_scope: known_route_exact_or_flexible_completion
+        combined_open_jaw: supported
+        specialist_pipeline_required: false
   providers:
     expedia_tw_airport_origin_surface:
       selected_roles:
-        - stage_a_origin_wide_destination_seed
+      - stage_a_origin_wide_destination_seed
       execution: chatgpt_web_direct
       credential_required: false
       freshness: indexed_or_live_public_web_observation
@@ -828,46 +876,97 @@ source_routing:
         destination_without_usable_fare: destination_only
         round_trip_division_or_imputation: forbidden
       known_limitations:
-        - origin_surface_is_not_an_exhaustive_destination_matrix
-        - headline_one_way_low_may_not_include_exact_departure_date
-        - many_visible_deal_cards_are_round_trip_evidence
-        - serious_destinations_require_exact_one_way_route_date_probe
-        - prices_can_change_between_index_and_opened_surface
+      - origin_surface_is_not_an_exhaustive_destination_matrix
+      - headline_one_way_low_may_not_include_exact_departure_date
+      - many_visible_deal_cards_are_round_trip_evidence
+      - serious_destinations_require_exact_one_way_route_date_probe
+      - prices_can_change_between_index_and_opened_surface
     chatgpt_web_public_fare_index:
       selected_roles:
-        - origin_wide_fallback
-        - post_seed_known_route_probe
+      - origin_wide_fallback
+      - post_seed_known_route_probe
       execution: chatgpt_web_direct
       credential_required: false
       freshness: indexed_or_live_public_web_observation
       verification_state: discovery
       source_classes_ordered:
-        - public_ota_or_metasearch_route_fare_index
-        - indexed_exact_fare_result
-        - official_lcc_promotion_or_event
-        - public_deal_editor_or_forum
+      - public_ota_or_metasearch_route_fare_index
+      - indexed_exact_fare_result
+      - official_lcc_promotion_or_event
+      - public_deal_editor_or_forum
       known_limitations:
-        - indexed_fares_may_be_stale_or_change_between_observations
-        - metro_labels_can_hide_exact_airport_substitution_and_must_be_resolved
-        - promotion_pages_often_lack_absolute_fare_and_only_seed_route_or_sale_interest
-        - best_effort_web_recall_does_not_claim_exhaustive_market_matrix
-        - serious_candidates_require_separate_revalidation
-    flyai:
+      - indexed_fares_may_be_stale_or_change_between_observations
+      - metro_labels_can_hide_exact_airport_substitution_and_must_be_resolved
+      - promotion_pages_often_lack_absolute_fare_and_only_seed_route_or_sale_interest
+      - best_effort_web_recall_does_not_claim_exhaustive_market_matrix
+      - serious_candidates_require_separate_revalidation
+    gflights_google_flight_deals:
+      truth_source: google_flight_deals
+      library: gflights==0.3.0
+      license: MIT
+      execution: disposable_github_runner_or_local
+      credential_required: false
+      proxy: forbidden
+      user_agent: fixed_explicit_project_identity_required
       selected_roles:
-        - china_deep_search
-      unselected_roles:
-        - broad_discovery
-        - revalidation
-        - final_cross_check
-      freshness: provider_live_search
-      verification_state: discovery
-      fare_semantics:
-        currency: unknown
-        tax_inclusion: unknown
-        baggage: unknown
-        fare_family: unknown
-      known_limitations:
-        - returned_airport_substitution_requires_strict_filtering
-        - combined_open_jaw_not_supported_by_tested_cli
-        - independent_reference_found_a_c2_itinerary_component_coverage_gap
-        - true_revalidation_not_measured
+      - primary_destination_free_deal_discovery
+      - primary_external_anomaly_truth_acquisition
+      qualification: production_candidate_live_proven_2026_08_13
+    gflights_google_explore:
+      truth_source: google_flights_explore
+      library: gflights==0.3.0
+      credential_required: false
+      selected_roles:
+      - secondary_destination_free_seed_discovery
+      verification_state: seed_only_until_exact_completion
+    gflights_google_exact:
+      truth_source: google_flights_exact_search
+      library: gflights==0.3.0
+      credential_required: false
+      selected_roles:
+      - exact_completion
+      - flexible_dates
+      - open_jaw
+      - booking_offer_revalidation
+      verification_state: current_search_evidence_revalidate_before_publish
+    fli_google_exact:
+      library: flights==0.9.0
+      credential_required: false
+      selected_roles:
+      - exact_and_flexible_fallback_comparator
+      production_note: install_click_explicitly_due_current_wheel_metadata_defect
+    kiwi_anywhere_web:
+      selected_roles:
+      - secondary_seed_discovery
+      execution: chatgpt_web_direct
+      credential_required: false
+    skyscanner_everywhere_web:
+      selected_roles:
+      - secondary_seed_discovery
+      execution: chatgpt_web_direct
+      credential_required: false
+    trvl_research_only:
+      selected_roles: []
+      production_status: rejected_after_live_bakeoff
+      reasons:
+      - twd_request_returned_usd
+      - default_multi_provider_merge_noisy
+      - provider_429_and_403_observed
+      - self_connect_composition
+      - polyform_noncommercial_license
+      - google_provider_uses_utls_browser_tls_impersonation
+  anomaly_truth_priority:
+  - google_flight_deals
+  - google_flights_exact_price_insight
+  - own_price_history
+  conflicting_anomaly_sources: select_highest_priority_qualified_source_never_average
+  api_production_gate: long_term_free_or_proven_recurring_free_quota_only
+  api_production_exclusions:
+    expedia_api: authorization_partner_access_and_new_applications_paused
+    kiwi_tequila_api: new_partnerships_invitation_only
+    skyscanner_api: partnership_approval_and_quota_not_proven_free_for_daily_full_radar
+    google_flights_public_airfare_api: not_available
+return_windows_policy:
+  role: search_hints_only
+  formal_deal_minimum_away_hours: 24
+  trip_length_does_not_affect_deal_status_or_ranking: true
