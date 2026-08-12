@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - publication/radar-reports
+      - main
     paths:
       - "publication/runs/*.json"
+      - "src/cheap_flight_radar/publication.py"
+      - "flight-radar.yaml"
+      - ".github/workflows/radar-pages.yml"
   workflow_dispatch:
 
 permissions:
