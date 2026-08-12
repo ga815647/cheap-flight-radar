@@ -9,6 +9,7 @@ from .models import OriginSweepRequest, ProviderPlanEntry, ProviderState, RouteP
 
 
 KNOWN_ROUTE_WEB_STAGES = {"outbound_probe", "return_expansion", "round_trip_benchmark"}
+KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client"}
 
 
 def _unavailable(reason: str, state: str = "unavailable") -> RoutePlan:
@@ -61,9 +62,11 @@ def build_source_plan(
 ) -> RoutePlan:
     """Return the ordered provider plan without silently degrading query fidelity.
 
-    ``OriginSweepRequest`` is the only valid Stage A discovery request. A legacy
-    ``SearchRequest(search_stage="broad_discovery")`` already contains a caller-
-    selected destination and therefore cannot establish outbound-first coverage.
+    Destination-free discovery is represented by ``OriginSweepRequest``.  It may
+    yield qualified round-trip Deals directly, or weaker round-trip/one-way/
+    destination seeds that are completed only for competitive endpoints.
+    A destination-bearing ``SearchRequest(search_stage="broad_discovery")`` is
+    therefore not valid evidence of destination-free origin coverage.
     """
 
     routing = policy.get("source_routing") or {}
@@ -73,22 +76,20 @@ def build_source_plan(
         stage_config = _shared_origin_wide_config(request.profiles, selected)
         if not stage_config:
             return _unavailable(
-                "no shared production provider selected for origin-wide discovery",
+                "no shared production provider selected for destination-free discovery",
                 state="unconfigured",
             )
         return _plan_stage(
             stage_config=stage_config,
             provider_states=provider_states,
-            reason=(
-                f"selected by SSOT for destination-free {request.origin} origin sweep"
-            ),
+            reason=f"selected by SSOT for destination-free {request.origin} origin sweep",
             include_fallback=True,
         )
 
     if request.search_stage == "broad_discovery":
         return _unavailable(
-            "known-destination SearchRequest cannot establish outbound-first coverage; "
-            "use destination-free OriginSweepRequest",
+            "known-destination SearchRequest cannot establish destination-free origin coverage; "
+            "use OriginSweepRequest",
             state="invalid_contract",
         )
 
@@ -122,10 +123,11 @@ def build_source_plan(
         stage_config=stage_config,
         provider_states=provider_states,
         reason=(
-            f"selected by SSOT for shared known-route {request.search_stage} via ChatGPT Web"
+            f"selected by SSOT for shared known-route {request.search_stage}"
             if request.search_stage in KNOWN_ROUTE_WEB_STAGES
             else f"selected by SSOT for {request.profile}/{request.search_stage}"
         ),
+        include_fallback=True,
     )
 
 
@@ -140,29 +142,28 @@ def _plan_stage(
     if not provider:
         return _unavailable("selected route has no primary provider", state="unconfigured")
 
-    if stage_config.get("execution_mode") == "chatgpt_web_direct":
-        entries = [ProviderPlanEntry(provider=provider, reason=reason)]
+    execution_mode = str(stage_config.get("execution_mode") or "")
+    credential_required = bool(stage_config.get("credential_required", execution_mode not in KEYLESS_EXECUTION_MODES))
+
+    if not credential_required and execution_mode in KEYLESS_EXECUTION_MODES:
+        entries = [ProviderPlanEntry(provider=str(provider), reason=reason)]
         fallback = stage_config.get("fallback_provider") if include_fallback else None
         if fallback and fallback != provider:
             entries.append(
                 ProviderPlanEntry(
                     provider=str(fallback),
-                    reason="best-effort fallback after primary origin-wide surface failure",
+                    reason="ordered fallback after selected primary substrate cannot satisfy the request",
                 )
             )
         return RoutePlan(entries=tuple(entries), coverage_state="planned")
 
-    state = provider_states.get(provider)
+    state = provider_states.get(str(provider))
     if state is None or not state.credential_available:
-        return _unavailable(
-            f"{provider} credential unavailable; no silent fallback selected"
-        )
+        return _unavailable(f"{provider} credential unavailable; no silent fallback selected")
     if not state.healthy:
-        return _unavailable(
-            f"{provider} unhealthy; no silent lower-fidelity fallback selected"
-        )
+        return _unavailable(f"{provider} unhealthy; no silent lower-fidelity fallback selected")
 
     return RoutePlan(
-        entries=(ProviderPlanEntry(provider=provider, reason=reason),),
+        entries=(ProviderPlanEntry(provider=str(provider), reason=reason),),
         coverage_state="planned",
     )
