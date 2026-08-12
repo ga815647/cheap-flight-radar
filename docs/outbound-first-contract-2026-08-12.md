@@ -71,6 +71,25 @@ Operational decision: Expedia Taiwan is strong enough to be the **first origin-w
 
 `tests/fixtures/outbound_first/expedia_tpe_origin_surface.json` preserves one-way, round-trip-card and destination-only evidence classes without claiming the fixture price remains current.
 
+## Live end-to-end smoke — destination produced by the sweep
+
+A small public-Web smoke on 2026-08-12 closed the full contract without preselecting the destination:
+
+1. **Origin sweep:** Expedia Taiwan's TPE airport-origin surface independently emitted **ICN** among its deal destinations. The caller supplied TPE, not ICN.
+2. **Exact outbound probe:** only after that seed existed, the TPE→ICN route surface exposed an explicit one-way fare of **NT$2,442 for 2026-09-14**.
+3. **Return expansion:** the observed direct flight time was about 2h35, so the SSOT's up-to-4-hour bracket expands the outbound into multiple reasonable return dates, including 3/5/8 nights: **2026-09-17, 2026-09-19, 2026-09-22**. The 5-night ICN→TPE probe converged to an explicit one-way **NT$2,575 on 2026-09-19**.
+4. **Conventional RT benchmark:** Trip.com's public Taiwan route surface independently exposed the exact same TPE→ICN **2026-09-14 → 2026-09-19** nonstop round trip at **TWD 5,057**.
+5. **Complete candidate:** the constructed pair is **TWD 5,017 = 2,442 + 2,575**, so for this smoke the one-way pair beats the conventional round trip by **TWD 40**. The benchmark is still retained; had the RT been cheaper or materially more practical, the executable completion rule would select it instead.
+
+Evidence URLs used by the smoke:
+
+- Expedia TPE origin surface: `https://www.expedia.com.tw/en/lp/airports/tpe/flights-from-taoyuan-intl-airport`
+- Expedia TPE→ICN: `https://www.expedia.com.tw/lp/flights/tpe/icn/taipei-to-seoul?flightType=oneway`
+- Expedia ICN→TPE: `https://www.expedia.com.tw/en/lp/flights/icn/tpe/seoul-to-taipei?siteid=62`
+- Trip.com Taiwan TPE→ICN benchmark surface: `https://tw.trip.com/flights/airport-tpe-icn/`
+
+These are public fare-index observations, not checkout verification. They prove the Stage-A discovery provenance and end-to-end contract shape; any user-facing fare promotion still requires the normal final revalidation policy.
+
 ## Public Facebook/editor contract
 
 Search-indexed public Facebook/editor material may create `OpportunisticSeedSignal` carrying route/date/promo/price text. It is permanently `role=opportunistic`, `verification_state=seed_only`, and `can_establish_verified_fare=false`. Login-gated/non-public social content is rejected.
