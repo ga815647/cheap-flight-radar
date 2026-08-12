@@ -232,13 +232,17 @@ ranking:
   preserve_views:
     - near_term_cheapest
     - absolute_cheapest
-    - best_value
     - best_short_break
     - unusual_long_haul_deal
   price_view_semantics:
     near_term_cheapest: lowest_usable_complete_trip_price_departing_within_30_days
     absolute_cheapest: lowest_usable_complete_trip_price_in_rolling_120_day_horizon
     historical_anomaly: separate_evidence_axis_not_a_synonym_for_absolute_cheapest
+  composite_score:
+    enabled: true
+    role: internal_candidate_ordering_heuristic
+    publish_winner: false
+    user_facing_view: false
   primary_recommendation_components:
     effective_total_price: 0.35
     route_value: 0.25
@@ -246,9 +250,9 @@ ranking:
     transport_efficiency: 0.15
   weights_status: provisional_until_historical_calibration
   price_priority_rule: >-
-    Absolute price must remain visible and must never be hidden by the composite
-    score. Composite ranking exists to distinguish usable deals from superficially
-    cheap but impractical itineraries.
+    Absolute price and explicit user-facing views must never be hidden by the
+    composite score. Composite scoring may order internal search candidates but
+    must not publish a Best Value winner.
 
 penalties:
   self_transfer:
@@ -481,6 +485,62 @@ price_history:
     - percentile_vs_route_history
     - percentage_below_recent_baseline
 
+publication:
+  enabled: true
+  platform: github_pages
+  code_ref: main
+  evidence_ref: history/price-observations
+  presentation:
+    ref: publication/radar-reports
+    manifest_path_template: publication/runs/{radar_run_id}.json
+    manifest_mode: append_only_per_run
+    presentation_is_not_fare_evidence: true
+    daily_manifest_write_requires_pr_or_main_merge: false
+  static_site:
+    generator: cheap_flight_radar.publication
+    deterministic: true
+    build_from_all_manifests_each_deploy: true
+    per_run_path_template: runs/{radar_run_id}/index.html
+    latest_path: latest/index.html
+    index_path: index.html
+    permanent_per_run_url: true
+    future_history_must_not_change_prior_run_metrics: true
+  user_facing_views:
+    - absolute_cheapest
+    - near_term_cheapest
+    - best_short_break
+    - unusual_long_haul_deal
+  required_market_sections:
+    - japan
+    - korea
+    - china
+    - world
+  required_operational_sections:
+    - failed_non_converged_cheap_seeds
+    - origin_coverage
+    - fixed_watch_coverage_and_freshness
+    - china_mode_coverage
+  historical_display:
+    derive_from_evidence_ref: true
+    show_all_time_and_rolling_low_when_supported: true
+    show_recent_baseline_and_percent_below_when_supported: true
+    percentile_threshold: inherit_price_history_percentile_minimum_samples
+    always_show_sample_count_and_confidence: true
+    sparse_history_explanation_required: true
+    synthetic_backfill: forbidden
+  write_sequence:
+    - persist_immutable_history_snapshot
+    - read_history_and_derive_comparable_metrics
+    - append_publication_manifest
+    - generate_per_run_latest_and_index_pages
+    - deploy_github_pages
+  orchestration:
+    primary_scheduler: chatgpt_scheduled_radar_run
+    publication_trigger: presentation_manifest_push
+    github_actions_role: disposable_static_build_gate_and_deploy_backend
+    independent_github_cron: false
+    github_actions_is_not_scheduler: true
+
 notifications:
   enabled_when_automation_exists: true
   notify_on:
@@ -511,7 +571,7 @@ public_intelligence:
       failure_affects_discovery_coverage: false
   orchestration:
     primary_scheduler: chatgpt_scheduled_radar_run
-    github_actions_role: on_demand_deterministic_execution_crawler_and_gate_backend
+    github_actions_role: on_demand_deterministic_execution_crawler_gate_and_deploy_backend
     independent_github_cron: false
     cadence_semantics: freshness_reuse_window_and_due_threshold_not_actions_schedule
     due_clock_source: latest_successful_fixed_watch_attempt
@@ -526,7 +586,10 @@ public_intelligence:
       - read_normalized_observations_and_attempt_manifest
       - perform_opportunistic_web_discovery
       - perform_deep_search_and_revalidation
-      - produce_final_report
+      - persist_immutable_price_history_snapshot
+      - derive_historical_metrics_from_persisted_history
+      - append_publication_manifest
+      - publish_static_report
   runtime:
     selected: scrapy
     http_runtime: scrapy
