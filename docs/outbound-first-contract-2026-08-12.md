@@ -2,7 +2,7 @@
 
 Status: implementation checkpoint on top of clean `main`.
 
-This package does not change the product policy in `flight-radar.yaml`. It makes the already-declared `search.discovery_strategy: outbound_one_way_first` and shared Web broad-discovery route executable and testable.
+This package does not change the product goal in `flight-radar.yaml`. It makes the already-declared `search.discovery_strategy: outbound_one_way_first` and shared Web broad-discovery route executable and testable.
 
 ## Audit result
 
@@ -52,41 +52,36 @@ Selected probes are wrapped as `SeriousOutbound`. Return expansion accepts that 
 
 ### Stage C/D — completion + mandatory RT benchmark
 
-`complete_candidate()` requires both a usable exact return fare and a conventional round-trip benchmark on the same dates. A usable conventional round trip wins when it is cheaper/equal with at least comparable practicality, or when current evidence marks it as more practical.
+`complete_candidate()` requires a conventional round-trip benchmark on the same candidate dates. When a usable exact return one-way also converges, the constructed one-way pair and the conventional RT are compared directly. If the separate return one-way does not converge but the exact-date conventional RT is usable, `complete_candidate_from_round_trip()` lets the RT itself close the candidate rather than incorrectly requiring two one-way tickets.
 
-Only after this baseline candidate exists does `downstream_expansion_modes()` expose open-jaw / mixed-Taiwan-return expansion. Mainland HSR/domestic air/Kinmen/Matsu modes are China-profile-only.
+A usable conventional round trip wins when it is cheaper/equal with at least comparable practicality, or when current evidence marks it as more practical. Only after this baseline candidate exists does `downstream_expansion_modes()` expose open-jaw / mixed-Taiwan-return expansion. Mainland HSR/domestic air/Kinmen/Matsu modes are China-profile-only.
 
 ## Expedia Taiwan origin-wide smoke research
 
 Live public-Web research on 2026-08-12 found Expedia Taiwan airport-origin pages for TPE, TSA, RMQ and KHH under the `/lp/airports/<IATA>/flights-from-...` surface.
 
-The TPE page is genuinely destination-free at entry: it is a flights-**from-TPE** page rather than a TPE→preselected-destination page. In the observed surface:
+The TPE page is genuinely destination-free at entry: it is a flights-**from-TPE** page rather than a TPE→preselected-destination page. In the refreshed observed surface:
 
 - the page separately stated one-way and round-trip starting prices;
-- its FAQ identified the cheapest observed one-way destination as ICN;
-- deal cards independently surfaced destinations including ICN, KIX, DMK, HKG, NRT and PVG;
-- visible deal cards were predominantly explicitly labeled **round trip**, even though a one-way filter exists.
+- it identified **DMK** as the current cheapest observed one-way destination in one indexed rendering;
+- deal cards independently surfaced destinations including **ICN**, DMK and NRT without the caller preselecting them;
+- visible deal cards were explicitly labeled **round trip** even though the page also exposes a one-way mode.
 
-Operational decision: Expedia Taiwan is strong enough to be the **first origin-wide seed surface** attempted inside the existing `chatgpt_web_public_fare_index` Stage-A execution, but it is **not sufficient as the sole Stage-A fare authority**. The airport page may give a one-way low without the exact outbound date needed for a 0–30/0–120 floor, while many useful destination cards are round-trip evidence. Every serious destination therefore still requires an exact one-way route/date probe.
+These values drift within the day, which is exactly why the source is treated as live discovery evidence rather than a constant fixture.
+
+Operational decision: Expedia Taiwan is strong enough to be the **first origin-wide seed surface** attempted inside Stage A, but it is **not sufficient as the sole Stage-A fare authority**. The airport page may give a one-way low without the exact outbound date needed for a 0–30/0–120 floor, while many useful destination cards are round-trip evidence. Every serious destination therefore still requires an exact one-way route/date probe.
 
 `tests/fixtures/outbound_first/expedia_tpe_origin_surface.json` preserves one-way, round-trip-card and destination-only evidence classes without claiming the fixture price remains current.
 
 ## Live end-to-end smoke — destination produced by the sweep
 
-A small public-Web smoke on 2026-08-12 closed the full contract without preselecting the destination:
+A refreshed public-Web smoke on 2026-08-12 closed the full contract without preselecting the destination:
 
 1. **Origin sweep:** Expedia Taiwan's TPE airport-origin surface independently emitted **ICN** among its deal destinations. The caller supplied TPE, not ICN.
-2. **Exact outbound probe:** only after that seed existed, the TPE→ICN route surface exposed an explicit one-way fare of **NT$2,442 for 2026-09-14**.
-3. **Return expansion:** the observed direct flight time was about 2h35, so the SSOT's up-to-4-hour bracket expands the outbound into multiple reasonable return dates, including 3/5/8 nights: **2026-09-17, 2026-09-19, 2026-09-22**. The 5-night ICN→TPE probe converged to an explicit one-way **NT$2,575 on 2026-09-19**.
-4. **Conventional RT benchmark:** Trip.com's public Taiwan route surface independently exposed the exact same TPE→ICN **2026-09-14 → 2026-09-19** nonstop round trip at **TWD 5,057**.
+2. **Exact outbound probe:** only after that seed existed, the TPE→ICN route surface exposed an explicit one-way fare of **NT$2,442 for 2026-09-16**.
+3. **Return expansion:** the observed direct flight time was about 2h35, so the SSOT's up-to-4-hour bracket produces multiple reasonable return dates. A 3-night probe on **2026-09-19** converged to an explicit ICN→TPE one-way fare of **NT$2,575**; other generated dates remain independent attempts rather than invented prices.
+4. **Conventional RT benchmark:** Trip.com's Taiwan route surface independently exposed the exact same TPE→ICN **2026-09-16 → 2026-09-19** nonstop round trip at **TWD 5,057**. Expedia also exposed same-route round-trip evidence in the same live period.
 5. **Complete candidate:** the constructed pair is **TWD 5,017 = 2,442 + 2,575**, so for this smoke the one-way pair beats the conventional round trip by **TWD 40**. The benchmark is still retained; had the RT been cheaper or materially more practical, the executable completion rule would select it instead.
-
-Evidence URLs used by the smoke:
-
-- Expedia TPE origin surface: `https://www.expedia.com.tw/en/lp/airports/tpe/flights-from-taoyuan-intl-airport`
-- Expedia TPE→ICN: `https://www.expedia.com.tw/lp/flights/tpe/icn/taipei-to-seoul?flightType=oneway`
-- Expedia ICN→TPE: `https://www.expedia.com.tw/en/lp/flights/icn/tpe/seoul-to-taipei?siteid=62`
-- Trip.com Taiwan TPE→ICN benchmark surface: `https://tw.trip.com/flights/airport-tpe-icn/`
 
 These are public fare-index observations, not checkout verification. They prove the Stage-A discovery provenance and end-to-end contract shape; any user-facing fare promotion still requires the normal final revalidation policy.
 
