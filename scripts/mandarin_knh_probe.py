@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Temporary narrow probe for Mandarin Airlines' official booking form.
+"""Temporary narrow probe for Mandarin Airlines target-date KNH return fares.
 
 Route/date-specific acquisition research only, not a production crawler. Uses vanilla
 Playwright and ordinary browser interaction. It does not synthesize or bypass a
@@ -16,9 +16,8 @@ from playwright.async_api import async_playwright
 
 URL = "https://www.mandarin-airlines.com/b2c/BookingNPurchase"
 OUT = Path("artifacts/mandarin-knh-probe")
-ROUTES = (("KHH", "KNH"), ("TSA", "KNH"))
-DEPARTURE = "2026-08-20"
-RETURN = "2026-08-23"
+ROUTES = (("KNH", "KHH"), ("KNH", "TSA"))
+DEPARTURE = "2026-08-23"
 
 
 async def set_date(page, selector: str, value: str) -> None:
@@ -37,19 +36,17 @@ async def query(browser, origin: str, destination: str) -> dict:
     response = await page.goto(URL, wait_until="domcontentloaded", timeout=60_000)
     await page.wait_for_timeout(4_000)
 
-    # Ordinary UI interaction. Do not touch cf_turnstile_response.
-    await page.locator("#trip_return").check()
+    # Ordinary UI interaction only. Do not touch cf_turnstile_response.
+    await page.locator("#trip_oneway").check()
     await page.locator("#departureCity1").select_option(origin)
     await page.wait_for_timeout(500)
     await page.locator("#arrivalCity1").select_option(destination)
-    await set_date(page, "#rtDeptDate1", DEPARTURE)
-    await set_date(page, "#rtRetDate1", RETURN)
+    await set_date(page, "#deptDate4", DEPARTURE)
 
     pre = {
         "origin": origin,
         "destination": destination,
         "departure": DEPARTURE,
-        "return": RETURN,
         "http_status": response.status if response else None,
         "turnstile_field_present": await page.locator("#cf_turnstile_response").count() > 0,
         "turnstile_value_present_before_click": bool(
@@ -70,11 +67,9 @@ async def query(browser, origin: str, destination: str) -> dict:
             token in body.lower()
             for token in ("captcha", "turnstile", "verify you are human", "驗證您是人類", "機器人")
         ),
-        "buttons": await page.locator("button").all_inner_texts(),
-        "links": (await page.locator("a").all_inner_texts())[:100],
     }
 
-    slug = f"{origin.lower()}-{destination.lower()}-{DEPARTURE}-{RETURN}"
+    slug = f"{origin.lower()}-{destination.lower()}-{DEPARTURE}"
     (OUT / f"{slug}.txt").write_text(body, encoding="utf-8")
     (OUT / f"{slug}.html").write_text(await page.content(), encoding="utf-8")
     await page.screenshot(path=str(OUT / f"{slug}.png"), full_page=True)
@@ -90,12 +85,11 @@ async def main() -> None:
         for origin, destination in ROUTES:
             try:
                 results.append(await query(browser, origin, destination))
-            except Exception as exc:  # probe evidence should retain failures cleanly
+            except Exception as exc:
                 results.append({
                     "origin": origin,
                     "destination": destination,
                     "departure": DEPARTURE,
-                    "return": RETURN,
                     "error": type(exc).__name__,
                     "message": str(exc)[:2000],
                 })
