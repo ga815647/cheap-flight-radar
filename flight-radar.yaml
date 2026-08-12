@@ -132,6 +132,24 @@ routing:
   max_extra_flight_segments_default: 1
   prefer_domestic_positioning_over_cross_border_self_transfer: true
   reject_unverified_connections: true
+  short_local_access:
+    normalization: ignore_cost_and_comparative_time
+    exact_fare_or_duration_required: false
+    can_fail_closed: false
+    practical_connection_feasibility_required_when_time_sensitive: true
+    definition: >-
+      Short local first/last-mile or intra-gateway-area movement that can normally
+      be handled by taxi or ordinary local transit and is not itself the travel
+      product being compared.
+    examples:
+      - airport_to_same_city_or_gateway_area
+      - port_to_same_city_or_gateway_area
+      - short_airport_to_port_or_port_to_airport
+    does_not_apply_to:
+      - intercity_or_cross_region_transfer
+      - ferry_or_mainland_rail_or_domestic_flight
+      - required_connection_wait_or_checkin
+      - unavoidable_transport_caused_overnight
 
 return_windows:
   # Based on typical one-way travel time. These are search windows, not mandatory trip lengths.
@@ -174,10 +192,11 @@ cost:
     - required_rail
     - required_bus
     - required_ferry
-    - required_airport_or_port_transfer
+    - material_required_airport_or_port_transfer_excluding_short_local_access
     - required_baggage
     - unavoidable_transport_caused_overnight_cost
   exclude_by_default:
+    - short_local_taxi_or_equivalent_access_cost
     - normal_local_sightseeing_transport
     - hotels_not_caused_by_transport
     - meals
@@ -259,7 +278,9 @@ china:
   ferry_evaluation:
     compare_against_simplest_comparable_air_itinerary: true
     count_total_door_to_door_transport_time: true
-    include_port_transfer_and_checkin_time: true
+    short_local_taxi_or_equivalent_transfer_time_excluded: true
+    include_material_port_transfer_and_checkin_time: true
+    connection_feasibility_still_required_for_excluded_local_access: true
     include_immigration_and_wait_time: true
     evaluate_savings_per_extra_transport_hour: true
     evaluate_extra_transport_time_share_of_usable_trip: true
@@ -297,6 +318,7 @@ china:
       exact_airport_and_date_required_for_air_segments: true
       current_price_required_for_all_priced_segments: true
       live_schedule_required_for_time_sensitive_ground_or_ferry_segments: true
+      excluded_short_local_access_is_not_an_essential_component: true
       essential_unknown_action: exploratory_not_verified
   document_requirements_must_be_verified_live: true
   ferry_schedule_must_be_verified_live: true

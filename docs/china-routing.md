@@ -58,13 +58,26 @@ Do not compare only the minutes spent on the boat. Compare the ferry itinerary's
 Count, when required:
 
 - Taiwan positioning flight and airport process,
-- airport → port transfer,
+- material airport / port transfer that is more than short local access,
 - ferry check-in and waiting,
 - sailing time,
 - immigration/border processing,
-- port → city/rail/airport transfer,
+- material port → city/rail/airport transfer when it is intercity or otherwise a real routing leg,
 - onward mainland transport,
 - the same components again if the return also uses ferry.
+
+### Short local access normalization
+
+Short local first/last-mile movement that can normally be handled by taxi or ordinary local transit is **not part of the comparative deal cost or comparative transport time**. A conventional same-city air trip also requires local airport access, so exact taxi fare/minutes add noise without improving the gateway decision.
+
+For this class of movement:
+
+- do not require an exact fare or duration;
+- do not fail-close a candidate solely because that exact local fare/time is missing;
+- do not deduct it from usable destination time or add it to extra transport time;
+- still confirm that the connection is physically practical when it feeds a time-sensitive ferry or separately ticketed segment.
+
+Examples that may be ignored for cost/time when practically short and local include `KNH ↔ Shuitou`, `Wutong ↔ Xiamen local anchor`, or an ordinary airport ↔ same-city taxi. This exception does **not** apply to a real intercity leg such as `Huangqi ↔ Fuzhou`, to ferry/rail/domestic-air travel, to check-in/waiting, or to a transport-caused overnight.
 
 Expose at least two diagnostics for a serious ferry candidate:
 
@@ -99,7 +112,7 @@ Potential routing shape:
 Taiwan airport → KNH → port transfer → ferry → Xiamen/Quanzhou area → rail/domestic flight → destination
 ```
 
-Actual ferry terminals, timetables, eligibility, ticket prices, document requirements, and transfer times are live facts and must be verified at research time.
+Actual ferry terminals, timetables, eligibility, ticket prices, and document requirements are live facts and must be verified at research time. For short local taxi-equivalent access, verify only that the connection is practically feasible; exact fare/minutes are not required or scored.
 
 ## Matsu gateway
 
@@ -189,10 +202,12 @@ China multimodal candidates must include required:
 
 - Taiwan positioning flight,
 - ferry fare,
-- port/airport transfers,
+- material port/airport transfers that are not short local taxi-equivalent access,
 - mainland rail/domestic airfare,
 - return transport to Taiwan,
 - required baggage and unavoidable transport-caused overnight costs.
+
+Short local taxi-equivalent access is deliberately excluded from both comparative cost and comparative transport time; only connection feasibility remains relevant.
 
 Do not compare a ferry gateway's partial cost against a direct flight's complete round-trip cost.
 

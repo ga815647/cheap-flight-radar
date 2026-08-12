@@ -13,6 +13,9 @@ class ChinaMixedRoutingPolicyTests(unittest.TestCase):
         with (ROOT / "flight-radar.yaml").open("r", encoding="utf-8") as handle:
             cls.policy = yaml.safe_load(handle)
         cls.mixed = cls.policy["china"]["mixed_routing"]
+        cls.local_access = cls.policy["routing"]["short_local_access"]
+        cls.cost = cls.policy["cost"]
+        cls.ferry = cls.policy["china"]["ferry_evaluation"]
 
     def test_return_window_is_not_a_hard_mixed_routing_rejection(self):
         self.assertEqual(
@@ -46,6 +49,29 @@ class ChinaMixedRoutingPolicyTests(unittest.TestCase):
         self.assertEqual(
             second_city["consider_open_jaw_when"],
             "verified_exit_reduces_backtracking_or_complete_transport_cost_or_time",
+        )
+
+    def test_short_local_access_is_not_a_cost_time_or_fail_closed_component(self):
+        self.assertEqual(
+            self.local_access["normalization"],
+            "ignore_cost_and_comparative_time",
+        )
+        self.assertFalse(self.local_access["exact_fare_or_duration_required"])
+        self.assertFalse(self.local_access["can_fail_closed"])
+        self.assertTrue(
+            self.local_access["practical_connection_feasibility_required_when_time_sensitive"]
+        )
+        includes = set(self.cost["effective_total_transport_price_includes"])
+        self.assertNotIn("required_airport_or_port_transfer", includes)
+        self.assertIn(
+            "material_required_airport_or_port_transfer_excluding_short_local_access",
+            includes,
+        )
+        self.assertTrue(self.ferry["short_local_taxi_or_equivalent_transfer_time_excluded"])
+        self.assertTrue(
+            self.mixed["final_revalidation"][
+                "excluded_short_local_access_is_not_an_essential_component"
+            ]
         )
 
     def test_mixed_routing_stops_on_unverifiable_or_noncompetitive_branches(self):
