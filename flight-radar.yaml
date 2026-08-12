@@ -571,7 +571,7 @@ public_intelligence:
       failure_affects_discovery_coverage: false
   orchestration:
     primary_scheduler: chatgpt_scheduled_radar_run
-    github_actions_role: on_demand_deterministic_execution_crawler_gate_and_deploy_backend
+    github_actions_role: on_demand_deterministic_execution_crawler_and_gate_backend
     independent_github_cron: false
     cadence_semantics: freshness_reuse_window_and_due_threshold_not_actions_schedule
     due_clock_source: latest_successful_fixed_watch_attempt
