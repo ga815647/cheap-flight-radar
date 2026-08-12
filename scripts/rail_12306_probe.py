@@ -9,13 +9,35 @@ public 12306 ticket/price surfaces and emits compact JSON evidence to stdout.
 from __future__ import annotations
 
 import argparse
+from http.cookiejar import CookieJar
 import json
+import re
 import sys
 from urllib.parse import urlencode
-from urllib.request import Request, build_opener
+from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 BASE = "https://kyfw.12306.cn"
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) CheapFlightRadar/0.1 public-evidence-probe"
+
+
+def fetch_text(opener, path: str, params: dict[str, str] | None = None) -> tuple[int, str]:
+    url = f"{BASE}{path}"
+    if params:
+        url = f"{url}?{urlencode(params)}"
+    req = Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/json,text/plain,*/*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.7",
+            "Referer": f"{BASE}/otn/leftTicket/init",
+        },
+    )
+    try:
+        with opener.open(req, timeout=20) as response:
+            return response.status, response.read().decode("utf-8", errors="replace")
+    except Exception as exc:
+        return 0, f"{type(exc).__name__}: {exc}"
 
 
 def fetch_json(opener, path: str, params: dict[str, str]) -> tuple[int, str, object | None]:
@@ -25,12 +47,14 @@ def fetch_json(opener, path: str, params: dict[str, str]) -> tuple[int, str, obj
         headers={
             "User-Agent": USER_AGENT,
             "Accept": "application/json,text/plain,*/*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.7",
+            "X-Requested-With": "XMLHttpRequest",
             "Referer": f"{BASE}/otn/leftTicket/init",
         },
     )
     try:
         with opener.open(req, timeout=20) as response:
-            raw = response.read().decode("utf-8", errors="replace")
+            raw = response.read().decode("utf-8-sig", errors="replace")
             status = response.status
     except Exception as exc:  # research probe: preserve exact failure class/message
         return 0, f"{type(exc).__name__}: {exc}", None
@@ -43,6 +67,7 @@ def fetch_json(opener, path: str, params: dict[str, str]) -> tuple[int, str, obj
 
 def train_summary(result: str, station_map: dict[str, str]) -> dict[str, object]:
     fields = result.split("|")
+
     def field(index: int) -> str | None:
         return fields[index] if index < len(fields) and fields[index] else None
 
@@ -70,20 +95,48 @@ def main() -> int:
     parser.add_argument("--date", required=True)
     parser.add_argument("--from-code", default="XKS")
     parser.add_argument("--to-code", default="FYS")
+    parser.add_argument("--from-name", default="厦门北")
+    parser.add_argument("--to-name", default="福州南")
     args = parser.parse_args()
 
-    opener = build_opener()
+    jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(jar))
+    init_params = {
+        "linktypeid": "dc",
+        "fs": f"{args.from_name},{args.from_code}",
+        "ts": f"{args.to_name},{args.to_code}",
+        "date": args.date,
+        "flag": "N,N,Y",
+    }
+    init_status, init_raw = fetch_text(opener, "/otn/leftTicket/init", init_params)
+    endpoint_match = re.search(r"CLeftTicketUrl\s*=\s*['\"]([^'\"]+)", init_raw)
+    endpoint_fragment = endpoint_match.group(1) if endpoint_match else None
+    endpoint = "/otn/" + endpoint_fragment.lstrip("/") if endpoint_fragment else "/otn/leftTicket/query"
+
+    evidence: dict[str, object] = {
+        "request": {
+            "date": args.date,
+            "from_code": args.from_code,
+            "to_code": args.to_code,
+            "from_name": args.from_name,
+            "to_name": args.to_name,
+        },
+        "bootstrap": {
+            "status": init_status,
+            "cookies": sorted(cookie.name for cookie in jar),
+            "query_endpoint_from_page": endpoint_fragment,
+            "preview": init_raw[:500],
+        },
+    }
+
     left_params = {
         "leftTicketDTO.train_date": args.date,
         "leftTicketDTO.from_station": args.from_code,
         "leftTicketDTO.to_station": args.to_code,
         "purpose_codes": "ADULT",
     }
-    status, preview, payload = fetch_json(opener, "/otn/leftTicket/query", left_params)
-    evidence: dict[str, object] = {
-        "request": {"date": args.date, "from_code": args.from_code, "to_code": args.to_code},
-        "left_ticket": {"status": status, "preview": preview},
-    }
+    status, preview, payload = fetch_json(opener, endpoint, left_params)
+    evidence["left_ticket"] = {"endpoint": endpoint, "status": status, "preview": preview}
 
     if not isinstance(payload, dict):
         print(json.dumps(evidence, ensure_ascii=False, indent=2))
@@ -91,7 +144,7 @@ def main() -> int:
 
     data = payload.get("data")
     if not isinstance(data, dict):
-        evidence["left_ticket"] = {"status": status, "payload": payload}
+        evidence["left_ticket"] = {"endpoint": endpoint, "status": status, "payload": payload}
         print(json.dumps(evidence, ensure_ascii=False, indent=2))
         return 3
 
@@ -99,6 +152,7 @@ def main() -> int:
     raw_results = data.get("result") if isinstance(data.get("result"), list) else []
     summaries = [train_summary(item, station_map) for item in raw_results]
     evidence["left_ticket"] = {
+        "endpoint": endpoint,
         "status": status,
         "http_status": payload.get("httpstatus"),
         "count": len(summaries),
@@ -107,7 +161,8 @@ def main() -> int:
 
     selected = next(
         (
-            s for s in summaries
+            s
+            for s in summaries
             if isinstance(s.get("train_code"), str)
             and str(s["train_code"]).startswith(("G", "D", "C"))
             and s.get("can_web_buy") == "Y"
