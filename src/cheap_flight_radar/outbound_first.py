@@ -49,6 +49,7 @@ class StageASelection:
 class OutboundFirstCoverage:
     covered_origins: tuple[str, ...]
     missing_origins: tuple[str, ...]
+    invalid_request_count: int
     can_claim_outbound_first: bool
 
 
@@ -147,17 +148,26 @@ def validate_outbound_probe(seed: OutboundSeed, probe: OutboundProbe) -> None:
 
 
 def outbound_first_coverage(
-    requests: Iterable[OriginSweepRequest],
+    requests: Iterable[OriginSweepRequest | SearchRequest],
     configured_origins: Sequence[str],
 ) -> OutboundFirstCoverage:
-    """Coverage can only be claimed from destination-free sweep requests."""
+    """Only destination-free sweep requests can establish outbound-first coverage."""
 
-    covered = tuple(dict.fromkeys(request.origin for request in requests))
+    covered_list: list[str] = []
+    invalid_request_count = 0
+    for request in requests:
+        if not isinstance(request, OriginSweepRequest):
+            invalid_request_count += 1
+            continue
+        if request.origin not in covered_list:
+            covered_list.append(request.origin)
+    covered = tuple(covered_list)
     missing = tuple(origin for origin in configured_origins if origin not in covered)
     return OutboundFirstCoverage(
         covered_origins=covered,
         missing_origins=missing,
-        can_claim_outbound_first=not missing,
+        invalid_request_count=invalid_request_count,
+        can_claim_outbound_first=not missing and invalid_request_count == 0,
     )
 
 
@@ -287,12 +297,38 @@ def build_return_expansion_requests(
 
 def complete_candidate(
     serious: SeriousOutbound,
-    return_fare: ReturnFare,
+    return_fare: ReturnFare | None,
     benchmark: RoundTripBenchmark,
 ) -> CompleteCandidate:
-    """Require a conventional RT benchmark and let it win if cheaper/more practical."""
+    """Require a conventional RT benchmark and let it complete/win when appropriate."""
 
     outbound = serious.probe
+    if benchmark.origin != outbound.origin or benchmark.destination != outbound.destination:
+        raise ValueError("round-trip benchmark must cover the conventional outbound route")
+    if benchmark.outbound_date != outbound.outbound_date:
+        raise ValueError("round-trip benchmark must use the outbound probe date")
+    if benchmark.practicality not in {"better", "comparable", "worse"}:
+        raise ValueError("unsupported benchmark practicality state")
+    if benchmark.price_twd <= 0:
+        raise ValueError("round-trip benchmark price must be positive")
+
+    if return_fare is None:
+        if not benchmark.usable:
+            raise ValueError("candidate has neither a usable return fare nor usable round trip")
+        return CompleteCandidate(
+            seed_id=outbound.seed_id,
+            origin=outbound.origin,
+            destination=outbound.destination,
+            outbound_date=outbound.outbound_date,
+            return_date=benchmark.return_date,
+            taiwan_return_airport=outbound.origin,
+            selected_kind="conventional_round_trip",
+            selected_total_twd=benchmark.price_twd,
+            constructed_total_twd=None,
+            round_trip_benchmark_twd=benchmark.price_twd,
+            benchmark_source_id=benchmark.source_id,
+        )
+
     if return_fare.seed_id != outbound.seed_id:
         raise ValueError("return fare does not belong to outbound seed")
     if return_fare.foreign_origin != outbound.destination:
@@ -301,12 +337,8 @@ def complete_candidate(
         raise ValueError("return fare must resolve exact airport/date")
     if not return_fare.usable:
         raise ValueError("return fare must be usable")
-    if benchmark.origin != outbound.origin or benchmark.destination != outbound.destination:
-        raise ValueError("round-trip benchmark must cover the conventional outbound route")
-    if benchmark.outbound_date != outbound.outbound_date or benchmark.return_date != return_fare.return_date:
-        raise ValueError("round-trip benchmark must use the candidate dates")
-    if benchmark.practicality not in {"better", "comparable", "worse"}:
-        raise ValueError("unsupported benchmark practicality state")
+    if benchmark.return_date != return_fare.return_date:
+        raise ValueError("round-trip benchmark must use the candidate return date")
 
     constructed = outbound.price_twd + return_fare.price_twd
     rt_wins = benchmark.usable and (
