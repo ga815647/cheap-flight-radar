@@ -1,3 +1,19 @@
+# Current price-history role — 2026-08-13 substrate convergence
+
+Price history remains durable evidence, but it is no longer the mandatory or preferred anomaly engine. This section supersedes older text below where repository history appears to be required to decide whether a fare is unusually cheap. Existing immutable observations and comparison code are retained rather than deleted.
+
+Current authority order:
+
+1. qualified Google Flight Deals typical-price / discount evidence;
+2. qualified Google Flights exact price insight when available;
+3. repository `history/price-observations` comparable history as fallback and supplemental context.
+
+An external source qualifies only when the relevant surface is stable enough for production use, the current price can be reproduced closely enough to identify the same airfare, and it exposes a typical price or explicit route-relative anomaly magnitude. Conflicting qualified sources are resolved by the explicit priority above; values are never averaged. A formal Deal does not require repository history when a higher-priority qualified authority already supplies anomaly truth.
+
+Repository history still supports provenance, route observations that lack external typical-price context, fallback percentile/baseline metrics, disappearance/staleness analysis, and future source audits. Synthetic backfill remains forbidden.
+
+---
+
 # Price History and Fare Baselines
 
 ## Purpose

@@ -28,7 +28,7 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
     def setUp(self):
         self.watches = load_fixed_watch_registry(POLICY_PATH)
         self.by_id = {watch.id: watch for watch in self.watches}
-        self.now = datetime(2026, 8, 11, 8, 0, tzinfo=UTC)
+        self.now = datetime(2026, 8, 13, 0, 0, tzinfo=UTC)
 
     def attempt(self, source_id, status, completed_hours_ago, name):
         completed = self.now - timedelta(hours=completed_hours_ago)
@@ -42,10 +42,7 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         )
 
     def test_registry_and_orchestration_contract(self):
-        self.assertEqual(
-            {watch.id for watch in self.watches},
-            {"china_airlines_official", "ptt_japan_travel_info"},
-        )
+        self.assertEqual({watch.id for watch in self.watches}, {"china_airlines_official"})
         policy = load_policy(POLICY_PATH)
         validate_orchestration_policy(policy)
         orchestration = policy["public_intelligence"]["orchestration"]
@@ -53,7 +50,9 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
         self.assertFalse(orchestration["independent_github_cron"])
         self.assertIn("freshness_reuse_window", orchestration["cadence_semantics"])
         self.assertEqual(self.by_id["china_airlines_official"].acquisition, "direct_http")
-        self.assertEqual(self.by_id["ptt_japan_travel_info"].acquisition, "direct_http")
+        registry = policy["public_intelligence"]["fixed_watch_registry"]
+        self.assertEqual(registry[0]["role"], "signal_only")
+        self.assertEqual(registry[0]["cadence_hours"], 24)
 
     def test_browser_fallback_is_opt_in_not_required_by_current_registry(self):
         self.assertFalse(browser_required(self.watches))
@@ -63,43 +62,37 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
             source_type="official_airline",
             acquisition="headless",
             entry_url="https://example.test/",
-            cadence_hours=6,
+            cadence_hours=24,
             coverage_claim="source_attempt_only",
         )
         self.assertTrue(browser_required((future_headless,)))
 
     def test_no_success_is_due(self):
         plan = {entry.source_id: entry for entry in plan_fixed_watches(self.watches, (), self.now)}
-        self.assertTrue(all(entry.due for entry in plan.values()))
-        self.assertEqual(plan["ptt_japan_travel_info"].reason, "no_successful_attempt")
+        self.assertEqual(set(plan), {"china_airlines_official"})
+        self.assertTrue(plan["china_airlines_official"].due)
+        self.assertEqual(plan["china_airlines_official"].reason, "no_successful_attempt")
 
     def test_fresh_success_can_be_reused_and_boundary_is_due(self):
-        ptt = self.by_id["ptt_japan_travel_info"]
-        fresh = self.attempt(ptt.id, "success", 2, "ptt-fresh")
-        entry = plan_fixed_watches((ptt,), (fresh,), self.now)[0]
+        china = self.by_id["china_airlines_official"]
+        fresh = self.attempt(china.id, "success", 23, "china-fresh")
+        entry = plan_fixed_watches((china,), (fresh,), self.now)[0]
         self.assertFalse(entry.due)
-        self.assertEqual(entry.latest_success_attempt_id, "ptt-fresh")
+        self.assertEqual(entry.latest_success_attempt_id, "china-fresh")
         self.assertEqual(entry.reason, "fresh_prior_success")
 
-        boundary = self.attempt(ptt.id, "success", 3, "ptt-boundary")
-        entry = plan_fixed_watches((ptt,), (boundary,), self.now)[0]
+        boundary = self.attempt(china.id, "success", 24, "china-boundary")
+        entry = plan_fixed_watches((china,), (boundary,), self.now)[0]
         self.assertTrue(entry.due)
         self.assertEqual(entry.reason, "cadence_expired")
 
     def test_failed_attempt_does_not_refresh_due_clock(self):
-        ptt = self.by_id["ptt_japan_travel_info"]
-        expired_success = self.attempt(ptt.id, "success", 4, "old-success")
-        recent_failure = self.attempt(ptt.id, "fetch_failed", 1, "recent-failure")
-        entry = plan_fixed_watches((ptt,), (expired_success, recent_failure), self.now)[0]
+        china = self.by_id["china_airlines_official"]
+        expired_success = self.attempt(china.id, "success", 25, "old-success")
+        recent_failure = self.attempt(china.id, "fetch_failed", 1, "recent-failure")
+        entry = plan_fixed_watches((china,), (expired_success, recent_failure), self.now)[0]
         self.assertTrue(entry.due)
         self.assertEqual(entry.latest_success_attempt_id, "old-success")
-
-    def test_china_airlines_six_hour_cadence(self):
-        china = self.by_id["china_airlines_official"]
-        fresh = self.attempt(china.id, "success", 5, "fresh")
-        expired = self.attempt(china.id, "success", 6, "expired")
-        self.assertFalse(plan_fixed_watches((china,), (fresh,), self.now)[0].due)
-        self.assertTrue(plan_fixed_watches((china,), (expired,), self.now)[0].due)
 
     def test_campaign_dedupe_preserves_all_sightings_and_ignores_source_and_price(self):
         first = DiscoverySighting(
@@ -162,9 +155,7 @@ class PublicIntelligenceRuntimeTests(unittest.TestCase):
             return_date_or_window="2026-09-05",
             operating_or_marketing_flight_identity_when_known=("IT200", "IT201"),
         )
-        first = exact_itinerary_identity(**kwargs)
-        second = exact_itinerary_identity(**kwargs)
-        self.assertEqual(first, second)
+        self.assertEqual(exact_itinerary_identity(**kwargs), exact_itinerary_identity(**kwargs))
 
     def test_fixed_watch_workflow_has_no_schedule_and_browser_install_is_conditional(self):
         workflow_path = ROOT / ".github/workflows/fixed-watch-run.yml"

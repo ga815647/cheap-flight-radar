@@ -1,3 +1,21 @@
+# Current search policy — 2026-08-13 substrate convergence
+
+This section supersedes any older mandatory outbound-one-way-first, global-scope, market-specific deep-pipeline, ferry-gateway, or fixed 120-day product semantics below. The older material remains in this file as design history. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative; see `docs/substrate-bakeoff-2026-08-13.md` for live evidence.
+
+Current search architecture:
+
+- production scope is Asia/Oceania; Japan, Korea and China are priority coverage slices, not separate mandatory algorithms;
+- attempt destination-free discovery independently from TPE/TSA/RMQ/KHH;
+- primary surface is qualified Google Flight Deals, with Google Explore and public Expedia/Kiwi/Skyscanner surfaces as recall/fallback seeds;
+- direct complete round-trip Deal discovery is first-class and does not require reconstruction from a one-way fare;
+- cheap one-way/Explore/Signal observations may seed investigation, but only competitive endpoints receive flexible return/open-jaw expansion;
+- exact/flexible/multi-city Google Flights is the normal completion substrate; `fli` is a comparator/fallback;
+- do not brute-force every city × date × city combination; add specialist pipelines only after measured recall evidence justifies them;
+- 120 days is the normal compute budget, not a durable product boundary;
+- ferry gateways are outside the airfare-Deal product.
+
+---
+
 # Search Strategy
 
 ## Goal
@@ -30,6 +48,8 @@ A cheap outbound fare is an efficient discovery signal. Most destinations do not
 
 Outbound-first does **not** mean two one-way tickets are assumed cheaper. The round-trip benchmark remains mandatory where available.
 
+The term also has a strict executable meaning: the caller must not choose the destination before Stage A. A run that starts with `TPE -> PUS`, `KHH -> PVG`, or any other caller-preselected destination is a known-route probe, not outbound-first coverage, even if it searches the outbound leg before the return.
+
 ## Daily radar profiles
 
 The default daily run uses one shared discovery engine with four specialist views rather than four unrelated full searches:
@@ -45,34 +65,51 @@ The final public report preserves dedicated Japan, Korea, China, and World secti
 
 ## Stage A — broad discovery
 
-Search the rolling horizon for low one-way fares from the configured Taiwan origins.
+Search the rolling horizon for low one-way opportunities from the configured Taiwan origins **without a caller-supplied destination**.
+
+### Executable coverage boundary
+
+`OriginSweepRequest` is the only request shape that can establish outbound-first Stage-A coverage. It contains the exact Taiwan origin, rolling horizon and profile scope, but deliberately contains no destination or outbound date. A destination first appears in an `OutboundSeed` emitted by the sweep.
+
+A legacy/known-route `SearchRequest(search_stage="broad_discovery", destination=...)` is rejected as `invalid_contract` by the source router and is ignored by the outbound-first coverage gate. This is the regression boundary that prevents a guessed PUS/OKA/PVG list from being relabeled as outbound-first.
+
+The daily run performs one shared destination-free sweep for each configured origin:
+
+- TPE;
+- TSA;
+- RMQ;
+- KHH.
+
+Only after a sweep produces a destination may the radar issue an exact known-route outbound probe.
 
 ### Broad-discovery routing
 
-The shared production broad-discovery route is intentionally different from fixed-watch monitoring and from provider-backed deep search.
+The primary Stage-A public surface is Expedia Taiwan's airport-origin `flights-from` page for the exact origin airport. These pages are useful because the request itself names an origin but does not require a destination. They are executed through ChatGPT Web, not through a new crawler or GitHub schedule.
 
-ChatGPT performs this stage directly with public Web fare-index evidence. The preferred source order is:
+Expedia is a **primary destination-seed surface, not a sole fare authority**. Its origin page can expose three distinct evidence classes:
 
-1. public OTA/metasearch **route fare indexes** exposing actual origin/destination/date/price observations;
-2. indexed exact-fare results;
-3. official LCC promotion/event pages;
-4. public deal editors/forums as additional seeds.
+1. `one_way_fare` — only when the page explicitly labels the amount as one-way;
+2. `round_trip_deal` — a card explicitly labeled round trip;
+3. `destination_only` — a destination/route signal without a usable fare.
 
-A promotion announcement is not the same thing as a cheap fare observation. A carrier event page can prove a sale, route, date range, or coupon while exposing no absolute price. It can seed investigation but cannot establish the current fare floor by itself.
+A round-trip card is never divided by two or otherwise converted into an invented outbound fare. A headline one-way low without an exact departure date can seed a destination, but it cannot establish either the 0–30 or 0–120 outbound floor until an exact route/date one-way probe converges.
 
-For each configured Taiwan origin, broad discovery should use several query shapes:
+If the Expedia airport-origin surface is unavailable or insufficient, the existing `chatgpt_web_public_fare_index` route remains a best-effort destination-free fallback. This fallback does not convert known-route probes into Stage-A coverage and does not claim exhaustive market recall.
 
-- **origin floor scan** — exact origin IATA + rolling-horizon month/date context + cheap-flight/fare-index intent, preferably in TWD;
-- **exact route probe** — exact origin IATA + candidate destination IATA + month/date window + one-way/round-trip intent;
+After a destination exists, the shared known-route Web layer uses:
+
+- **exact route probe** — exact origin IATA + sweep-produced destination IATA + month/date window + explicit one-way intent;
+- **return expansion probe** — sweep-produced destination + one of the generated return dates + Taiwan return airport;
+- **round-trip benchmark probe** — exact conventional origin/destination/date pair;
 - **LCC carrier probe** — exact route/date context plus a relevant low-cost carrier when generic fare indexes under-surface it.
 
 Public fare-index observations remain **discovery evidence**. Indexed prices can be stale, prices can change, and metro-area pages can silently substitute airports. Exact airport/date/price therefore must be revalidated before a candidate is described as verified.
 
-This best-effort Web route does not claim an exhaustive fare matrix. Fixed watches remain separate coverage/provenance signals and are not expanded merely to imitate a fare matrix. GitHub Actions is not part of this normal direct-Web stage unless ChatGPT delegates a deterministic execution surface.
+This best-effort Web route does not claim an exhaustive fare matrix. Fixed watches remain separate coverage/provenance signals and are not expanded merely to imitate a fare matrix. PTT is not a dependency of the outbound-first execution trunk. GitHub Actions is not part of this normal direct-Web stage unless ChatGPT delegates a deterministic execution surface.
 
 ### Two live fare floors, not one coarse target band
 
-Broad discovery must retain both:
+Only exact one-way probes can enter outbound floors. Broad discovery must retain both:
 
 1. the cheapest serious **near-term** candidate departing within 30 days; and
 2. the cheapest serious candidate in the complete **rolling 120-day horizon**.
@@ -81,22 +118,24 @@ A coarse heuristic such as "Korea around TWD 5k is cheap" is only an early candi
 
 The same distinction matters for history: observations should be compared within departure lead-time buckets where possible so a fare seen a week before departure is not treated as equivalent to a 90-day-ahead observation.
 
+Stage-A serious-candidate selection also reserves breadth across Japan, Korea, China and World before filling the remaining candidate budget globally. One market with many cheap observations must not consume the entire deep-search budget while other markets have eligible evidence.
+
 ### Korea specialist breadth
 
 The Korea specialist must not equate "Korea" with only Seoul and Busan.
 
-Initial non-exhaustive floor-scan seeds include ICN, GMP, PUS, CJU, TAE, and CJJ. This is a seed list, not a permanent route whitelist. Any other relevant Korean airport remains eligible when current route/fare evidence exists.
+Initial non-exhaustive floor-scan seeds include ICN, GMP, PUS, CJU, TAE, and CJJ. This is a specialist deep-search breadth list, not a substitute for the destination-free Stage-A origin sweep and not a permanent route whitelist. Any other relevant Korean airport remains eligible when current route/fare evidence exists.
 
 ### Origin coverage gate
 
-Every configured airport in `search.origin_airports` must receive a discovery attempt before a run may be described as a **full global radar**:
+Every configured airport in `search.origin_airports` must receive a destination-free `OriginSweepRequest` attempt before a run may be described as **outbound-first full global radar**:
 
 - TPE;
 - TSA;
 - RMQ;
 - KHH.
 
-A source that only exposes a metro-level "Taipei" result does not count as Taiwan-wide coverage. Failed/missing origins remain visible as missing/unavailable rather than being silently replaced.
+A known-destination attempt for an origin does not satisfy this gate. A source that only exposes a metro-level "Taipei" result also does not count as Taiwan-wide airport coverage. Failed/missing origins remain visible as missing/unavailable rather than being silently replaced.
 
 ### Taiwan return closure is broader than outbound discovery
 
@@ -125,9 +164,9 @@ Capture at minimum origin/destination, departure timestamp or date, displayed pr
 
 ## Stage B — candidate expansion
 
-For the cheapest/highest-potential outbound candidates, search returns over route-time-dependent windows.
+Only `SeriousOutbound` records selected from exact one-way Stage-A probes may enter return expansion. A raw seed or a caller-preselected route cannot bypass this gate.
 
-Candidate return forms include:
+For each serious outbound, search **multiple** return dates over route-time-dependent windows. Candidate return forms include:
 
 1. same destination → Taiwan;
 2. nearby/practical alternate city → Taiwan;
@@ -135,7 +174,7 @@ Candidate return forms include:
 4. an opportunistic return to another live-served Taiwan main-island passenger airport;
 5. one positioning segment by domestic flight, rail, bus, or ferry where allowed.
 
-Do not force a return to the outbound Taiwan airport.
+Do not force a return to the outbound Taiwan airport. Non-primary Taiwan return airports require current live route evidence before they are added to the expansion set.
 
 ### Return-window semantics
 
@@ -180,11 +219,15 @@ Normalize each serious candidate into a comparable itinerary record including:
 
 Unknown essential components remain unknown; do not fill plausible values.
 
+A separate return one-way is not mandatory when the same return-expansion date has a usable conventional round-trip fare. In that case the RT benchmark itself is a complete itinerary and may close the candidate directly; the system must not require two one-way fares merely because discovery began with a one-way outbound.
+
 ## Stage D — round-trip benchmark
 
 For each serious candidate, compare against a conventional round trip on the relevant route/dates when a comparable fare can be obtained.
 
-If a normal round trip is cheaper and comparably usable, it should win even when discovery began with a one-way fare. The benchmark does not invalidate a mixed-Taiwan-airport itinerary merely because its endpoint differs; compare the simplest practical complete alternatives available for the same travel intent.
+If a normal round trip is cheaper and comparably usable, it should win even when discovery began with a one-way fare. If the separate return one-way fails to converge but the conventional RT is exact-date, usable and current enough for the candidate's evidence state, the RT may itself complete the candidate. The benchmark does not invalidate a mixed-Taiwan-airport itinerary merely because its endpoint differs; compare the simplest practical complete alternatives available for the same travel intent.
+
+Only after a complete baseline candidate exists should the radar spend extra effort on open-jaw and mixed-Taiwan-return alternatives. Mainland HSR/domestic-air/Kinmen/Matsu expansion remains China-specialist-only.
 
 ## Stage E — explicit views and market sections
 
@@ -232,15 +275,20 @@ Search-result/metasearch prices are discovery signals, not promises.
 
 Before calling a result a verified deal, re-check through a source capable of showing the actual itinerary and current price. When checkout cannot be verified, label confidence/state accurately.
 
+Public/indexed Facebook or airfare-editor posts are `opportunistic` seed evidence only. They may provide route/date/promotion/price text when accessible without login bypass, but they never establish a verified fare and do not repair fixed-watch coverage.
+
 ## Current source-router slice
 
 Production source routing remains intentionally **partial**:
 
-1. **shared broad discovery** across World/Japan/Korea/China — `chatgpt_web_public_fare_index`, executed directly by ChatGPT Web using public fare-index/query-shape policy; no credential or GitHub runner is required for the normal path;
-2. **China deep search** — exact round trip through FlyAI with formal `FLYAI_API_KEY` when that route is used.
+1. **shared destination-free Stage A** across World/Japan/Korea/China — `expedia_tw_airport_origin_surface` is the primary origin-wide seed surface for TPE/TSA/RMQ/KHH; `chatgpt_web_public_fare_index` is the best-effort fallback. Both execute directly through ChatGPT Web and neither claims an exhaustive fare matrix;
+2. **post-seed known-route Web probes** — `chatgpt_web_public_fare_index` handles exact outbound one-way, return expansion and conventional RT benchmark queries only after a sweep-produced destination exists;
+3. **China deep search** — exact round trip through FlyAI with formal `FLYAI_API_KEY` when that route is used.
 
 The router reads these selections from `flight-radar.yaml`; provider choice must not be duplicated as hidden code policy. A missing credential, unhealthy provider, unsupported open-jaw request, or unconfigured market/stage yields explicit unavailable/unsupported coverage and must not silently degrade while claiming provider coverage.
 
 The shared Web route is best-effort discovery, not a deterministic full-market matrix and not checkout verification. Serious candidates require separate revalidation.
 
 FlyAI results pass a strict returned-segment airport/date gate before normalization. Observed FlyAI `ticketPrice` remains a raw provider value where currency/tax/baggage/fare-family semantics are unknown. FlyAI is not selected for broad discovery, true revalidation, final cross-check, or combined open-jaw fare, and a FlyAI-only run must never claim complete China airfare coverage.
+
+See `docs/outbound-first-contract-2026-08-12.md` for the implementation audit, deterministic Gate and live Expedia smoke evidence for this contract.

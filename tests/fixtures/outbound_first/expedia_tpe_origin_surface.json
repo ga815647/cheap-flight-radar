@@ -1,0 +1,35 @@
+{
+  "source_id": "expedia_tw_airport_origin_surface",
+  "source_url": "https://www.expedia.com.tw/en/lp/airports/tpe/flights-from-taoyuan-intl-airport",
+  "observed_at": "2026-08-12T20:43:00+08:00",
+  "request_destination": null,
+  "observations": [
+    {
+      "seed_id": "expedia:tpe:dmk:one-way-low",
+      "destination": "DMK",
+      "market": "world",
+      "evidence_kind": "one_way_fare",
+      "displayed_price_twd": 2347,
+      "outbound_date_hint": null,
+      "return_date_hint": null
+    },
+    {
+      "seed_id": "expedia:tpe:icn:round-trip-card",
+      "destination": "ICN",
+      "market": "korea",
+      "evidence_kind": "round_trip_deal",
+      "displayed_price_twd": 5079,
+      "outbound_date_hint": "2026-09-30",
+      "return_date_hint": "2026-10-06"
+    },
+    {
+      "seed_id": "expedia:tpe:hkg:destination-only",
+      "destination": "HKG",
+      "market": "world",
+      "evidence_kind": "destination_only",
+      "displayed_price_twd": null,
+      "outbound_date_hint": null,
+      "return_date_hint": null
+    }
+  ]
+}

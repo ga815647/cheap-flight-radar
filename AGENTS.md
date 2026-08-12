@@ -2,72 +2,72 @@
 
 This file is the required first entry for any ChatGPT/Codex/agent session working on this repository.
 
-## 1. Source of truth
+## 1. Product intent and source of truth
 
-- `flight-radar.yaml` is the **single machine-readable source of truth (SSOT)** for current travel-search policy.
-- `docs/*.md` explains the reasoning and edge cases behind that policy.
+- `PRODUCT_INTENT.md` is the durable human-level statement of **what the user wants Cheap Flight Radar to achieve and how results should be judged**.
+- `flight-radar.yaml` is the **single machine-readable operational source of truth (SSOT)** for current implemented travel-search policy.
+- The operational SSOT must evolve to conform to `PRODUCT_INTENT.md`; implementation details must not silently redefine product intent.
+- When `PRODUCT_INTENT.md` and current `flight-radar.yaml` conflict, treat that as an explicit policy inconsistency to reconcile in a policy-change branch/PR. Do not silently reinterpret the product intent to preserve legacy behavior, and do not silently bypass the current SSOT at runtime before the policy change is made.
+- `docs/*.md` explains reasoning, evidence, and edge cases behind current policy.
 - Code implements policy; code must not silently redefine policy.
-- Chat history, prompts, and external notes are not authoritative when they conflict with the repository.
+- Chat history, prompts, and external notes are not authoritative when they conflict with the durable repository sources above.
 
 ## 2. Required read order
 
 Before changing behavior:
 
 1. Read this file.
-2. Read the complete `flight-radar.yaml`.
-3. Read the relevant design document(s):
+2. Read `PRODUCT_INTENT.md` completely.
+3. Read `flight-radar.yaml` completely.
+4. Read the relevant design document(s):
    - search/discovery changes → `docs/search-strategy.md`
    - ranking/scoring changes → `docs/scoring.md`
-   - China / Kinmen / Matsu routing → `docs/china-routing.md`
-4. Inspect current implementation and tests.
+   - China routing → `docs/china-routing.md`
+5. Inspect current implementation and tests.
 
 ## 3. Product objective
 
-Find unusually cheap **complete, usable trips from Taiwan**, rather than merely finding the lowest displayed airfare.
+The compact objective is:
 
-A good result balances:
+> Find **real, abnormally cheap airfare Deals from Taiwan** that are cheap enough to make the user consider destinations they had not already planned to visit.
 
-- effective total transport price,
-- travel time / distance value,
-- usable destination time,
-- transport efficiency,
-- practical routing.
-
-Absolute low price remains a first-class view. Long-haul deals must not crowd out excellent short-haul 2–3 day trips, and short-haul fares must not hide unusually cheap long-haul opportunities.
+Do not substitute generic trip-planning quality, absolute-low-fare leaderboards, crawler completeness, historical-model sophistication, or infrastructure elegance for that objective. See `PRODUCT_INTENT.md` for the durable decisions behind this statement.
 
 ## 4. Search behavior
 
-- Default horizon: rolling 120 days.
-- Default origin scope: Taiwan airports defined in `flight-radar.yaml`.
-- Destination scope: global.
-- No weekday restriction unless the SSOT explicitly changes.
-- Discovery is outbound-one-way-first.
-- Deep search is conditional: cheap outbound candidates are expanded into returns/open-jaw alternatives.
-- Always retain a conventional round-trip benchmark when possible.
-- Mixed transport is allowed where policy permits: air, rail, bus, ferry.
-- Do not assume a cached/search-result fare is bookable. Mark discovery prices separately from verified/bookable prices.
+Current executable behavior is defined by `flight-radar.yaml`; do not rely on a duplicated summary in this file when details matter.
+
+General invariants:
+
+- discovery evidence and formal/current Deal evidence are distinct;
+- a cheap one-way observation may seed investigation, but a formal Deal requires a concrete complete airfare itinerary under the current policy;
+- outbound-first and direct round-trip discovery may coexist;
+- open-jaw is a first-class airfare possibility;
+- do not assume a cached/search-result fare is currently purchasable;
+- do not turn temporary search horizon, source coverage, compute budget, or crawler limitations into durable product preferences.
 
 ## 5. Evidence rules
 
 For live fare research:
 
-- Prefer current public fare/search sources and official carrier/transport sources for final validation.
-- Record source, observed timestamp, currency, fare scope, baggage assumptions, and whether the price was discovery-only or revalidated.
-- Never invent unavailable fares, schedules, connections, or transport costs.
-- If a route component cannot be verified, mark it unknown rather than filling a plausible value.
+- Prefer reproducible current fare/search evidence and trusted selling channels for formal Deal validation.
+- Record source, observed timestamp, currency, fare scope, and enough itinerary identity to distinguish the actual fare being claimed.
+- Never invent unavailable fares, schedules, connections, fees, or transport costs.
+- When a source exposes only an incomplete or lagged signal, preserve it as signal evidence rather than promoting it to a formal Deal.
 
 ## 6. Change workflow
 
 For meaningful repository changes:
 
 1. Create/use a branch; do not develop directly on `main`.
-2. Change `flight-radar.yaml` first when policy changes.
-3. Update relevant docs.
-4. Update implementation.
-5. Add/update tests.
-6. Run required gates.
-7. Open a PR with the exact head commit and a concise explanation of behavioral impact.
-8. Do not merge unless explicitly requested by the user.
+2. If durable user intent changes, update `PRODUCT_INTENT.md` first.
+3. If operational policy changes, update `flight-radar.yaml` to conform to the product intent.
+4. Update relevant docs.
+5. Update implementation.
+6. Add/update tests.
+7. Run required gates.
+8. Open a PR with the exact head commit and a concise explanation of behavioral impact.
+9. Do not merge unless explicitly requested by the user.
 
 Exception: the repository's very first initialization commit may exist on `main` solely to create a branchable base.
 
@@ -83,12 +83,14 @@ As collectors/data pipelines are added, add deterministic fixture-based tests be
 
 ## 8. Design discipline
 
-- Keep discovery, itinerary construction, scoring, and notification policy separable.
-- Avoid provider-specific assumptions in the core scoring model.
-- Prefer deterministic normalized records over scraping-page-specific structures.
-- Historical price data is valuable evidence but does not overwrite the current SSOT.
-- Treat scoring weights as calibratable parameters; preserve raw component scores so rankings are explainable.
+- Keep discovery, itinerary construction, anomaly/truth evaluation, Deal validation, presentation, and notification policy separable.
+- Do not build provider-independent abstractions merely for elegance; prefer the smallest architecture that supports qualified stable sources and required fallback.
+- Prefer deterministic normalized records over scraping-page-specific structures when persistence or cross-source comparison requires them.
+- Reuse stable external typical-price/anomaly capabilities when qualified instead of rebuilding expensive historical machinery by default.
+- Historical price data is supplemental evidence/fallback unless current policy explicitly gives it a stronger role.
+- Scoring/ranking must remain explainable and must not hide the underlying anomaly and current airfare evidence.
+- Do not ask the user to decide implementation questions that can only be answered by source/tool experiments; measure them first.
 
 ## 9. Current non-goals
 
-v0.1 does not promise exhaustive fare-matrix coverage, automated booking, CAPTCHA bypass, or guaranteed checkout prices.
+Current product intent does not require automated booking, exhaustive global fare-matrix coverage, detailed destination itinerary planning, lodging/visa optimization, or guaranteed checkout prices. Europe, the Americas, and Africa are future expansion rather than current production scope.
