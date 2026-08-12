@@ -18,6 +18,20 @@ search:
     - TSA
     - RMQ
     - KHH
+  return_to_taiwan:
+    completion_scope: any_public_passenger_airport_on_taiwan_main_island
+    outbound_discovery_origin_scope_is_separate: true
+    primary_return_search_airports:
+      - TPE
+      - TSA
+      - RMQ
+      - KHH
+    opportunistic_main_island_return_airports_allowed: true
+    live_route_evidence_required_for_non_primary_return_airport: true
+    different_return_airport_allowed: true
+    final_main_island_arrival_counts_as_trip_complete: true
+    post_arrival_main_island_ground_access_is_not_required_component: true
+    coverage_gate_applies_to_outbound_origins_not_every_possible_return_airport: true
   destination_scope: global
   weekday_restriction: none
   discovery_strategy: outbound_one_way_first
@@ -182,7 +196,21 @@ usable_time:
   primary_measure: usable_destination_hours
   derive_usable_days_from_hours: true
   usable_day_hours: 12
-  penalize_overnight_or_long_connection_time: true
+  penalize_unusable_connection_time: true
+  long_connection_duration_alone_is_not_penalty: true
+  usable_stopover:
+    enabled: true
+    track_as_usable_stopover_hours: true
+    qualifying_hours_count_as_usable_trip_time: true
+    verified_excursion_hours_reduce_connection_penalty: true
+    do_not_convert_entire_scheduled_layover_to_usable_time: true
+    never_reward_transport_efficiency_above_practical_baseline: true
+    qualification_requires:
+      - entry_and_document_requirements_feasible
+      - minimum_connection_and_recheck_buffers_preserved
+      - local_access_practically_allows_excursion
+      - baggage_and_recheck_constraints_compatible
+    uncertainty_action: treat_unverified_portion_as_connection_time
   do_not_reward_excess_trip_length_beyond_ideal: true
 
 cost:
@@ -229,7 +257,13 @@ penalties:
     severity: moderate
   excessive_connection_time:
     enabled: true
+    applies_to: unusable_connection_time_after_verified_usable_stopover_hours
     severity: high
+  usable_stopover:
+    long_duration_alone_penalty: none
+    self_transfer_and_reentry_risks_still_apply: true
+    unavoidable_transport_caused_overnight_cost_still_included: true
+    cannot_raise_transport_efficiency_above_practical_baseline: true
   insufficient_trip_length_for_route:
     enabled: true
     severity: high
