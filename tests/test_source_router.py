@@ -3,7 +3,7 @@ import unittest
 
 import yaml
 
-from cheap_flight_radar.models import ProviderState, SearchRequest
+from cheap_flight_radar.models import OriginSweepRequest, ProviderState, SearchRequest
 from cheap_flight_radar.source_router import build_source_plan
 
 
@@ -41,31 +41,76 @@ class SourceRouterTests(unittest.TestCase):
             broad["source_class_order"][0],
             "public_ota_or_metasearch_route_fare_index",
         )
-        self.assertIn("official_lcc_promotion_or_event", broad["source_class_order"])
+        self.assertIn("origin_floor_scan", broad["query_shapes"])
+        self.assertIn("exact_route_probe", broad["query_shapes"])
         self.assertTrue(broad["revalidation_required"])
         self.assertFalse(broad["full_market_coverage_claim"])
 
-    def test_broad_discovery_plans_direct_chatgpt_web_for_all_profiles(self):
-        for profile in ("world", "japan", "korea", "china"):
-            with self.subTest(profile=profile):
-                plan = build_source_plan(
-                    self.request(
-                        profile=profile,
-                        search_stage="broad_discovery",
-                        origin="TPE",
-                        destination="PUS",
-                        outbound_date="2026-09-21",
-                        return_date=None,
-                    ),
-                    self.policy,
-                    {},
-                )
-                self.assertEqual(plan.coverage_state, "planned")
-                self.assertEqual(
-                    [entry.provider for entry in plan.entries],
-                    ["chatgpt_web_public_fare_index"],
-                )
-                self.assertIn("ChatGPT Web", plan.entries[0].reason)
+    def test_destination_free_origin_sweep_plans_one_shared_direct_web_stage(self):
+        request = OriginSweepRequest(
+            origin="TPE",
+            horizon_start="2026-08-12",
+        )
+        self.assertEqual(
+            request.profiles,
+            ("world", "japan", "korea", "china"),
+        )
+        plan = build_source_plan(request, self.policy, {})
+        self.assertEqual(plan.coverage_state, "planned")
+        self.assertEqual(
+            [entry.provider for entry in plan.entries],
+            ["chatgpt_web_public_fare_index"],
+        )
+        self.assertIn("destination-free", plan.entries[0].reason)
+
+    def test_preselected_destination_cannot_claim_broad_discovery_contract(self):
+        plan = build_source_plan(
+            self.request(
+                profile="world",
+                search_stage="broad_discovery",
+                origin="TPE",
+                destination="PUS",
+                outbound_date="2026-09-21",
+                return_date=None,
+            ),
+            self.policy,
+            {},
+        )
+        self.assertEqual(plan.coverage_state, "invalid_contract")
+        self.assertEqual(plan.entries, ())
+        self.assertIn("cannot establish outbound-first coverage", plan.fallback_reason)
+
+    def test_origin_sweep_seed_can_continue_to_known_route_outbound_probe(self):
+        plan = build_source_plan(
+            self.request(
+                profile="world",
+                search_stage="outbound_probe",
+                origin="TPE",
+                destination="ICN",
+                outbound_date="2026-09-30",
+                return_date=None,
+            ),
+            self.policy,
+            {},
+        )
+        self.assertEqual(plan.coverage_state, "planned")
+        self.assertIn("known-route outbound_probe", plan.entries[0].reason)
+
+    def test_return_expansion_requires_exact_return_date(self):
+        plan = build_source_plan(
+            self.request(
+                profile="world",
+                search_stage="return_expansion",
+                origin="TPE",
+                destination="ICN",
+                outbound_date="2026-09-30",
+                return_date=None,
+            ),
+            self.policy,
+            {},
+        )
+        self.assertEqual(plan.coverage_state, "unsupported")
+        self.assertIn("exact return date", plan.fallback_reason)
 
     def test_ssot_keeps_china_deep_slice_on_flyai(self):
         routing = self.policy["source_routing"]
