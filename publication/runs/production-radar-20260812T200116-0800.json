@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "radar_run_id": "production-radar-20260812T200116+0800",
+  "run_at": "2026-08-12T20:01:16+08:00",
+  "history_snapshot_path": "data/price-history/2026/08/12/production-radar-20260812T200116-0800.json",
+  "sections": {
+    "best_short_break": "prod-kr-tpe-pus-20260920-20260922",
+    "unusual_long_haul_deal": null
+  },
+  "unusual_long_haul_empty_reason": "No exact current unusual long-haul candidate converged in this production-readiness run.",
+  "markets": {
+    "japan": [
+      "prod-jp-tpe-oka-20260906-20260911"
+    ],
+    "korea": [
+      "prod-kr-tpe-pus-20260920-20260922",
+      "prod-kr-tpe-pus-20260831-20260910",
+      "prod-kr-rmq-icn-20260915-20260916",
+      "prod-kr-rmq-icn-20260907-20260916"
+    ],
+    "china": [
+      "prod-cn-khh-pvg-20260930-20261007",
+      "prod-cn-khh-pvg-20260830-20260904",
+      "prod-cn-tsa-xmn-20260915-20261008"
+    ],
+    "world": [
+      "prod-world-khh-dmk-20260909-20260913"
+    ]
+  },
+  "candidate_details": {
+    "prod-jp-tpe-oka-20260906-20260911": {"return_date": "2026-09-11"},
+    "prod-kr-tpe-pus-20260831-20260910": {"return_date": "2026-09-10"},
+    "prod-kr-tpe-pus-20260920-20260922": {"return_date": "2026-09-22"},
+    "prod-kr-rmq-icn-20260915-20260916": {"return_date": "2026-09-16"},
+    "prod-kr-rmq-icn-20260907-20260916": {"return_date": "2026-09-16"},
+    "prod-cn-khh-pvg-20260930-20261007": {"return_date": "2026-10-07"},
+    "prod-cn-khh-pvg-20260830-20260904": {"return_date": "2026-09-04"},
+    "prod-cn-tsa-xmn-20260915-20261008": {"return_date": "2026-10-08"},
+    "prod-world-khh-dmk-20260909-20260913": {"return_date": "2026-09-13"}
+  },
+  "failed_seeds": [
+    {
+      "route": "TPE–OKA",
+      "price": "about TWD 4,575",
+      "reason": "lower indexed signal did not survive the current exact route-page revalidation; current exact route floor remained TWD 5,143"
+    },
+    {
+      "route": "TPE–PUS / mixed Taiwan return",
+      "price": "N/A",
+      "reason": "PUS→RMQ/KHH public reverse-route surfaces did not converge on a same-date exact one-way return, so no complete cheaper mixed-airport itinerary was promoted"
+    },
+    {
+      "route": "KHH–PVG / mixed Taiwan return",
+      "price": "N/A",
+      "reason": "PVG→TPE/TSA public reverse-route surfaces exposed route floors but not an Oct 7 date-pinned exact return suitable for complete open-jaw normalization"
+    }
+  ],
+  "coverage": {
+    "origins": {
+      "TPE": "attempted",
+      "TSA": "attempted",
+      "RMQ": "attempted",
+      "KHH": "attempted"
+    },
+    "fixed_watch": {
+      "status": "complete",
+      "sources": [
+        {"id": "china_airlines_official", "state": "fresh_success"},
+        {"id": "ptt_japan_travel_info", "state": "fresh_success"}
+      ]
+    },
+    "china": {
+      "status": "partial",
+      "modes": {
+        "direct_air": "revalidated",
+        "kinmen": "official_target_date_timetable_verified_but_complete_chain_non_converged",
+        "matsu": "official_daily_timetable_verified_but_complete_chain_non_converged"
+      }
+    }
+  },
+  "notes": [
+    "Fixed-watch due state was refreshed at 2026-08-12 19:53 Asia/Taipei: China Airlines official succeeded with 8 normalized observations and PTT Japan_Travel succeeded with 1 normalized observation; the obsolete Tigerair source is outside the current fixed registry and does not affect completeness.",
+    "China Airlines headline fares are fixed-watch intelligence signals with incomplete tax/trip-scope semantics and were not promoted into usable-complete-trip price history; the PTT Peach post was treated as an information seed only.",
+    "All four configured outbound origins TPE/TSA/RMQ/KHH were attempted across the rolling 120-day Japan/Korea/China/World discovery pass.",
+    "Mixed-Taiwan-return/open-jaw expansion was attempted for serious Korea and China seeds; no cheaper date-pinned exact complete itinerary converged, so the ordinary round-trip benchmark remains the promoted fare.",
+    "Kinmen rerun verified the official August target-date sailing table, but a complete currently priced and practically connectable chain did not converge without guessing essential components.",
+    "Matsu rerun verified the official daily 2025-12-01 through 2026-11-30 timetable and current ferry fare surface; the currently surfaced 2026-08-20 TSA→MFK fare departs too late for the same-day 10:00 Huangqi sailing, and Huangqi→Fuzhou exact intercity fare/time did not converge.",
+    "Percentile is intentionally omitted unless at least 10 comparable prior observations exist; sparse/low history remains explicit rather than imputed."
+  ]
+}
