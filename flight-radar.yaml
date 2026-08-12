@@ -38,6 +38,38 @@ search:
   deep_search_candidate_limit: 20
   final_shortlist_limit: 10
   round_trip_benchmark: true
+  outbound_first_contract:
+    stage_a_request: OriginSweepRequest
+    stage_a_destination_input: forbidden
+    first_known_destination_record: OutboundSeed
+    configured_origin_sweep_required: true
+    caller_preselected_destination_invalidates_outbound_first_coverage_claim: true
+    seed_evidence_kinds:
+      - one_way_fare
+      - round_trip_deal
+      - destination_only
+    round_trip_deal_must_not_be_divided_into_one_way_price: true
+    serious_seed_requires_exact_outbound_one_way_probe: true
+    exact_outbound_probe_requires:
+      - exact_origin_airport
+      - exact_destination_airport
+      - exact_outbound_date
+      - explicit_one_way_fare_scope
+      - positive_current_price
+    floor_windows_days:
+      near_term: 30
+      horizon_absolute: 120
+    reserve_serious_candidate_breadth_across_markets:
+      - japan
+      - korea
+      - china
+      - world
+    only_serious_outbounds_enter_return_expansion: true
+    return_expansion_searches_multiple_reasonable_dates: true
+    conventional_round_trip_benchmark_required: true
+    usable_round_trip_may_complete_candidate_when_separate_return_one_way_does_not_converge: true
+    open_jaw_and_mixed_taiwan_return_after_baseline_completion: true
+    china_specialist_multimodal_expansion_after_baseline_completion: true
   price_time_views:
     near_term:
       enabled: true
@@ -681,6 +713,16 @@ public_intelligence:
     include_news_and_forums: true
     include_public_airline_promotion_pages_not_in_fixed_registry: true
     preserve_source_url_or_post_identity: true
+    public_social_seed_contract:
+      public_indexed_without_login_required: true
+      may_supply:
+        - route_signal
+        - date_signal
+        - promo_signal
+        - price_text
+      verification_state: seed_only
+      can_establish_verified_fare: false
+      serious_candidate_requires_separate_exact_fare_probe: true
     examples_researched_not_required_coverage:
       - tigerair_tw_official_news_and_static_events
       - taiwan_airfare_editor_facebook_pages
@@ -713,16 +755,32 @@ source_routing:
   unconfigured_market_stage_action: mark_source_unavailable_and_do_not_claim_coverage
   selected_routes:
     shared:
+      origin_wide_discovery:
+        primary_provider: expedia_tw_airport_origin_surface
+        fallback_provider: chatgpt_web_public_fare_index
+        execution_mode: chatgpt_web_direct
+        query_scope: destination_free_origin_airport_anywhere
+        request_contract: OriginSweepRequest
+        destination_input_forbidden: true
+        applies_to_profiles: [world, japan, korea, china]
+        shared_across_profiles: true
+        require_origin_attempt_for_each_configured_airport: true
+        evidence_kinds:
+          - one_way_fare
+          - round_trip_deal
+          - destination_only
+        round_trip_deal_must_not_be_divided_into_one_way_price: true
+        exact_one_way_probe_required_before_floor_or_serious_candidate: true
+        full_market_coverage_claim: false
       broad_discovery:
         primary_provider: chatgpt_web_public_fare_index
         execution_mode: chatgpt_web_direct
-        query_scope: rolling_horizon_public_fare_index
+        query_scope: post_seed_known_route_public_fare_index
+        role: exact_outbound_return_and_round_trip_probe_after_origin_seed
         applies_to_profiles: [world, japan, korea, china]
         shared_across_profiles: true
         require_exact_origin_airport: true
-        require_origin_attempt_for_each_configured_airport: true
         query_shapes:
-          - origin_floor_scan
           - exact_route_probe
           - lcc_carrier_probe
         query_requirements:
@@ -752,9 +810,33 @@ source_routing:
         fallback_provider: null
         incomplete_coverage_action: mark_missing_and_do_not_claim_full_china_airfare_coverage
   providers:
+    expedia_tw_airport_origin_surface:
+      selected_roles:
+        - stage_a_origin_wide_destination_seed
+      execution: chatgpt_web_direct
+      credential_required: false
+      freshness: indexed_or_live_public_web_observation
+      verification_state: discovery
+      origin_entry_urls:
+        TPE: https://www.expedia.com.tw/en/lp/airports/tpe/flights-from-taoyuan-intl-airport
+        TSA: https://www.expedia.com.tw/en/lp/airports/tsa/flights-from-songshan-airport
+        RMQ: https://www.expedia.com.tw/en/lp/airports/rmq/flights-from-taichung-airport
+        KHH: https://www.expedia.com.tw/en/lp/airports/khh/flights-from-kaohsiung-intl-airport
+      evidence_semantics:
+        explicit_one_way_amount: one_way_fare
+        explicitly_round_trip_card: round_trip_deal
+        destination_without_usable_fare: destination_only
+        round_trip_division_or_imputation: forbidden
+      known_limitations:
+        - origin_surface_is_not_an_exhaustive_destination_matrix
+        - headline_one_way_low_may_not_include_exact_departure_date
+        - many_visible_deal_cards_are_round_trip_evidence
+        - serious_destinations_require_exact_one_way_route_date_probe
+        - prices_can_change_between_index_and_opened_surface
     chatgpt_web_public_fare_index:
       selected_roles:
-        - shared_broad_discovery
+        - origin_wide_fallback
+        - post_seed_known_route_probe
       execution: chatgpt_web_direct
       credential_required: false
       freshness: indexed_or_live_public_web_observation
