@@ -112,7 +112,7 @@ Potential routing shape:
 Taiwan airport → KNH → port transfer → ferry → Xiamen/Quanzhou area → rail/domestic flight → destination
 ```
 
-Actual ferry terminals, timetables, eligibility, ticket prices, document requirements, and transfer times are live facts and must be verified at research time.
+Actual ferry terminals, timetables, eligibility, ticket prices, and document requirements are live facts and must be verified at research time. For short local taxi-equivalent access, verify only that the connection is practically feasible; exact fare/minutes are not required or scored.
 
 ## Matsu gateway
 
