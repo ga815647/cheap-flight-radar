@@ -101,12 +101,27 @@ def _destination_text(discovery: Mapping[str, Any]) -> str:
     return f"{airport} · {extras}" if extras else airport
 
 
-def _dates(discovery: Mapping[str, Any]) -> str:
-    legs = discovery.get("legs")
+def _dates(record: Mapping[str, Any]) -> str:
+    legs = record.get("legs")
     if not isinstance(legs, Sequence) or isinstance(legs, (str, bytes)) or not legs:
         return "dates unknown"
     dates = [str(leg.get("date")) for leg in legs if isinstance(leg, Mapping) and leg.get("date")]
     return " → ".join(dates) if dates else "dates unknown"
+
+
+def _itinerary_text(record: Mapping[str, Any]) -> str:
+    legs = record.get("legs")
+    if not isinstance(legs, Sequence) or isinstance(legs, (str, bytes)) or not legs:
+        return "itinerary identity unavailable"
+    parts = []
+    for leg in legs:
+        if not isinstance(leg, Mapping):
+            continue
+        origin = str(leg.get("origin") or "???")
+        destination = str(leg.get("destination") or "???")
+        day = str(leg.get("date") or "date unknown")
+        parts.append(f"{origin} → {destination} ({day})")
+    return " / ".join(parts) if parts else "itinerary identity unavailable"
 
 
 def _airlines(exact: Mapping[str, Any], discovery: Mapping[str, Any]) -> str:
@@ -148,7 +163,7 @@ def _deal_card(item: Mapping[str, Any], *, by_id: Mapping[str, FareObservation],
         '<div class="view-label">Deal</div>'
         f'<h3 class="route">{escape(origin)} → {escape(destination)}</h3>'
         f'<p class="price">{escape(_money(current))}</p>'
-        f'<p class="trip-meta">{escape(_dates(discovery))} · exact revalidated · {escape(_airlines(exact, discovery))}</p>'
+        f'<p class="trip-meta">{escape(_dates(exact or discovery))} · exact revalidated · {escape(_airlines(exact, discovery))}</p>'
         '<div class="metric-row">'
         f'<span class="metric good"><small>Anomaly</small><strong>{escape(_percent(anomaly))}</strong></span>'
         f'<span class="metric"><small>{escape(baseline_label)}</small><strong>{escape(_money(typical))}</strong></span>'
@@ -168,11 +183,14 @@ def _signal_card(item: Mapping[str, Any]) -> str:
     price = item.get("current_complete_airfare_twd") or exact.get("current_price_twd") or discovery.get("current_price_twd")
     state = str(item.get("state") or "signal")
     reason = str(item.get("reason") or "weak evidence")
+    is_airfare_alternative = state in {"mixed_taiwan_return_alternative", "open_jaw_airfare_alternative"}
+    title = _itinerary_text(exact) if is_airfare_alternative else f"{origin} → {destination}"
+    dates = _dates(exact) if is_airfare_alternative else _dates(discovery)
     return (
         '<article class="candidate">'
-        f'<h3 class="route">{escape(origin)} → {escape(destination)}</h3>'
+        f'<h3 class="route">{escape(title)}</h3>'
         f'<p class="price">{escape(_money(price))}</p>'
-        f'<p class="trip-meta">{escape(_dates(discovery))} · {escape(state)}</p>'
+        f'<p class="trip-meta">{escape(dates)} · {escape(state)}</p>'
         f'<p class="sparse-note">{escape(reason)}</p>'
         '</article>'
     )
@@ -184,6 +202,7 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
         return ""
     origins = coverage.get("origins") if isinstance(coverage.get("origins"), Mapping) else {}
     markets = coverage.get("markets") if isinstance(coverage.get("markets"), Mapping) else {}
+    execution = coverage.get("execution") if isinstance(coverage.get("execution"), Mapping) else {}
     origin_rows = []
     for origin, details in origins.items():
         details = details if isinstance(details, Mapping) else {}
@@ -200,6 +219,26 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
             '<li><span>' + escape(str(market)) + '</span><span class="status-badge neutral">'
             + escape(f"{details.get('discovered', 0)} discovered · {details.get('deals', 0)} Deals") + '</span></li>'
         )
+    execution_rows = []
+    for surface in ("flight_deals", "explore", "conventional_exact", "flexible_dates", "mixed_taiwan_return", "open_jaw"):
+        details = execution.get(surface)
+        if not isinstance(details, Mapping):
+            continue
+        execution_rows.append(
+            '<li><span>' + escape(surface.replace("_", " ")) + '</span><span class="status-badge neutral">'
+            + escape(
+                f"{details.get('attempts', 0)} attempts · {details.get('successes', 0)} success · "
+                f"{details.get('records', 0)} records · {details.get('failures', 0)} failed · {details.get('unsupported', 0)} unsupported"
+            ) + '</span></li>'
+        )
+    if coverage.get("deep_search_candidate_limit") is not None:
+        execution_rows.append(
+            '<li><span>deep vs publication budget</span><span class="status-badge neutral">'
+            + escape(
+                f"deep {coverage.get('deep_search_candidate_limit')} · final {coverage.get('final_shortlist_limit')} · "
+                f"expansion seeds {coverage.get('expansion_seed_count', 0)}"
+            ) + '</span></li>'
+        )
     failures = manifest.get("provider_failures")
     failure_rows = []
     if isinstance(failures, Sequence) and not isinstance(failures, (str, bytes)):
@@ -215,13 +254,15 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
     )
     return (
         '<section class="ops-card"><div class="section-heading"><div><h2>Coverage &amp; evidence</h2>'
-        '<p>Origin attempts and shared Asia/Oceania pipeline coverage for this immutable run.</p></div></div>'
+        '<p>Origin attempts and actual search-path execution for this immutable run.</p></div></div>'
         '<div class="ops-grid">'
         '<div class="ops-block"><h3>Origin sweeps</h3><ul class="ops-list">' + "".join(origin_rows) + '</ul></div>'
         '<div class="ops-block"><h3>Market slices</h3><ul class="ops-list">' + "".join(market_rows) + '</ul></div>'
+        '<div class="ops-block"><h3>Search execution</h3><ul class="ops-list">' + "".join(execution_rows) + '</ul></div>'
         '<div class="ops-block"><h3>Semantics</h3><ul class="ops-list">'
         '<li><span>Flight Deals</span><span class="status-badge good">destination-airport truth</span></li>'
-        '<li><span>Google exact</span><span class="status-badge good">revalidation</span></li>'
+        '<li><span>Google exact/flexible</span><span class="status-badge good">completion</span></li>'
+        '<li><span>Google multi-city</span><span class="status-badge good">mixed return / open-jaw</span></li>'
         '<li><span>Fixed watch</span><span class="status-badge neutral">Signal only</span></li>'
         '</ul></div></div></section>' + failures_html
     )
@@ -246,13 +287,13 @@ def render_v2_run_page(manifest: Mapping[str, Any], snapshot: FareHistorySnapsho
         '<nav class="nav"><a href="../../latest/">Latest</a><a href="../../">All runs</a></nav></div>'
         '<header class="hero"><p class="eyebrow">Taiwan → Asia / Oceania · anomaly-first</p>'
         '<h1>Qualified cheap airfare Deals</h1>'
-        '<p class="hero-copy">Deals are ranked by destination-airport anomaly strength across accepted Taiwan origins, then current complete airfare. Signals remain separate and cannot outrank a Deal.</p>'
+        '<p class="hero-copy">Deals are ranked by destination-airport anomaly strength across accepted Taiwan origins, then current complete airfare. Mixed-Taiwan-return and open-jaw fares are shown separately without invented multi-city anomaly baselines.</p>'
         '<div class="run-meta">'
         f'<span class="chip">Run at {escape(snapshot.run_at)}</span><span class="chip">TPE · TSA · RMQ · KHH</span>'
-        '<span class="chip">Google Flight Deals → exact revalidation</span></div></header>'
+        '<span class="chip">Flight Deals → exact / flexible / multi-city</span></div></header>'
         '<div class="section-heading"><div><h2>Deals</h2><p>Qualified external anomaly truth + current exact complete airfare.</p></div></div>'
         '<section class="hero-grid" aria-label="Qualified Deals">' + deal_cards + '</section>'
-        '<div class="section-heading"><div><h2>Signals</h2><p>Weak seeds, stale anomalies, and exact candidates without qualified anomaly truth.</p></div></div>'
+        '<div class="section-heading"><div><h2>Signals &amp; airfare alternatives</h2><p>Weak seeds, non-converged evidence, mixed Taiwan returns, and open-jaw alternatives stay separate from formal Deal ranking.</p></div></div>'
         '<section class="market-section"><div class="candidate-list">' + signal_cards + '</div></section>'
         + _coverage_html(manifest)
         + '<section class="details-card"><details><summary>Transition / diagnostic views</summary>'
@@ -279,7 +320,7 @@ def build_site(*, policy_path: Path, history_dir: Path, manifest_dir: Path, site
         snapshot = _snapshot_for_manifest(manifest, history_dir)
         slug = legacy.safe_run_id(snapshot.radar_run_id)
         run_dir = site_dir / "runs" / slug
-        run_dir.mkdir(parents=True, exist_ok=True)
+        run_dir.mkdir(parents=True)
         page = run_dir / "index.html"
         html = legacy.render_run_page(manifest, snapshot, all_history, policy) if manifest["schema_version"] == 1 else render_v2_run_page(manifest, snapshot, all_history, policy)
         page.write_text(html, encoding="utf-8")
@@ -289,7 +330,7 @@ def build_site(*, policy_path: Path, history_dir: Path, manifest_dir: Path, site
     index.write_text(legacy._render_index(entries), encoding="utf-8")
     outputs.append(index)
     latest_dir = site_dir / "latest"
-    latest_dir.mkdir(parents=True, exist_ok=True)
+    latest_dir.mkdir(parents=True)
     latest = latest_dir / "index.html"
     if entries:
         latest.write_bytes((site_dir / "runs" / entries[-1][1] / "index.html").read_bytes())
