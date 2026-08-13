@@ -76,7 +76,7 @@ class ProductionPublicationTests(unittest.TestCase):
             build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
             text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
             self.assertIn("<h2>Deals</h2>", text)
-            self.assertIn("<h2>Signals</h2>", text)
+            self.assertIn("<h2>Signals &amp; airfare alternatives</h2>", text)
             self.assertIn("31.0% below baseline", text)
             self.assertIn("Destination baseline", text)
             self.assertIn("TWD 6,900", text)
