@@ -4,8 +4,10 @@ This section supersedes older formal ranking rules below that combine airfare wi
 
 Formal Deal ordering is deliberately simple and explainable:
 
-1. route-relative anomaly strength, descending;
+1. destination-airport-relative anomaly strength, descending;
 2. current complete airfare in TWD, ascending.
+
+Before exact revalidation, records for the same exact destination airport are normalized across TPE/TSA/RMQ/KHH: Radar keeps the lowest current complete airfare as the concrete candidate, while Google Flight Deals typical-price evidence is conservatively pooled by taking the lowest qualified typical price observed for that same destination airport across the configured Taiwan origins. Exact ticket origin/date identity is preserved. This prevents a sparse or expensive origin-specific route such as TSA→CJU from manufacturing a huge anomaly when another Taiwan origin reaches CJU at a much lower normal fare.
 
 Qualified anomaly truth is selected by explicit authority priority and never averaged across conflicting sources:
 

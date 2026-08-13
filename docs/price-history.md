@@ -24,7 +24,7 @@ The radar keeps three independent price views:
 
 1. **near-term floor** — the lowest usable complete trip in the current run departing within 0–30 days;
 2. **rolling-horizon absolute floor** — the lowest usable complete trip in the current run across the complete 0–120 day horizon;
-3. **historical anomaly evidence** — how a current usable fare compares with prior comparable observations for the same route and departure lead-time conditions.
+3. **historical anomaly evidence** — how a current usable fare compares with prior comparable observations for the same exact destination airport, pooled across accepted Taiwan origins, under matching trip-type and departure lead-time conditions.
 
 These views must not be collapsed. A fare can be excellent for travel next week while still being above a cheaper departure 70 days away. Conversely, the current 120-day floor can be historically ordinary while another higher-priced route is a new observed route low.
 
@@ -98,12 +98,14 @@ Near-term floor uses departures 0–30 days from run time. Absolute floor uses 0
 
 ## Comparable historical sample
 
-For v0.1, the mandatory comparison key is:
+For the current policy, the mandatory comparison key is:
 
-- exact origin airport;
 - exact destination airport;
+- any accepted Taiwan origin among TPE/TSA/RMQ/KHH;
 - trip type;
 - departure lead-time bucket.
+
+The raw observation still retains its exact origin airport for provenance. Origin is deliberately **not** part of the anomaly comparison key: within one Radar run, the historical sample for a destination airport is the lowest usable complete airfare observed across the accepted Taiwan origins.
 
 The SSOT lead-time buckets are:
 
@@ -114,7 +116,7 @@ The SSOT lead-time buckets are:
 
 Each observation is bucketed using **its own observation time versus its own departure date**. This prevents a fare seen 7 days before departure from being naively compared with one seen 90 days before departure.
 
-A radar run contributes at most **one comparable price sample** for the same exact route + trip type + lead-time bucket. Multiple Web query permutations, editors, OTAs, or duplicate sightings in the same run are provenance, not independent market samples. If a run contains multiple usable complete-trip observations for one comparison key, the run-level historical sample is the lowest observed usable complete-trip price.
+A radar run contributes at most **one comparable price sample** for the same destination airport + trip type + lead-time bucket. Multiple Taiwan origins, Web query permutations, editors, OTAs, or duplicate sightings in the same run are provenance, not independent market samples. If a run contains multiple usable complete-trip observations for one comparison key, the run-level historical sample is the lowest observed usable complete-trip price across the accepted Taiwan origins.
 
 Season/month and comparable trip length are additional dimensions only when enough history exists. They must not shrink a sample below thresholds and then pretend the smaller result is precise.
 

@@ -181,11 +181,11 @@ def _confidence(sample_count: int, policy: Mapping[str, object]) -> str:
 def _collapse_duplicate_run_samples(
     observations: Sequence[FareObservation],
 ) -> list[FareObservation]:
-    """Keep one comparable route-floor sample per radar run.
+    """Keep one comparable destination-floor sample per radar run.
 
-    Multiple source/query sightings in one run are provenance, not independent
-    historical market samples.  The cheapest usable complete-trip observation is
-    retained for that route/trip-type/lead-time comparison run.
+    Multiple Taiwan origins/source/query sightings in one run are provenance,
+    not independent historical market samples.  The cheapest usable complete-trip
+    observation is retained for that destination/trip-type/lead-time run.
     """
 
     by_run: dict[str, FareObservation] = {}
@@ -206,6 +206,12 @@ def _comparable_history(
 
     current_time = _parse_datetime(current.observed_at)
     bucket = departure_lead_time_bucket(_days_until_departure(current), policy)
+    configured_origins_obj = policy.get("comparison_origin_airports", ())
+    if not isinstance(configured_origins_obj, Sequence) or isinstance(configured_origins_obj, (str, bytes)):
+        raise TypeError("price_history.comparison_origin_airports must be a sequence")
+    configured_origins = {str(item) for item in configured_origins_obj}
+    if configured_origins and current.origin not in configured_origins:
+        raise ValueError("current observation origin is outside configured comparison origins")
 
     comparable: list[FareObservation] = []
     for prior in history:
@@ -214,11 +220,9 @@ def _comparable_history(
         prior_time = _parse_datetime(prior.observed_at)
         if prior_time >= current_time:
             continue
-        if (
-            prior.origin != current.origin
-            or prior.destination != current.destination
-            or prior.trip_type != current.trip_type
-        ):
+        if configured_origins and prior.origin not in configured_origins:
+            continue
+        if prior.destination != current.destination or prior.trip_type != current.trip_type:
             continue
         try:
             prior_bucket = departure_lead_time_bucket(_days_until_departure(prior), policy)
@@ -248,7 +252,7 @@ def compare_with_history(
     history: Sequence[FareObservation],
     policy: Mapping[str, object],
 ) -> FareHistoryComparison:
-    """Compare a current fare with prior exact-route, lead-time-matched history."""
+    """Compare a current fare with prior destination-airport, lead-time-matched history."""
 
     bucket, comparable = _comparable_history(current, history, policy)
     current_time = _parse_datetime(current.observed_at)

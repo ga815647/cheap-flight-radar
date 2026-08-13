@@ -75,7 +75,7 @@ def _percent(value: Any) -> str:
         number = float(value)
     except (TypeError, ValueError):
         return "unknown"
-    return f"{number:.1f}% below typical"
+    return f"{number:.1f}% below baseline"
 
 
 def _record(item: Mapping[str, Any], key: str) -> Mapping[str, Any]:
@@ -129,7 +129,13 @@ def _deal_card(item: Mapping[str, Any], *, by_id: Mapping[str, FareObservation],
     origin = _airport(discovery, "origin")
     destination = _destination_text(discovery)
     current = item.get("current_complete_airfare_twd") or exact.get("current_price_twd")
-    typical = discovery.get("typical_price_twd")
+    anomaly_scope = str(item.get("anomaly_scope") or "")
+    if item.get("anomaly_baseline_twd") is not None:
+        typical = item.get("anomaly_baseline_twd")
+        baseline_label = "Destination baseline" if anomaly_scope == "destination_airport_all_taiwan_origins" else "Selected baseline"
+    else:
+        typical = discovery.get("typical_price_twd")
+        baseline_label = "Provider typical (legacy)"
     anomaly = item.get("anomaly_strength_percent")
     source = str(item.get("anomaly_source") or "unknown")
     booking = exact.get("booking_url") or discovery.get("booking_url") or exact.get("evidence_url") or discovery.get("evidence_url")
@@ -145,7 +151,7 @@ def _deal_card(item: Mapping[str, Any], *, by_id: Mapping[str, FareObservation],
         f'<p class="trip-meta">{escape(_dates(discovery))} · exact revalidated · {escape(_airlines(exact, discovery))}</p>'
         '<div class="metric-row">'
         f'<span class="metric good"><small>Anomaly</small><strong>{escape(_percent(anomaly))}</strong></span>'
-        f'<span class="metric"><small>Typical</small><strong>{escape(_money(typical))}</strong></span>'
+        f'<span class="metric"><small>{escape(baseline_label)}</small><strong>{escape(_money(typical))}</strong></span>'
         f'<span class="metric"><small>Authority</small><strong>{escape(source)}</strong></span>'
         '</div>'
         + _history_html(str(item.get("observation_id")) if item.get("observation_id") else None, by_id, all_history, policy)
@@ -214,7 +220,7 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
         '<div class="ops-block"><h3>Origin sweeps</h3><ul class="ops-list">' + "".join(origin_rows) + '</ul></div>'
         '<div class="ops-block"><h3>Market slices</h3><ul class="ops-list">' + "".join(market_rows) + '</ul></div>'
         '<div class="ops-block"><h3>Semantics</h3><ul class="ops-list">'
-        '<li><span>Flight Deals</span><span class="status-badge good">Deal truth</span></li>'
+        '<li><span>Flight Deals</span><span class="status-badge good">destination-airport truth</span></li>'
         '<li><span>Google exact</span><span class="status-badge good">revalidation</span></li>'
         '<li><span>Fixed watch</span><span class="status-badge neutral">Signal only</span></li>'
         '</ul></div></div></section>' + failures_html
@@ -240,7 +246,7 @@ def render_v2_run_page(manifest: Mapping[str, Any], snapshot: FareHistorySnapsho
         '<nav class="nav"><a href="../../latest/">Latest</a><a href="../../">All runs</a></nav></div>'
         '<header class="hero"><p class="eyebrow">Taiwan → Asia / Oceania · anomaly-first</p>'
         '<h1>Qualified cheap airfare Deals</h1>'
-        '<p class="hero-copy">Deals are ranked by route-relative anomaly strength, then current complete airfare. Signals remain separate and cannot outrank a Deal.</p>'
+        '<p class="hero-copy">Deals are ranked by destination-airport anomaly strength across accepted Taiwan origins, then current complete airfare. Signals remain separate and cannot outrank a Deal.</p>'
         '<div class="run-meta">'
         f'<span class="chip">Run at {escape(snapshot.run_at)}</span><span class="chip">TPE · TSA · RMQ · KHH</span>'
         '<span class="chip">Google Flight Deals → exact revalidation</span></div></header>'
@@ -251,7 +257,7 @@ def render_v2_run_page(manifest: Mapping[str, Any], snapshot: FareHistorySnapsho
         + _coverage_html(manifest)
         + '<section class="details-card"><details><summary>Transition / diagnostic views</summary>'
         '<p class="empty">Absolute Cheapest, Near-Term Cheapest, and other legacy views are diagnostic only for schema-v2 runs and do not determine Deal status or order.</p></details></section>'
-        + '<p class="provenance">Own price history is supplemental/fallback anomaly evidence; sparse history cannot block a Deal already qualified by a higher-priority external authority.<br>'
+        + '<p class="provenance">Destination-airport anomaly baselines pool TPE/TSA/RMQ/KHH while each ticket retains its actual origin. Own price history is supplemental/fallback evidence; sparse history cannot block a Deal already qualified by a higher-priority external authority.<br>'
         'Immutable evidence snapshot: <code>' + history_path + '</code></p>'
         '</main></body></html>\n'
     )

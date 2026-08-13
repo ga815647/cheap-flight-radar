@@ -127,6 +127,23 @@ class ProductionRadarTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(strengths, [36.7, 31.0, 22.5, 22.2])
         self.assertTrue(all(item.anomaly_source == "google_flight_deals" for item in result.deals))
 
+    async def test_same_destination_uses_cheapest_origin_and_lowest_typical_baseline(self):
+        adapter = FakeAdapter({
+            "TPE": [],
+            "TSA": [deal("TSA", "CJU", "South Korea", 17639, 63237, 72)],
+            "RMQ": [deal("RMQ", "CJU", "South Korea", 9023, 11576, 22)],
+            "KHH": [],
+        })
+        result = await ProductionRadar(policy=self.policy, adapter=adapter).run(run_at=RUN_AT)
+        cju = next(item for item in result.deals if item.discovery.destination.iata == "CJU")
+        self.assertEqual(cju.discovery.origin.iata, "RMQ")
+        self.assertEqual(cju.current_complete_airfare_twd, 9023)
+        self.assertEqual(cju.anomaly_baseline_twd, 11576)
+        self.assertEqual(cju.anomaly_scope, "destination_airport_all_taiwan_origins")
+        self.assertAlmostEqual(cju.anomaly_strength_percent or 0, (11576 - 9023) / 11576 * 100)
+        self.assertIn(("RMQ", "CJU", "2026-09-10", "2026-09-14"), adapter.exact_calls)
+        self.assertNotIn(("TSA", "CJU", "2026-09-10", "2026-09-14"), adapter.exact_calls)
+
     async def test_exact_failure_is_signal_and_never_guessed_into_deal(self):
         adapter = self.full_adapter()
         adapter.fail_exact.add(("TPE", "NRT"))

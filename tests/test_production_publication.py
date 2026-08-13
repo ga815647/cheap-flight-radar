@@ -51,6 +51,7 @@ class ProductionPublicationTests(unittest.TestCase):
         item = {
             "classification": "Deal", "state": "deal", "reason": "qualified anomaly authority plus current exact complete airfare",
             "observation_id": observation.observation_id, "anomaly_source": "google_flight_deals", "anomaly_strength_percent": 31.0,
+            "anomaly_baseline_twd": 10000, "anomaly_scope": "destination_airport_all_taiwan_origins",
             "current_complete_airfare_twd": 6900, "discovery": asdict(discovery), "exact": asdict(exact),
         }
         manifest = {
@@ -76,7 +77,8 @@ class ProductionPublicationTests(unittest.TestCase):
             text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
             self.assertIn("<h2>Deals</h2>", text)
             self.assertIn("<h2>Signals</h2>", text)
-            self.assertIn("31.0% below typical", text)
+            self.assertIn("31.0% below baseline", text)
+            self.assertIn("Destination baseline", text)
             self.assertIn("TWD 6,900", text)
             self.assertIn("google_flight_deals", text)
             self.assertIn("sparse history cannot block a Deal", text)

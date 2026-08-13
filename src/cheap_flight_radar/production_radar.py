@@ -49,6 +49,8 @@ class RadarItem:
     anomaly_strength_percent: float | None
     reason: str
     observation_id: str | None = None
+    anomaly_baseline_twd: int | None = None
+    anomaly_scope: str | None = None
 
     @property
     def current_complete_airfare_twd(self) -> int | None:
@@ -121,6 +123,26 @@ def _dedupe_discovery(records: Sequence[AirfareRecord]) -> list[AirfareRecord]:
         if incumbent is None or _discovery_sort_key(record) < _discovery_sort_key(incumbent):
             by_key[key] = record
     return sorted(by_key.values(), key=_discovery_sort_key)
+
+
+def _destination_floor_sort_key(record: AirfareRecord) -> tuple[float, float, str]:
+    return (
+        float(record.current_price_twd or 10**12),
+        -float(record.discount_percent or 0.0),
+        record.record_id,
+    )
+
+
+def _dedupe_destination_floor(records: Sequence[AirfareRecord]) -> list[AirfareRecord]:
+    """Keep the cheapest current complete airfare for each exact destination airport."""
+
+    by_destination: dict[str, AirfareRecord] = {}
+    for record in records:
+        destination = record.destination.iata
+        incumbent = by_destination.get(destination)
+        if incumbent is None or _destination_floor_sort_key(record) < _destination_floor_sort_key(incumbent):
+            by_destination[destination] = record
+    return sorted(by_destination.values(), key=_discovery_sort_key)
 
 
 def _select_for_revalidation(records: Sequence[AirfareRecord], limit: int) -> tuple[AirfareRecord, ...]:
@@ -206,6 +228,8 @@ def _item_json(item: RadarItem) -> Mapping[str, Any]:
         "observation_id": item.observation_id,
         "anomaly_source": item.anomaly_source,
         "anomaly_strength_percent": item.anomaly_strength_percent,
+        "anomaly_baseline_twd": item.anomaly_baseline_twd,
+        "anomaly_scope": item.anomaly_scope,
         "current_complete_airfare_twd": item.current_complete_airfare_twd,
         "discovery": _record_json(item.discovery),
         "exact": _record_json(item.exact),
@@ -228,18 +252,30 @@ class ProductionRadar:
         self.prior_history = tuple(prior_history)
         self.anomaly_priority = tuple(str(item) for item in policy["source_routing"]["anomaly_truth_priority"])
 
-    def _external_truth(self, discovery: AirfareRecord, exact: AirfareRecord) -> AnomalyEvidence | None:
+    def _external_truth(
+        self,
+        discovery: AirfareRecord,
+        exact: AirfareRecord,
+        destination_baseline: AirfareRecord | None,
+    ) -> AnomalyEvidence | None:
         evidences: list[AnomalyEvidence] = []
-        if discovery.anomaly_authority == "google_flight_deals":
+        flight_deals_baseline = destination_baseline
+        if flight_deals_baseline is None and discovery.anomaly_authority == "google_flight_deals":
+            flight_deals_baseline = discovery
+        if (
+            flight_deals_baseline is not None
+            and flight_deals_baseline.anomaly_authority == "google_flight_deals"
+            and flight_deals_baseline.typical_price_twd is not None
+        ):
             evidences.append(
                 AnomalyEvidence(
                     source="google_flight_deals",
                     current_price_twd=float(exact.current_price_twd or 0),
-                    typical_price_twd=float(discovery.typical_price_twd) if discovery.typical_price_twd is not None else None,
+                    typical_price_twd=float(flight_deals_baseline.typical_price_twd),
                     discount_percent=None,
-                    reproducible=bool(discovery.reproducible_search and exact.reproducible_search),
+                    reproducible=bool(flight_deals_baseline.reproducible_search and exact.reproducible_search),
                     qualified=(
-                        discovery.evidence_class == "qualified_round_trip_deal"
+                        flight_deals_baseline.evidence_class == "qualified_round_trip_deal"
                         and exact.verification_state == "revalidated"
                         and exact.complete_airfare
                     ),
@@ -293,6 +329,7 @@ class ProductionRadar:
         market_coverage = _market_coverage_template()
         provider_failures: list[Mapping[str, str]] = []
         completion_seed_records: list[AirfareRecord] = []
+        destination_baselines: dict[str, AirfareRecord] = {}
         weak_signals: list[RadarItem] = []
 
         for origin in origins:
@@ -354,6 +391,13 @@ class ProductionRadar:
                     if departure < run_date or departure > horizon_end:
                         continue
                 region_records.append(record)
+                if record.anomaly_authority == "google_flight_deals" and record.typical_price_twd:
+                    incumbent_baseline = destination_baselines.get(record.destination.iata)
+                    if (
+                        incumbent_baseline is None
+                        or int(record.typical_price_twd) < int(incumbent_baseline.typical_price_twd or 10**12)
+                    ):
+                        destination_baselines[record.destination.iata] = record
                 market = market_slice(record.destination.country)
                 market_coverage[market]["discovered"] += 1
                 qualified = (
@@ -419,7 +463,10 @@ class ProductionRadar:
                 "errors": origin_errors,
             }
 
-        candidates = _select_for_revalidation(_dedupe_discovery(completion_seed_records), candidate_limit)
+        candidates = _select_for_revalidation(
+            _dedupe_destination_floor(_dedupe_discovery(completion_seed_records)),
+            candidate_limit,
+        )
         selected_record_ids = {item.record_id for item in candidates}
         deals: list[RadarItem] = []
         exact_signals: list[RadarItem] = []
@@ -478,7 +525,8 @@ class ProductionRadar:
                 continue
 
             observation = _to_observation(run_id, exact)
-            truth = self._external_truth(discovery, exact) or self._history_truth(observation)
+            destination_baseline = destination_baselines.get(discovery.destination.iata)
+            truth = self._external_truth(discovery, exact, destination_baseline) or self._history_truth(observation)
             market = market_slice(discovery.destination.country)
             market_coverage[market]["revalidated"] += 1
             if truth is None or not truth.is_usable_truth():
@@ -488,7 +536,19 @@ class ProductionRadar:
             if discount is None or discount <= 0:
                 exact_signals.append(RadarItem("Signal", "exact_revalidated_candidate", discovery, exact, truth.source, discount, "exact current airfare is no longer below the selected anomaly baseline", observation.observation_id))
                 continue
-            deals.append(RadarItem("Deal", "deal", discovery, exact, truth.source, discount, "qualified anomaly authority plus current exact complete airfare", observation.observation_id))
+            baseline_twd = int(round(truth.typical_price_twd)) if truth.typical_price_twd is not None else None
+            anomaly_scope = (
+                "destination_airport_all_taiwan_origins"
+                if truth.source in {"google_flight_deals", "own_price_history"}
+                else "selected_authority_scope"
+            )
+            deals.append(
+                RadarItem(
+                    "Deal", "deal", discovery, exact, truth.source, discount,
+                    "qualified anomaly authority plus current exact complete airfare",
+                    observation.observation_id, anomaly_baseline_twd=baseline_twd, anomaly_scope=anomaly_scope,
+                )
+            )
             market_coverage[market]["deals"] += 1
 
         deals.sort(
@@ -514,6 +574,9 @@ class ProductionRadar:
             "deal_acquisition_surface": "google_flight_deals",
             "exact_completion_surface": "google_flights_exact",
             "destination_scope": "asia_oceania",
+            "anomaly_normalization": "exact_destination_airport_across_tpe_tsa_rmq_khh",
+            "same_destination_candidate_rule": "lowest_current_complete_airfare",
+            "same_destination_typical_rule": "lowest_qualified_google_flight_deals_typical",
             "fixed_watch_is_deal_coverage_authority": False,
         }
         return RadarRunResult(run_id, local_run_at.isoformat(), tuple(deals), tuple(signal_by_key.values()), coverage, tuple(provider_failures))

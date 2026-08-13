@@ -25,6 +25,8 @@ The primary product is a set of current, concrete airfare Deals plus a separate 
 The project is primarily looking for **abnormally cheap airfare**, not merely the lowest absolute ticket price.
 
 - Compare a destination against its own normal price level rather than comparing unrelated destinations by raw fare alone.
+- The primary airfare-anomaly normalization unit is the **exact destination airport**, pooled across the accepted Taiwan origins TPE, TSA, RMQ, and KHH. The ticket itself always retains its actual origin, but an origin-specific normal price must not make an otherwise ordinary destination look exceptionally cheap when another accepted Taiwan origin has a materially lower normal price to the same destination airport.
+- For the same destination airport, prefer the **lowest current complete airfare across accepted Taiwan origins** before deciding which concrete origin/date itinerary deserves scarce exact revalidation and publication.
 - City-level Deals are the primary actionable unit because tickets are actually bought to/from cities. Country-level cheapness may be shown as a useful parallel/background view.
 - Airports serving the same city may be treated as one city Deal for anomaly interpretation.
 - When anomaly strength is similar, lower actual total airfare is preferred.
