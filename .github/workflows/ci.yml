@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: read
+  contents: read
+  actions: write
 
 jobs:
   test:
@@ -31,87 +31,14 @@ jobs:
       - name: Test
         run: python -m unittest discover -s tests -v
 
-  persist-production-radar:
+  dispatch-radar-pages:
     if: github.event_name == 'pull_request' && github.head_ref == 'chatdev/production-publication-run-20260813'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout immutable history evidence
-        uses: actions/checkout@v4
-        with:
-          ref: history/price-observations
-          path: history
-
-      - name: Checkout publication manifests
-        uses: actions/checkout@v4
-        with:
-          ref: publication/radar-reports
-          path: publication
-
-      - name: Download completed production Radar artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: production-radar-ace689142ca4bc8cae5d29f608f04ed1b6af43e1
-          path: artifact
-          github-token: ${{ github.token }}
-          run-id: 31675375341
-
-      - name: Validate artifact identity and append-only targets
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path('artifact')
-          run = json.loads((root / 'run-result.json').read_text(encoding='utf-8'))
-          assert run['radar_run_id'] == 'production-radar-20260813T145057+0800'
-          assert run['deal_count'] == 10
-          assert run['signal_count'] == 63
-          assert not run['provider_failures']
-
-          history = root / 'history/data/price-history/2026/08/13/production-radar-20260813T145057-0800.json'
-          manifest = root / 'publication/runs/production-radar-20260813T145057+0800.json'
-          assert history.is_file() and manifest.is_file()
-          hp = json.loads(history.read_text(encoding='utf-8'))
-          mp = json.loads(manifest.read_text(encoding='utf-8'))
-          assert hp['radar_run_id'] == run['radar_run_id'] and len(hp['observations']) == 10
-          assert mp['schema_version'] == 2 and mp['radar_run_id'] == run['radar_run_id']
-          assert len(mp['deals']) == 10 and len(mp['signals']) == 63
-          assert not Path('history/data/price-history/2026/08/13/production-radar-20260813T145057-0800.json').exists()
-          assert not Path('publication/publication/runs/production-radar-20260813T145057+0800.json').exists()
-          PY
-
-      - name: Persist immutable history snapshot first
-        run: |
-          mkdir -p history/data/price-history/2026/08/13
-          cp artifact/history/data/price-history/2026/08/13/production-radar-20260813T145057-0800.json \
-             history/data/price-history/2026/08/13/production-radar-20260813T145057-0800.json
-          git -C history config user.name github-actions[bot]
-          git -C history config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git -C history add data/price-history/2026/08/13/production-radar-20260813T145057-0800.json
-          git -C history commit -m 'history: record production Radar 20260813T145057'
-          git -C history push origin HEAD:history/price-observations
-          echo "history_commit=$(git -C history rev-parse HEAD)" >> "$GITHUB_ENV"
-
-      - name: Append schema-v2 publication manifest second
-        run: |
-          mkdir -p publication/publication/runs
-          cp 'artifact/publication/runs/production-radar-20260813T145057+0800.json' \
-             'publication/publication/runs/production-radar-20260813T145057+0800.json'
-          git -C publication config user.name github-actions[bot]
-          git -C publication config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git -C publication add 'publication/runs/production-radar-20260813T145057+0800.json'
-          git -C publication commit -m 'report: publish production radar 20260813T145057+0800'
-          git -C publication push origin HEAD:publication/radar-reports
-          echo "publication_commit=$(git -C publication rev-parse HEAD)" >> "$GITHUB_ENV"
-
-      - name: Record persistence receipt
-        run: |
-          printf 'history_commit=%s\npublication_commit=%s\n' "$history_commit" "$publication_commit" > persistence-receipt.txt
-
-      - name: Upload persistence receipt
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-radar-persistence-receipt
-          path: persistence-receipt.txt
-          retention-days: 14
+      - name: Dispatch fresh Radar Pages workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run radar-pages.yml
+          --repo "$GITHUB_REPOSITORY"
+          --ref main
