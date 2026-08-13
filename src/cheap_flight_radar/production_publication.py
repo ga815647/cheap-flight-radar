@@ -103,9 +103,14 @@ def _destination_text(discovery: Mapping[str, Any]) -> str:
 
 def _dates(record: Mapping[str, Any]) -> str:
     legs = record.get("legs")
-    if not isinstance(legs, Sequence) or isinstance(legs, (str, bytes)) or not legs:
-        return "dates unknown"
-    dates = [str(leg.get("date")) for leg in legs if isinstance(leg, Mapping) and leg.get("date")]
+    dates: list[str] = []
+    if isinstance(legs, Sequence) and not isinstance(legs, (str, bytes)):
+        dates.extend(str(leg.get("date")) for leg in legs if isinstance(leg, Mapping) and leg.get("date"))
+    reproducible = record.get("reproducible_search")
+    if isinstance(reproducible, Mapping):
+        return_date = reproducible.get("return_date")
+        if return_date and str(return_date) not in dates:
+            dates.append(str(return_date))
     return " → ".join(dates) if dates else "dates unknown"
 
 
