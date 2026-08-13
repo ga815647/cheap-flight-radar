@@ -1,0 +1,23 @@
+[
+  {
+    "airline": "multi",
+    "price": 9500,
+    "booking_token": "open-jaw-token",
+    "legs": [
+      {
+        "from_airport": "TPE",
+        "to_airport": "NRT",
+        "departure_time": "06:35",
+        "arrival_time": "10:45",
+        "departure_date": "2026-09-10"
+      },
+      {
+        "from_airport": "KIX",
+        "to_airport": "KHH",
+        "departure_time": "12:20",
+        "arrival_time": "14:30",
+        "departure_date": "2026-09-15"
+      }
+    ]
+  }
+]

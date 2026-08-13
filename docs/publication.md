@@ -7,40 +7,51 @@ Radar publication turns a completed ChatGPT-orchestrated Radar run into a durabl
 The publication layer has three deliberately separate states:
 
 1. **policy/code** on `main` — the generator, templates, SSOT, docs, tests, and deployment workflow;
-2. **fare evidence** on `history/price-observations` — immutable per-run observation snapshots used for historical metrics;
-3. **presentation manifests** on `publication/radar-reports` — append-only per-run selections, failed seeds, coverage/freshness state, and other report-only metadata.
+2. **fare evidence** on `history/price-observations` — immutable per-run exact/current observations used for historical metrics;
+3. **presentation manifests** on `publication/radar-reports` — append-only per-run Deals, Signals, coverage/provider failures, and other report-only metadata.
 
-A presentation manifest is not fare evidence. It may select which already-observed candidate appears in Best Short Break or a market section, but prices, baselines, rolling lows, percentiles, and confidence are derived from history snapshots.
+A presentation manifest is not fare evidence. Current fares and comparable historical metrics come from persisted observations; provider-relative anomaly evidence and Signal/Deal classification are preserved explicitly in the run manifest.
 
-## User-facing views
+## Schema-v2 user-facing model
+
+New production runs are anomaly-first.
+
+The primary user-facing classes are:
+
+- **Deal** — qualified anomaly truth plus a current exact complete airfare;
+- **Signal** — useful evidence that has not satisfied the full Deal contract, including weak seeds, qualified anomalies pending exact completion, exact candidates without usable anomaly truth, stale anomalies, and fail-closed provider outcomes.
+
+Formal Deals are ordered only by:
+
+1. relative anomaly strength descending;
+2. current complete airfare in TWD ascending.
+
+Trip length, stops, self-transfer, airline, red-eye, lodging, ground transport, and similar preference/friction dimensions do not change formal Deal order.
+
+Google Flight Deals is the first anomaly authority, followed by Google Flights exact price insight, then own immutable price history. Authorities are selected by priority and are never averaged. Own history being sparse does not block a Deal already qualified by a higher-priority external anomaly authority.
 
 The public report does **not** publish a `Best Value` winner.
 
-Required top-level live views are:
+Legacy `Absolute Cheapest`, `Near-Term Cheapest`, `Best Short Break`, `Unusual Long-Haul Deal`, and similar views may remain available for old schema-v1 runs or as transition/diagnostic material. They do not determine Deal status and may not reorder schema-v2 Deals.
 
-- Absolute Cheapest;
-- Near-Term Cheapest;
-- Best Short Break;
-- Unusual Long-Haul Deal.
-
-The existing composite score may remain as an internal candidate-ordering heuristic while search is deciding which candidates deserve deeper work. It must not be presented as a user-facing Best Value winner or as a hidden replacement for the explicit views above.
-
-Dedicated Japan, Korea, China, and World notable-candidate sections remain visible. A section may explicitly say that no candidate converged; absence must not be filled with an inferred or stale fare.
+Japan, Korea, China, and other Asia/Oceania remain priority slices of the same shared pipeline rather than independent publication methodologies.
 
 ## Run publication sequence
 
-A scheduled ChatGPT Radar run follows this order after current fares have been normalized and revalidated:
+A ChatGPT-orchestrated production Radar run follows this order after current fares have been normalized and revalidated:
 
 1. validate and write exactly one immutable snapshot to `history/price-observations`;
 2. read the history snapshots needed for comparison, including the just-persisted current run;
-3. derive current-run floors and historical metrics from immutable evidence;
-4. write one append-only publication manifest to `publication/radar-reports`;
+3. derive current-run comparable historical metrics from immutable evidence where enough evidence exists;
+4. write one append-only schema-v2 publication manifest to `publication/radar-reports`;
 5. the manifest push invokes the disposable Pages build/deploy workflow;
 6. the workflow checks out the current generator from `main`, the evidence ref from `history/price-observations`, and the publication manifests from the triggering ref;
 7. build the permanent per-run pages plus mutable `latest/` and root index views;
 8. upload and deploy the static artifact to GitHub Pages.
 
 The snapshot write comes before the publication manifest. A failed Pages deployment therefore cannot cause a report to exist without its durable fare evidence.
+
+The generator on `main` must already understand the manifest schema before that schema is appended to the live publication ref. During a code/schema rollout, live history may safely be persisted first; publication waits until the compatible generator has merged.
 
 There is no GitHub cron. ChatGPT scheduling remains the primary scheduler/orchestrator. A push-triggered deployment after ChatGPT writes a publication manifest is an execution consequence of that run, not an independent Radar schedule.
 
@@ -58,43 +69,49 @@ Output paths are:
 - `/latest/` — copy of the latest generated run page;
 - `/` — run index.
 
-Every full build may reconstruct all HTML from scratch. Historical comparison code accepts only observations whose observation time is earlier than the run being rendered, so a fare discovered tomorrow cannot change yesterday's rolling low, baseline, percentile, confidence, or anomaly evidence. This is tested explicitly. A later template/code change can intentionally change presentation after the normal PR/Gate process, but later market data alone cannot rewrite an older run's historical meaning.
+Schema-v1 and schema-v2 manifests remain readable so older permanent run pages can be rebuilt after the anomaly-first migration.
+
+Every full build may reconstruct all HTML from scratch. Historical comparison code accepts only observations whose observation time is earlier than the run being rendered, so later market data cannot rewrite an older run's rolling low, baseline, percentile, confidence, or anomaly interpretation. A later template/code change can intentionally change presentation after the normal PR/Gate process.
 
 ## Historical evidence shown on pages
 
-For each displayed candidate, show evidence only when supported by the SSOT:
+For each displayed candidate, show historical evidence only when supported by the SSOT:
 
 - prior all-time comparable low when at least one prior sample exists;
 - configured rolling lows with their sample counts when observations exist in those windows;
 - selected recent median baseline and the actual baseline window when a configured window has enough samples;
-- percent below that selected baseline only when the baseline exists;
+- percent below that selected historical baseline only when the baseline exists;
 - historical percentile only when the configured minimum sample threshold is met;
 - comparable sample count and confidence on every candidate;
 - an explicit sparse-history note when evidence density is none/sparse/low.
 
 Do not synthesize history, impute a missing median window, or display a percentile placeholder that looks numeric when the sample threshold is not met.
 
+These historical fields are supplemental evidence. They do not override a higher-priority provider anomaly authority and do not become a hidden prerequisite for externally qualified Deals.
+
 ## Coverage and failure presentation
 
-Every run manifest records presentation-only operational context that is not naturally part of a fare observation:
+Every schema-v2 run manifest records operational context that is not naturally part of a fare observation:
 
 - TPE/TSA/RMQ/KHH origin-attempt state;
-- fixed-watch run coverage and each source's freshness state;
-- China-mode coverage for direct air, Kinmen, and Matsu when the China specialist was active;
-- failed/non-converged cheap seeds and the reason they were not promoted.
+- Japan / Korea / China / other Asia-Oceania discovery, qualification, exact-revalidation, and Deal counts;
+- provider failures;
+- weak seeds;
+- qualified Flight Deals anomalies that were retained but not selected for exact completion under the current run compute budget;
+- exact-revalidated candidates that failed Deal qualification.
 
-The generator also reads fixed-watch cadence thresholds from the SSOT so the page can explain the configured freshness requirement without copying cadence policy into every manifest.
+A failed or pending seed is not copied into fare history merely so it can be shown on the page. Fare history contains actually observed current fare evidence; presentation/provenance state remains in the manifest.
 
-A failed seed is not copied into fare history merely so it can be shown on the page. It remains presentation/provenance evidence that a low signal was investigated and failed to converge.
+Fixed-watch observations are Signals only and are not a Deal-coverage authority or publication gate.
 
 ## Daily publication versus code changes
 
-Adding a validated history snapshot and a publication manifest is data/report publication. It does not require a PR or merge to `main`.
+Adding a validated history snapshot and a publication manifest is data/report publication. It does not require a PR or merge to `main` once the manifest schema is supported by the merged generator.
 
 Changes to methodology, SSOT, generator code, workflow behavior, templates, or tests remain normal code/spec changes and follow branch → Gate/CI → PR → merge.
 
-## First reproducible publication
+## Historical schema-v1 publication
 
-The corrected Radar v1 run from 2026-08-12 is the first publication fixture and first intended live page. Its fare observations remain on `history/price-observations`; the repo fixture copies those already-observed values only for deterministic tests and does not create synthetic historical observations.
+The corrected Radar v1 run from 2026-08-12 remains the first publication fixture and historical live-page format. Its fare observations remain on `history/price-observations`; the repo fixture copies those already-observed values only for deterministic tests and does not create synthetic historical observations.
 
-The run's publication manifest records the corrected report selections, failed low seeds, incomplete fixed-watch freshness, and partial China specialist coverage documented in Issue #10. Historical metrics for the live page are still derived from the durable history ref at build time.
+Schema-v1 pages may still render their original Absolute Cheapest / Near-Term / market-section presentation for historical compatibility. That legacy presentation does not define the schema-v2 Deal model.

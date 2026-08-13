@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Seoul",
+    "country": "South Korea",
+    "nearest_airport": "ICN",
+    "flight_airport": "ICN",
+    "date_from": "2026-09-20",
+    "date_to": "2026-09-24",
+    "price": 5200,
+    "airline": "TW",
+    "booking_token": "explore-token"
+  }
+]

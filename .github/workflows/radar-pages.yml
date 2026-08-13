@@ -8,6 +8,7 @@ on:
     paths:
       - "publication/runs/*.json"
       - "src/cheap_flight_radar/publication.py"
+      - "src/cheap_flight_radar/production_publication.py"
       - "flight-radar.yaml"
       - ".github/workflows/radar-pages.yml"
   workflow_dispatch:
@@ -52,7 +53,7 @@ jobs:
 
       - name: Build deterministic Radar site
         run: >-
-          python -m cheap_flight_radar.publication
+          python -m cheap_flight_radar.production_publication
           --policy _app/flight-radar.yaml
           --history-dir _history
           --manifest-dir publication/runs

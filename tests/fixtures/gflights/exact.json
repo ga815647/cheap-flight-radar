@@ -1,0 +1,19 @@
+[
+  {
+    "airline": "IT",
+    "duration_minutes": 190,
+    "stops": 0,
+    "price": 6800,
+    "booking_token": "booking-token-123",
+    "legs": [
+      {
+        "from_airport": "TPE",
+        "to_airport": "NRT",
+        "departure_time": "06:35",
+        "arrival_time": "10:45",
+        "departure_date": "2026-09-10",
+        "arrival_date": "2026-09-10"
+      }
+    ]
+  }
+]
