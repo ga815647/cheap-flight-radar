@@ -10,7 +10,7 @@ import unittest
 import yaml
 
 from cheap_flight_radar.airfare import AirfareLeg, AirfareRecord, AirportIdentity, ProviderResult
-from cheap_flight_radar.production_runtime import run_once, write_run_artifacts
+from cheap_flight_radar.production_runtime import ProductionExecutionAdapter, run_once, write_run_artifacts
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_AT = datetime.fromisoformat("2026-08-13T02:00:00+08:00")
@@ -45,6 +45,8 @@ class FakeAdapter:
             discovery("deal-a", "NRT", 6000, 10000, 40),
             discovery("deal-b", "KIX", 6500, 10000, 35),
         ]
+        self.open_jaw_calls = []
+        self.exact_calls = []
 
     def _row(self, destination):
         return next(row for row in self.rows if row.destination.iata == destination)
@@ -57,6 +59,7 @@ class FakeAdapter:
         return ProviderResult("gflights", "explore", "complete", ())
 
     async def exact(self, *, origin, destination, departure_date, return_date=None, **kwargs):
+        self.exact_calls.append((origin, destination, departure_date, return_date))
         source = self._row(destination)
         exact = AirfareRecord(
             record_id=f"exact-{destination}-{departure_date}-{return_date}",
@@ -93,6 +96,7 @@ class FakeAdapter:
         return ProviderResult("gflights", "cheapest_dates", "complete", (record,))
 
     async def open_jaw(self, *, legs):
+        self.open_jaw_calls.append(tuple(legs))
         first_origin, first_destination, _ = legs[0]
         record = AirfareRecord(
             record_id=f"oj-{first_destination}-{legs[-1][0]}-{legs[-1][1]}", provider="gflights", surface="open_jaw",
@@ -102,6 +106,31 @@ class FakeAdapter:
             evidence_class="exact_revalidated_candidate", complete_airfare=True, booking_token="token",
         )
         return ProviderResult("gflights", "open_jaw", "complete", (record,))
+
+
+class ProductionExecutionAdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_multi_city_uses_reserved_adapter_not_primary_client(self):
+        multi_city = FakeAdapter()
+        adapter = ProductionExecutionAdapter(primary=object(), multi_city=multi_city)
+        legs = [("TPE", "NRT", "2026-09-10"), ("KIX", "TPE", "2026-09-14")]
+        result = await adapter.open_jaw(legs=legs)
+        self.assertEqual(result.coverage_state, "complete")
+        self.assertEqual(multi_city.open_jaw_calls, [tuple(legs)])
+
+    async def test_non_multi_city_surfaces_keep_primary_adapter(self):
+        primary = FakeAdapter()
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=object())
+        result = await adapter.exact(
+            origin="TPE",
+            destination="NRT",
+            departure_date="2026-09-10",
+            return_date="2026-09-14",
+        )
+        self.assertEqual(result.coverage_state, "complete")
+        self.assertEqual(
+            primary.exact_calls,
+            [("TPE", "NRT", "2026-09-10", "2026-09-14")],
+        )
 
 
 class ProductionRuntimeRetentionTests(unittest.IsolatedAsyncioTestCase):

@@ -129,6 +129,38 @@ def _itinerary_text(record: Mapping[str, Any]) -> str:
     return " / ".join(parts) if parts else "itinerary identity unavailable"
 
 
+def _requested_legs(record: Mapping[str, Any]) -> tuple[tuple[str, str, str], ...]:
+    reproducible = record.get("reproducible_search")
+    if not isinstance(reproducible, Mapping):
+        return ()
+    legs = reproducible.get("legs")
+    if not isinstance(legs, Sequence) or isinstance(legs, (str, bytes)):
+        return ()
+    requested: list[tuple[str, str, str]] = []
+    for leg in legs:
+        if not isinstance(leg, Sequence) or isinstance(leg, (str, bytes)) or len(leg) < 3:
+            return ()
+        origin, destination, day = (str(leg[0]).strip(), str(leg[1]).strip(), str(leg[2]).strip())
+        if not origin or not destination or not day:
+            return ()
+        requested.append((origin, destination, day))
+    return tuple(requested)
+
+
+def _requested_itinerary_text(record: Mapping[str, Any]) -> str | None:
+    legs = _requested_legs(record)
+    if not legs:
+        return None
+    return " / ".join(f"{origin} → {destination} ({day})" for origin, destination, day in legs)
+
+
+def _requested_dates(record: Mapping[str, Any]) -> str | None:
+    legs = _requested_legs(record)
+    if not legs:
+        return None
+    return " → ".join(day for _, _, day in legs)
+
+
 def _airlines(exact: Mapping[str, Any], discovery: Mapping[str, Any]) -> str:
     value = exact.get("airlines") or discovery.get("airlines") or []
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
@@ -189,8 +221,12 @@ def _signal_card(item: Mapping[str, Any]) -> str:
     state = str(item.get("state") or "signal")
     reason = str(item.get("reason") or "weak evidence")
     is_airfare_alternative = state in {"mixed_taiwan_return_alternative", "open_jaw_airfare_alternative"}
-    title = _itinerary_text(exact) if is_airfare_alternative else f"{origin} → {destination}"
-    dates = _dates(exact) if is_airfare_alternative else _dates(discovery)
+    if is_airfare_alternative:
+        title = _requested_itinerary_text(exact) or _itinerary_text(exact)
+        dates = _requested_dates(exact) or _dates(exact)
+    else:
+        title = f"{origin} → {destination}"
+        dates = _dates(discovery)
     return (
         '<article class="candidate">'
         f'<h3 class="route">{escape(title)}</h3>'

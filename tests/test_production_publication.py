@@ -54,9 +54,36 @@ class ProductionPublicationTests(unittest.TestCase):
             "anomaly_baseline_twd": 10000, "anomaly_scope": "destination_airport_all_taiwan_origins",
             "current_complete_airfare_twd": 6900, "discovery": asdict(discovery), "exact": asdict(exact),
         }
+        multi_city_exact = AirfareRecord(
+            record_id="multi-tpe-nrt-kix-tsa", provider="gflights", surface="open_jaw",
+            origin=AirportIdentity("TPE"), destination=AirportIdentity("NRT"),
+            legs=(
+                AirfareLeg("TPE", "HKG", "2026-09-10", "08:00", "10:00"),
+                AirfareLeg("HKG", "NRT", "2026-09-10", "12:00", "17:00"),
+            ),
+            current_price_twd=7200, observed_at=run_at.isoformat(), verification_state="revalidated",
+            evidence_class="exact_revalidated_candidate", complete_airfare=True, airlines=("multi",),
+            reproducible_search={
+                "currency": "TWD",
+                "legs": [
+                    ["TPE", "NRT", "2026-09-10"],
+                    ["KIX", "TSA", "2026-09-14"],
+                ],
+            },
+        )
+        multi_city_signal = {
+            "classification": "Signal", "state": "open_jaw_airfare_alternative",
+            "reason": "combined Google multi-city airfare exits via KIX; no synthetic multi-city typical price",
+            "observation_id": None, "anomaly_source": None, "anomaly_strength_percent": None,
+            "anomaly_baseline_twd": None, "anomaly_scope": None, "current_complete_airfare_twd": 7200,
+            "discovery": asdict(discovery), "exact": asdict(multi_city_exact),
+        }
         manifest = {
             "schema_version": 2, "radar_run_id": run_id, "run_at": run_at.isoformat(), "history_snapshot_path": relative.as_posix(),
-            "deals": [item], "signals": [{**item, "classification": "Signal", "state": "weak_seed", "reason": "fixture weak signal"}],
+            "deals": [item], "signals": [
+                {**item, "classification": "Signal", "state": "weak_seed", "reason": "fixture weak signal"},
+                multi_city_signal,
+            ],
             "coverage": {
                 "origins": {origin: {"status": "attempted", "returned_flight_deals": 1, "qualified_deals": 1} for origin in ("TPE", "TSA", "RMQ", "KHH")},
                 "markets": {
@@ -84,6 +111,14 @@ class ProductionPublicationTests(unittest.TestCase):
             self.assertIn("sparse history cannot block a Deal", text)
             self.assertNotIn('class="view-label">Absolute Cheapest', text)
             self.assertNotIn("Best Value", text)
+
+    def test_v2_multi_city_signal_uses_complete_requested_itinerary_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history, manifests, site, run_id = self._write_v2(Path(tmp))
+            build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
+            text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
+            self.assertIn("TPE → NRT (2026-09-10) / KIX → TSA (2026-09-14)", text)
+            self.assertIn("2026-09-10 → 2026-09-14 · open_jaw_airfare_alternative", text)
 
     def test_wrapper_still_renders_legacy_schema_v1_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:

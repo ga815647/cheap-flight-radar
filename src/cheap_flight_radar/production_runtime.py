@@ -1,12 +1,20 @@
 """Canonical one-shot production execution wrapper.
 
 The core :mod:`production_radar` runtime intentionally spends exact-search work
-only on a bounded competitive shortlist.  This wrapper records destination-free
+only on a bounded competitive shortlist. This wrapper records destination-free
 Flight Deals acquisition so every qualified anomaly candidate remains durable
 evidence even when it was not selected for exact completion in this run.
 
-It does not alter Deal qualification or Deal ordering, and it performs no extra
-provider queries.  ChatGPT remains the scheduler/orchestrator; this module is
+It also owns narrowly operational provider hardening for the canonical daily
+execution path. Multi-city searches use a client created at process start that
+is separate from the high-volume discovery/exact/flexible client. Both clients
+retain the same explicit CheapFlightRadar User-Agent, direct connection
+(``proxy=None``), locale, and currency through :class:`GFlightsAdapter`; this is
+surface budget isolation, not UA/proxy/session rotation, retry, or rate-limit
+resetting. Provider failures still fail closed through the underlying adapter.
+
+The wrapper does not alter Deal qualification, Deal ordering, or provider-call
+latency semantics. ChatGPT remains the scheduler/orchestrator; this module is
 only short-lived execution.
 """
 from __future__ import annotations
@@ -32,6 +40,37 @@ from .production_radar import (
     write_run_artifacts as _write_run_artifacts,
 )
 from .providers.gflights import GFlightsAdapter
+
+
+class ProductionExecutionAdapter:
+    """Reserve a separate fixed provider client for multi-city request budget.
+
+    The primary and multi-city adapters are both constructed once at process
+    start. A primary-client 429 therefore cannot make the library's client-local
+    sticky rate-limit state suppress every later multi-city request. The
+    dedicated multi-city client does not change IP, proxy, User-Agent, locale,
+    currency, or anti-bot behavior; a provider-side refusal still fails closed
+    normally.
+    """
+
+    def __init__(self, *, primary: Any, multi_city: Any) -> None:
+        self._primary = primary
+        self._multi_city = multi_city
+
+    async def flight_deals(self, **kwargs: Any) -> ProviderResult:
+        return await self._primary.flight_deals(**kwargs)
+
+    async def explore(self, **kwargs: Any) -> ProviderResult:
+        return await self._primary.explore(**kwargs)
+
+    async def exact(self, **kwargs: Any) -> ProviderResult:
+        return await self._primary.exact(**kwargs)
+
+    async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
+        return await self._primary.cheapest_dates(**kwargs)
+
+    async def open_jaw(self, **kwargs: Any) -> ProviderResult:
+        return await self._multi_city.open_jaw(**kwargs)
 
 
 class RecordingFlightDealsAdapter:
@@ -61,7 +100,7 @@ def retain_pending_qualified_candidates(
 
     A record is pending only when it meets the same discovery qualification
     predicates as the core runtime and is not already represented by a Deal or
-    another Signal.  Pending records remain Signals because exact current fare
+    another Signal. Pending records remain Signals because exact current fare
     completion has not been performed.
     """
 
@@ -167,9 +206,13 @@ def write_run_artifacts(
 async def _async_main(args: argparse.Namespace) -> int:
     policy = load_policy(Path(args.policy))
     prior_history = _load_prior_history(Path(args.history_dir) if args.history_dir else None)
+    adapter = ProductionExecutionAdapter(
+        primary=GFlightsAdapter(),
+        multi_city=GFlightsAdapter(),
+    )
     result = await run_once(
         policy=policy,
-        adapter=GFlightsAdapter(),
+        adapter=adapter,
         prior_history=prior_history,
     )
     paths = write_run_artifacts(result, policy=policy, output_dir=Path(args.output_dir))
