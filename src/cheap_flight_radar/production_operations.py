@@ -131,19 +131,26 @@ def inspect_daily_state(
     )
 
     if publication_manifest.exists():
-        if recovery_manifest.exists():
-            if publication_manifest.read_bytes() != recovery_manifest.read_bytes():
-                return DailyOperationState(
-                    status="blocked_manifest_divergence",
-                    reason="active publication manifest differs from immutable recovery evidence",
-                    **common,
-                )
+        if not recovery_manifest.exists():
+            return DailyOperationState(
+                status="blocked_missing_recovery_evidence",
+                reason=(
+                    "active publication manifest exists without immutable recovery evidence; "
+                    "do not accept presentation state as durable recovery"
+                ),
+                **common,
+            )
+        if publication_manifest.read_bytes() != recovery_manifest.read_bytes():
+            return DailyOperationState(
+                status="blocked_manifest_divergence",
+                reason="active publication manifest differs from immutable recovery evidence",
+                **common,
+            )
         return DailyOperationState(
             status="published",
             reason="canonical acquisition and active publication manifest already exist",
             **common,
         )
-
     if recovery_manifest.exists():
         return DailyOperationState(
             status="recover_publication",
