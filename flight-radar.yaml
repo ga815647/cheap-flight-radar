@@ -451,6 +451,14 @@ price_history:
     github_actions_is_not_durable_history_service: true
     artifact_role: transient_handoff_only
     data_snapshot_write_is_not_policy_or_code_merge: true
+    canonical_daily_acquisition:
+      local_day_timezone: Asia/Taipei
+      max_attempts_per_local_day: 1
+      claim_path_template: data/production-attempts/YYYY/MM/DD/canonical.json
+      claim_must_persist_before_live_provider_call: true
+      prior_claim_without_snapshot_action: fail_closed_no_same_day_reacquisition
+      run_recovery_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}
+      recovery_manifest_required_before_active_publication: true
   backfill:
     synthetic_backfill: forbidden
     derive_only_from_observed_evidence: true
@@ -642,7 +650,17 @@ publication:
   - deploy_github_pages
   orchestration:
     primary_scheduler: chatgpt_scheduled_radar_run
+    canonical_daily_control:
+      branch: ops/radar-request
+      request_path: requests/daily.json
+      request_mode: canonical_daily
+      request_local_date_timezone: Asia/Taipei
+      request_must_match_current_local_date: true
     publication_trigger: presentation_manifest_push
+    publication_trigger_semantics: durable_state_transition_not_assumed_recursive_workflow_event
+    github_token_manifest_push_recursively_triggers_pages: false
+    github_token_pages_trigger: explicit_radar_pages_workflow_dispatch_after_manifest_push
+    publication_recovery: immutable_run_evidence_without_reacquisition
     github_actions_role: disposable_static_build_gate_and_deploy_backend
     independent_github_cron: false
     github_actions_is_not_scheduler: true
