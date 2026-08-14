@@ -92,6 +92,14 @@ jobs:
       - name: Install current application
         run: python -m pip install -e _app
 
+      - name: Validate isolated publication/evidence baseline before claim
+        run: >-
+          python -m cheap_flight_radar.production_publication
+          --policy _app/flight-radar.yaml
+          --history-dir _history
+          --manifest-dir _publication/publication/runs
+          --site-dir _site-baseline
+
       - name: Inspect isolated daily state
         id: state
         shell: bash
