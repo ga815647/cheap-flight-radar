@@ -1,0 +1,142 @@
+name: One-shot publication closeout
+
+on:
+  push:
+    branches:
+      - chatdev/production-soak-429-20260814
+
+permissions:
+  contents: write
+
+jobs:
+  publish-final-soak:
+    if: contains(github.event.head_commit.message, '[publication-closeout]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install exact-head generator
+        run: python -m pip install -e .
+
+      - name: Download final no-timeout soak artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api /repos/${GITHUB_REPOSITORY}/actions/artifacts/9216744987/zip > /tmp/final-soak.zip
+          mkdir -p /tmp/final-soak
+          unzip -q /tmp/final-soak.zip -d /tmp/final-soak
+
+      - name: Validate final soak artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/final-soak')
+          run_id = 'production-radar-20260814T181909+0800'
+          snapshot_rel = Path('data/price-history/2026/08/14/production-radar-20260814T181909-0800.json')
+          manifest_file = root / 'publication' / 'runs' / f'{run_id}.json'
+          snapshot_file = root / 'history' / snapshot_rel
+          run = json.loads((root / 'run-result.json').read_text(encoding='utf-8'))
+          manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
+          snapshot = json.loads(snapshot_file.read_text(encoding='utf-8'))
+          assert run['radar_run_id'] == manifest['radar_run_id'] == snapshot['radar_run_id'] == run_id
+          assert manifest['history_snapshot_path'] == snapshot_rel.as_posix()
+          expected = {
+              'conventional_exact': (20, 20, 0),
+              'flexible_dates': (20, 16, 4),
+              'mixed_taiwan_return': (4, 3, 1),
+              'open_jaw': (4, 2, 2),
+          }
+          execution = run['coverage']['execution']
+          for surface, (attempts, successes, failures) in expected.items():
+              actual = execution[surface]
+              assert (actual['attempts'], actual['successes'], actual['failures']) == (attempts, successes, failures), (surface, actual)
+          assert run['coverage']['all_origins_attempted'] is True
+          assert set(run['coverage']['origins']) == {'TPE', 'TSA', 'RMQ', 'KHH'}
+          failures = run['provider_failures']
+          assert len(failures) == 3
+          assert all(item['error'] == 'empty' for item in failures)
+          joined = json.dumps(run, ensure_ascii=False).lower()
+          assert '429 too many requests' not in joined
+          assert run['deal_count'] == 10 and run['signal_count'] == 395
+          print('final soak artifact validated')
+          PY
+
+      - name: Persist immutable price-history snapshot
+        run: |
+          git fetch origin history/price-observations publication/radar-reports
+          git worktree add -B closeout-history /tmp/history origin/history/price-observations
+          target=/tmp/history/data/price-history/2026/08/14/production-radar-20260814T181909-0800.json
+          test ! -e "$target"
+          mkdir -p "$(dirname "$target")"
+          cp /tmp/final-soak/history/data/price-history/2026/08/14/production-radar-20260814T181909-0800.json "$target"
+          cd /tmp/history
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add data/price-history/2026/08/14/production-radar-20260814T181909-0800.json
+          git commit -m 'data: persist final 2026-08-14 production soak snapshot'
+          git push origin HEAD:history/price-observations
+
+      - name: Append publication manifest
+        run: |
+          git worktree add -B closeout-publication /tmp/publication origin/publication/radar-reports
+          target='/tmp/publication/publication/runs/production-radar-20260814T181909+0800.json'
+          test ! -e "$target"
+          mkdir -p "$(dirname "$target")"
+          cp '/tmp/final-soak/publication/runs/production-radar-20260814T181909+0800.json' "$target"
+          cd /tmp/publication
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add 'publication/runs/production-radar-20260814T181909+0800.json'
+          git commit -m 'publication: append final 2026-08-14 production Radar run'
+          git push origin HEAD:publication/radar-reports
+
+      - name: Validate exact-head deterministic Pages output
+        run: |
+          python -m cheap_flight_radar.production_publication \
+            --policy flight-radar.yaml \
+            --history-dir /tmp/history \
+            --manifest-dir /tmp/publication/publication/runs \
+            --site-dir /tmp/site
+          python - <<'PY'
+          from pathlib import Path
+
+          slug = 'production-radar-20260814T181909-0800'
+          site = Path('/tmp/site')
+          per_run = site / 'runs' / slug / 'index.html'
+          latest = site / 'latest' / 'index.html'
+          index = site / 'index.html'
+          assert per_run.exists() and latest.exists() and index.exists()
+          assert per_run.read_bytes() == latest.read_bytes()
+          text = per_run.read_text(encoding='utf-8')
+          index_text = index.read_text(encoding='utf-8')
+          for needle in (
+              '<h2>Deals</h2>',
+              '<h2>Signals &amp; airfare alternatives</h2>',
+              'TPE ·', 'TSA ·', 'RMQ ·', 'KHH ·',
+              '20 attempts · 20 success · 20 records · 0 failed',
+              '20 attempts · 16 success',
+              '4 attempts · 3 success · 3 records · 1 failed',
+              '4 attempts · 2 success · 2 records · 2 failed',
+              'RMQ · open_jaw — empty',
+              'TSA · mixed_taiwan_return — empty',
+              'TSA · open_jaw — empty',
+              'Historical evidence details',
+              'Sparse history',
+              'TPE → FKS',
+              '2026-09-15 → 2026-09-22',
+              'Tigerair Taiwan',
+          ):
+              assert needle in text, needle
+          assert slug in index_text
+          print('exact-head Pages output validated')
+          PY
