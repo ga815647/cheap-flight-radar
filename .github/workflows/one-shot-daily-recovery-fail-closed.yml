@@ -25,21 +25,9 @@ jobs:
 
           source = Path("src/cheap_flight_radar/production_operations.py")
           text = source.read_text(encoding="utf-8")
-          old = '''    if publication_manifest.exists():
-              if recovery_manifest.exists():
-                  if publication_manifest.read_bytes() != recovery_manifest.read_bytes():
-                      return DailyOperationState(
-                          status="blocked_manifest_divergence",
-                          reason="active publication manifest differs from immutable recovery evidence",
-                          **common,
-                      )
-              return DailyOperationState(
-                  status="published",
-                  reason="canonical acquisition and active publication manifest already exist",
-                  **common,
-              )
-          '''
-          new = '''    if publication_manifest.exists():
+          start = text.index("    if publication_manifest.exists():\n")
+          end = text.index("\n    if recovery_manifest.exists():\n", start)
+          replacement = '''    if publication_manifest.exists():
               if not recovery_manifest.exists():
                   return DailyOperationState(
                       status="blocked_missing_recovery_evidence",
@@ -61,14 +49,11 @@ jobs:
                   **common,
               )
           '''
-          if old not in text:
-              raise SystemExit("production_operations target snippet not found")
-          source.write_text(text.replace(old, new, 1), encoding="utf-8")
+          source.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
 
           tests = Path("tests/test_production_operations.py")
           text = tests.read_text(encoding="utf-8")
-          marker = '''    def test_manifest_divergence_fails_closed(self):
-          '''
+          marker = "    def test_manifest_divergence_fails_closed(self):\n"
           addition = '''    def test_active_publication_without_recovery_evidence_fails_closed(self):
               run_id, history_rel = self.write_runtime_output()
               snapshot_source = self.output / "history" / history_rel
