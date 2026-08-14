@@ -1,13 +1,20 @@
 """Canonical one-shot production execution wrapper.
 
 The core :mod:`production_radar` runtime intentionally spends exact-search work
-only on a bounded competitive shortlist.  This wrapper records destination-free
+only on a bounded competitive shortlist. This wrapper records destination-free
 Flight Deals acquisition so every qualified anomaly candidate remains durable
 evidence even when it was not selected for exact completion in this run.
 
-It does not alter Deal qualification or Deal ordering, and it performs no extra
-provider queries.  ChatGPT remains the scheduler/orchestrator; this module is
-only short-lived execution.
+It also owns narrowly operational provider hardening for the canonical daily
+execution path. Multi-city searches use a client created at process start that
+is separate from the high-volume discovery/exact/flexible client. Both clients
+retain the same explicit CheapFlightRadar User-Agent, direct connection
+(``proxy=None``), locale, and currency through :class:`GFlightsAdapter`; this is
+surface budget isolation, not UA/proxy/session rotation or a retry mechanism.
+Provider calls are time-bounded and fail closed rather than hanging a run.
+
+The wrapper does not alter Deal qualification or Deal ordering. ChatGPT remains
+the scheduler/orchestrator; this module is only short-lived execution.
 """
 from __future__ import annotations
 
@@ -32,6 +39,58 @@ from .production_radar import (
     write_run_artifacts as _write_run_artifacts,
 )
 from .providers.gflights import GFlightsAdapter
+
+PROVIDER_CALL_TIMEOUT_SECONDS = 30.0
+
+
+class ProductionExecutionAdapter:
+    """Bound canonical provider calls and reserve multi-city request capacity.
+
+    The primary and multi-city adapters are constructed once at process start.
+    A primary-client 429 therefore cannot make the library's client-local
+    sticky rate-limit state suppress every later multi-city request. The
+    dedicated multi-city client does not change IP, proxy, User-Agent, or any
+    anti-bot behavior; a provider-side 429 still fails closed normally.
+    """
+
+    def __init__(
+        self,
+        *,
+        primary: Any,
+        multi_city: Any,
+        timeout_seconds: float = PROVIDER_CALL_TIMEOUT_SECONDS,
+    ) -> None:
+        if timeout_seconds <= 0:
+            raise ValueError("provider call timeout must be positive")
+        self._primary = primary
+        self._multi_city = multi_city
+        self._timeout_seconds = float(timeout_seconds)
+
+    async def _bounded(self, method: Any, surface: str, **kwargs: Any) -> ProviderResult:
+        try:
+            return await asyncio.wait_for(method(**kwargs), timeout=self._timeout_seconds)
+        except TimeoutError:
+            return ProviderResult(
+                "gflights",
+                surface,
+                "failed",
+                error=f"TimeoutError: provider call exceeded {self._timeout_seconds:g}s",
+            )
+
+    async def flight_deals(self, **kwargs: Any) -> ProviderResult:
+        return await self._bounded(self._primary.flight_deals, "flight_deals", **kwargs)
+
+    async def explore(self, **kwargs: Any) -> ProviderResult:
+        return await self._bounded(self._primary.explore, "explore", **kwargs)
+
+    async def exact(self, **kwargs: Any) -> ProviderResult:
+        return await self._bounded(self._primary.exact, "exact", **kwargs)
+
+    async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
+        return await self._bounded(self._primary.cheapest_dates, "cheapest_dates", **kwargs)
+
+    async def open_jaw(self, **kwargs: Any) -> ProviderResult:
+        return await self._bounded(self._multi_city.open_jaw, "open_jaw", **kwargs)
 
 
 class RecordingFlightDealsAdapter:
@@ -61,7 +120,7 @@ def retain_pending_qualified_candidates(
 
     A record is pending only when it meets the same discovery qualification
     predicates as the core runtime and is not already represented by a Deal or
-    another Signal.  Pending records remain Signals because exact current fare
+    another Signal. Pending records remain Signals because exact current fare
     completion has not been performed.
     """
 
@@ -167,9 +226,13 @@ def write_run_artifacts(
 async def _async_main(args: argparse.Namespace) -> int:
     policy = load_policy(Path(args.policy))
     prior_history = _load_prior_history(Path(args.history_dir) if args.history_dir else None)
+    adapter = ProductionExecutionAdapter(
+        primary=GFlightsAdapter(),
+        multi_city=GFlightsAdapter(),
+    )
     result = await run_once(
         policy=policy,
-        adapter=GFlightsAdapter(),
+        adapter=adapter,
         prior_history=prior_history,
     )
     paths = write_run_artifacts(result, policy=policy, output_dir=Path(args.output_dir))
