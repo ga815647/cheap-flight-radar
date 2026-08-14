@@ -10,11 +10,12 @@ execution path. Multi-city searches use a client created at process start that
 is separate from the high-volume discovery/exact/flexible client. Both clients
 retain the same explicit CheapFlightRadar User-Agent, direct connection
 (``proxy=None``), locale, and currency through :class:`GFlightsAdapter`; this is
-surface budget isolation, not UA/proxy/session rotation or a retry mechanism.
-Provider calls are time-bounded and fail closed rather than hanging a run.
+surface budget isolation, not UA/proxy/session rotation, retry, or rate-limit
+resetting. Provider failures still fail closed through the underlying adapter.
 
-The wrapper does not alter Deal qualification or Deal ordering. ChatGPT remains
-the scheduler/orchestrator; this module is only short-lived execution.
+The wrapper does not alter Deal qualification, Deal ordering, or provider-call
+latency semantics. ChatGPT remains the scheduler/orchestrator; this module is
+only short-lived execution.
 """
 from __future__ import annotations
 
@@ -40,57 +41,36 @@ from .production_radar import (
 )
 from .providers.gflights import GFlightsAdapter
 
-PROVIDER_CALL_TIMEOUT_SECONDS = 30.0
-
 
 class ProductionExecutionAdapter:
-    """Bound canonical provider calls and reserve multi-city request capacity.
+    """Reserve a separate fixed provider client for multi-city request budget.
 
-    The primary and multi-city adapters are constructed once at process start.
-    A primary-client 429 therefore cannot make the library's client-local
+    The primary and multi-city adapters are both constructed once at process
+    start. A primary-client 429 therefore cannot make the library's client-local
     sticky rate-limit state suppress every later multi-city request. The
-    dedicated multi-city client does not change IP, proxy, User-Agent, or any
-    anti-bot behavior; a provider-side 429 still fails closed normally.
+    dedicated multi-city client does not change IP, proxy, User-Agent, locale,
+    currency, or anti-bot behavior; a provider-side refusal still fails closed
+    normally.
     """
 
-    def __init__(
-        self,
-        *,
-        primary: Any,
-        multi_city: Any,
-        timeout_seconds: float = PROVIDER_CALL_TIMEOUT_SECONDS,
-    ) -> None:
-        if timeout_seconds <= 0:
-            raise ValueError("provider call timeout must be positive")
+    def __init__(self, *, primary: Any, multi_city: Any) -> None:
         self._primary = primary
         self._multi_city = multi_city
-        self._timeout_seconds = float(timeout_seconds)
-
-    async def _bounded(self, method: Any, surface: str, **kwargs: Any) -> ProviderResult:
-        try:
-            return await asyncio.wait_for(method(**kwargs), timeout=self._timeout_seconds)
-        except TimeoutError:
-            return ProviderResult(
-                "gflights",
-                surface,
-                "failed",
-                error=f"TimeoutError: provider call exceeded {self._timeout_seconds:g}s",
-            )
 
     async def flight_deals(self, **kwargs: Any) -> ProviderResult:
-        return await self._bounded(self._primary.flight_deals, "flight_deals", **kwargs)
+        return await self._primary.flight_deals(**kwargs)
 
     async def explore(self, **kwargs: Any) -> ProviderResult:
-        return await self._bounded(self._primary.explore, "explore", **kwargs)
+        return await self._primary.explore(**kwargs)
 
     async def exact(self, **kwargs: Any) -> ProviderResult:
-        return await self._bounded(self._primary.exact, "exact", **kwargs)
+        return await self._primary.exact(**kwargs)
 
     async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
-        return await self._bounded(self._primary.cheapest_dates, "cheapest_dates", **kwargs)
+        return await self._primary.cheapest_dates(**kwargs)
 
     async def open_jaw(self, **kwargs: Any) -> ProviderResult:
-        return await self._bounded(self._multi_city.open_jaw, "open_jaw", **kwargs)
+        return await self._multi_city.open_jaw(**kwargs)
 
 
 class RecordingFlightDealsAdapter:
