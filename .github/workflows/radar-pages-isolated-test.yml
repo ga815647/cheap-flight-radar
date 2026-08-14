@@ -1,0 +1,80 @@
+name: Radar Pages isolated TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_ref:
+        description: Isolated fare-evidence ref
+        required: true
+        type: string
+      publication_ref:
+        description: Isolated presentation-manifest ref
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: radar-pages-isolated-test
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate isolated refs
+        shell: bash
+        env:
+          EVIDENCE_REF: ${{ inputs.evidence_ref }}
+          PUBLICATION_REF: ${{ inputs.publication_ref }}
+        run: |
+          case "$EVIDENCE_REF" in
+            test/radar-evidence/*) ;;
+            *) echo "Refusing non-test evidence ref: $EVIDENCE_REF" >&2; exit 1 ;;
+          esac
+          case "$PUBLICATION_REF" in
+            test/radar-publication/*) ;;
+            *) echo "Refusing non-test publication ref: $PUBLICATION_REF" >&2; exit 1 ;;
+          esac
+
+      - name: Checkout isolated publication manifests
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.publication_ref }}
+
+      - name: Checkout current generator
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: _app
+
+      - name: Checkout isolated immutable fare evidence
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.evidence_ref }}
+          path: _history
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install generator
+        run: python -m pip install -e _app
+
+      - name: Build deterministic Radar site from isolated TEST state
+        run: >-
+          python -m cheap_flight_radar.production_publication
+          --policy _app/flight-radar.yaml
+          --history-dir _history
+          --manifest-dir publication/runs
+          --site-dir _site
+
+      - name: Upload isolated Radar Pages build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-pages-isolated-test-${{ github.run_id }}
+          path: _site
+          if-no-files-found: error
+          retention-days: 14

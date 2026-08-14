@@ -1,0 +1,233 @@
+name: Isolated canonical production Radar test
+
+on:
+  push:
+    branches:
+      - ops/radar-test-request
+    paths:
+      - "requests/test-daily.json"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: canonical-production-radar
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout isolated test request
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          path: _request
+
+      - name: Resolve isolated test request
+        id: request
+        shell: bash
+        run: |
+          python - <<'PY' > _request.env
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("_request/requests/test-daily.json").read_text(encoding="utf-8"))
+          if payload.get("schema_version") != 1 or payload.get("mode") != "isolated_canonical_test":
+              raise SystemExit("invalid isolated canonical test request contract")
+          requested_date = str(payload.get("requested_date") or "")
+          evidence_ref = str(payload.get("evidence_ref") or "")
+          publication_ref = str(payload.get("publication_ref") or "")
+          if not evidence_ref.startswith("test/radar-evidence/"):
+              raise SystemExit("isolated test evidence_ref must use test/radar-evidence/*")
+          if not publication_ref.startswith("test/radar-publication/"):
+              raise SystemExit("isolated test publication_ref must use test/radar-publication/*")
+          print(f"REQUEST_DATE={requested_date}")
+          print(f"EVIDENCE_REF={evidence_ref}")
+          print(f"PUBLICATION_REF={publication_ref}")
+          PY
+          cat _request.env >> "$GITHUB_ENV"
+          while IFS='=' read -r key value; do
+            case "$key" in
+              REQUEST_DATE) echo "request_date=$value" >> "$GITHUB_OUTPUT" ;;
+              EVIDENCE_REF) echo "evidence_ref=$value" >> "$GITHUB_OUTPUT" ;;
+              PUBLICATION_REF) echo "publication_ref=$value" >> "$GITHUB_OUTPUT" ;;
+            esac
+          done < _request.env
+
+      - name: Validate local test date
+        shell: bash
+        run: |
+          TODAY="$(TZ=Asia/Taipei date +%F)"
+          if [ "$REQUEST_DATE" != "$TODAY" ]; then
+            echo "Refusing stale/future isolated test request: request=$REQUEST_DATE today=$TODAY" >&2
+            exit 1
+          fi
+
+      - name: Checkout current application
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: _app
+
+      - name: Checkout isolated durable fare evidence
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.request.outputs.evidence_ref }}
+          path: _history
+
+      - name: Checkout isolated publication manifests
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.request.outputs.publication_ref }}
+          path: _publication
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install current application
+        run: python -m pip install -e _app
+
+      - name: Inspect isolated daily state
+        id: state
+        shell: bash
+        run: |
+          python -m cheap_flight_radar.production_operations inspect \
+            --history-dir _history \
+            --publication-dir _publication \
+            --date "$REQUEST_DATE" \
+            --output _state.json
+          STATUS="$(python -c 'import json; print(json.load(open("_state.json"))["status"])')"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          case "$STATUS" in
+            acquire|recover_publication|published) ;;
+            *)
+              echo "Isolated Radar test failed closed in state: $STATUS" >&2
+              cat _state.json >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Persist isolated one-attempt acquisition claim
+        if: steps.state.outputs.status == 'acquire'
+        shell: bash
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          CLAIMED_AT="$(TZ=Asia/Taipei date --iso-8601=seconds)"
+          python -m cheap_flight_radar.production_operations claim \
+            --history-dir _history \
+            --date "$REQUEST_DATE" \
+            --claimed-at "$CLAIMED_AT" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "$RUN_URL" \
+            --trigger-sha "${{ github.sha }}"
+          cd _history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/production-attempts
+          git commit -m "TEST: claim isolated Radar acquisition ${REQUEST_DATE}"
+          git push origin HEAD:"$EVIDENCE_REF"
+
+      - name: Run canonical production acquisition in isolated state
+        if: steps.state.outputs.status == 'acquire'
+        id: acquisition
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m cheap_flight_radar.production_runtime \
+            --policy _app/flight-radar.yaml \
+            --history-dir _history \
+            --output-dir _out 2>&1 | tee _runtime.log
+
+      - name: Stage isolated immutable success and recovery evidence
+        if: steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
+        id: success
+        shell: bash
+        run: |
+          python -m cheap_flight_radar.production_operations stage-success \
+            --output-dir _out \
+            --history-dir _history \
+            --date "$REQUEST_DATE" \
+            --output _success.json
+          RUN_ID="$(python -c 'import json; print(json.load(open("_success.json"))["radar_run_id"])')"
+          echo "radar_run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cd _history
+          git add data/price-history data/run-evidence
+          git commit -m "TEST: persist isolated Radar evidence ${RUN_ID}"
+          git push origin HEAD:"$EVIDENCE_REF"
+
+      - name: Refresh isolated history checkout after acquisition
+        if: steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
+        run: git -C _history pull --ff-only origin "$EVIDENCE_REF"
+
+      - name: Restore isolated publication manifest from durable evidence
+        if: steps.state.outputs.status == 'recover_publication' || steps.state.outputs.status == 'published' || steps.acquisition.outcome == 'success'
+        id: restore
+        shell: bash
+        run: |
+          python -m cheap_flight_radar.production_operations restore-publication \
+            --history-dir _history \
+            --publication-dir _publication \
+            --date "$REQUEST_DATE" \
+            --output _restore.json
+          RUN_ID="$(python -c 'import json; print(json.load(open("_restore.json"))["radar_run_id"])')"
+          echo "radar_run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-build isolated publication before active push
+        if: steps.restore.outcome == 'success'
+        run: >-
+          python -m cheap_flight_radar.production_publication
+          --policy _app/flight-radar.yaml
+          --history-dir _history
+          --manifest-dir _publication/publication/runs
+          --site-dir _site-smoke
+
+      - name: Push isolated active publication manifest
+        if: steps.restore.outcome == 'success'
+        shell: bash
+        run: |
+          cd _publication
+          if [ -z "$(git status --porcelain -- publication/runs)" ]; then
+            echo "Isolated publication manifest already present; no data push required."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add publication/runs
+            git commit -m "TEST: publish isolated Radar ${{ steps.restore.outputs.radar_run_id }}"
+            git push origin HEAD:"$PUBLICATION_REF"
+          fi
+
+      - name: Explicitly dispatch Radar Pages isolated TEST
+        if: steps.restore.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          jq -n \
+            --arg ref main \
+            --arg evidence "$EVIDENCE_REF" \
+            --arg publication "$PUBLICATION_REF" \
+            '{ref:$ref, inputs:{evidence_ref:$evidence, publication_ref:$publication}}' \
+            | gh api \
+                --method POST \
+                repos/${{ github.repository }}/actions/workflows/radar-pages-isolated-test.yml/dispatches \
+                --input -
+
+      - name: Upload isolated operational evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-canonical-production-radar-${{ steps.request.outputs.request_date }}-${{ github.run_id }}
+          path: |
+            _state.json
+            _runtime.log
+            _success.json
+            _restore.json
+            _out/
+          if-no-files-found: warn
+          retention-days: 14
