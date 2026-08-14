@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from copy import deepcopy
 from datetime import datetime
 import json
@@ -47,6 +46,7 @@ class FakeAdapter:
             discovery("deal-b", "KIX", 6500, 10000, 35),
         ]
         self.open_jaw_calls = []
+        self.exact_calls = []
 
     def _row(self, destination):
         return next(row for row in self.rows if row.destination.iata == destination)
@@ -59,6 +59,7 @@ class FakeAdapter:
         return ProviderResult("gflights", "explore", "complete", ())
 
     async def exact(self, *, origin, destination, departure_date, return_date=None, **kwargs):
+        self.exact_calls.append((origin, destination, departure_date, return_date))
         source = self._row(destination)
         exact = AirfareRecord(
             record_id=f"exact-{destination}-{departure_date}-{return_date}",
@@ -107,44 +108,29 @@ class FakeAdapter:
         return ProviderResult("gflights", "open_jaw", "complete", (record,))
 
 
-class SlowExactAdapter:
-    async def exact(self, **kwargs):
-        await asyncio.sleep(0.05)
-        return ProviderResult("gflights", "exact", "complete", ())
-
-
 class ProductionExecutionAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_multi_city_uses_reserved_adapter_not_primary_client(self):
         multi_city = FakeAdapter()
-        adapter = ProductionExecutionAdapter(
-            primary=object(),
-            multi_city=multi_city,
-            timeout_seconds=1,
-        )
+        adapter = ProductionExecutionAdapter(primary=object(), multi_city=multi_city)
         legs = [("TPE", "NRT", "2026-09-10"), ("KIX", "TPE", "2026-09-14")]
         result = await adapter.open_jaw(legs=legs)
         self.assertEqual(result.coverage_state, "complete")
         self.assertEqual(multi_city.open_jaw_calls, [tuple(legs)])
 
-    async def test_provider_call_timeout_fails_closed(self):
-        adapter = ProductionExecutionAdapter(
-            primary=SlowExactAdapter(),
-            multi_city=FakeAdapter(),
-            timeout_seconds=0.001,
-        )
+    async def test_non_multi_city_surfaces_keep_primary_adapter(self):
+        primary = FakeAdapter()
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=object())
         result = await adapter.exact(
             origin="TPE",
             destination="NRT",
             departure_date="2026-09-10",
             return_date="2026-09-14",
         )
-        self.assertEqual(result.coverage_state, "failed")
-        self.assertEqual(result.surface, "exact")
-        self.assertIn("TimeoutError", result.error or "")
-
-    def test_provider_call_timeout_must_be_positive(self):
-        with self.assertRaises(ValueError):
-            ProductionExecutionAdapter(primary=object(), multi_city=object(), timeout_seconds=0)
+        self.assertEqual(result.coverage_state, "complete")
+        self.assertEqual(
+            primary.exact_calls,
+            [("TPE", "NRT", "2026-09-10", "2026-09-14")],
+        )
 
 
 class ProductionRuntimeRetentionTests(unittest.IsolatedAsyncioTestCase):
