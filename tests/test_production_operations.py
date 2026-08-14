@@ -145,6 +145,25 @@ class ProductionOperationsTest(unittest.TestCase):
                 requested_date=self.day,
             )
 
+    def test_active_publication_without_recovery_evidence_fails_closed(self):
+    run_id, history_rel = self.write_runtime_output()
+    snapshot_source = self.output / "history" / history_rel
+    snapshot_target = self.history / history_rel
+    snapshot_target.parent.mkdir(parents=True)
+    snapshot_target.write_bytes(snapshot_source.read_bytes())
+
+    manifest_source = self.output / "publication" / "runs" / f"{run_id}.json"
+    active = self.publication / "publication" / "runs" / f"{run_id}.json"
+    active.parent.mkdir(parents=True)
+    active.write_bytes(manifest_source.read_bytes())
+
+    state = inspect_daily_state(
+        history_dir=self.history,
+        publication_dir=self.publication,
+        requested_date=self.day,
+    )
+    self.assertEqual(state.status, "blocked_missing_recovery_evidence")
+
     def test_manifest_divergence_fails_closed(self):
         self.claim()
         run_id, _ = self.write_runtime_output()
