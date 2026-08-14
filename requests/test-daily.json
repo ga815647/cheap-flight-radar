@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "mode": "isolated_canonical_test",
+  "requested_date": "2026-08-14",
+  "evidence_ref": "test/radar-evidence/opverify-20260814-2210",
+  "publication_ref": "test/radar-publication/opverify-20260814-2210"
+}
