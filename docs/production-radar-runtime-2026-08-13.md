@@ -14,11 +14,11 @@ The production path is:
 4. The adapter performs sparse Flight Deals trip-length anchors with the fixed CheapFlightRadar User-Agent, direct connection (`proxy=None`), TWD, and Taiwan locale.
 5. Results are normalized into provider-independent `AirfareRecord` values. Raw `gflights` objects never cross the adapter boundary.
 6. Global provider results are filtered to international Asia/Oceania and classified into Japan, Korea, China, and other Asia/Oceania priority slices.
-7. Qualified Flight Deals and competitive weak seeds enter bounded selective known-route completion. There is no city × date × city brute-force matrix.
+7. Qualified Flight Deals and competitive weak seeds are first normalized by exact destination airport across TPE/TSA/RMQ/KHH. For each destination airport, the lowest current complete airfare is the preferred concrete candidate for bounded exact completion. There is no city × date × city brute-force matrix.
 8. Every qualified Flight Deals row is retained as run evidence. A qualified row not selected for exact completion under the current compute budget is a `qualified_anomaly_candidate_pending_exact` Signal, never silently discarded and never promoted to a Deal.
 9. `source_router` must select `gflights_google_exact` before the adapter can revalidate a candidate. Exact search preserves provider leg identity and booking-token/search provenance; booking offers are resolved when available.
 10. Formal anomaly truth is selected by SSOT priority and never averaged: `google_flight_deals` → `google_flights_exact_price_insight` → `own_price_history`.
-11. For Flight Deals, the authority's typical price is compared with the newly revalidated exact current complete airfare. This prevents a stale discovery price from driving formal ranking.
+11. For Flight Deals, Radar uses the **lowest qualified typical price observed for the same destination airport across the configured Taiwan origins** as the external baseline, then compares that baseline with the newly revalidated exact current complete airfare. An expensive origin-specific typical cannot override a lower same-destination baseline.
 12. Formal Deals are sorted only by relative anomaly strength descending, then current complete airfare ascending. Trip length, stops, brand, red-eye, self-transfer, lodging, and ground-transport friction do not alter formal Deal order.
 13. Weak seeds, pending qualified anomalies, exact candidates without qualified anomaly truth, stale anomalies, and provider failures remain Signals/evidence rather than being promoted.
 14. Every exact current complete airfare can become an immutable `FareObservation`. The run writes the existing history snapshot schema plus a schema-v2 publication manifest.

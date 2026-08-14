@@ -46,6 +46,9 @@ class FakeAdapter:
             discovery("deal-b", "KIX", 6500, 10000, 35),
         ]
 
+    def _row(self, destination):
+        return next(row for row in self.rows if row.destination.iata == destination)
+
     async def flight_deals(self, *, origin, anchor_departure, anchor_return):
         rows = self.rows if origin == "TPE" else []
         return ProviderResult("gflights", "flight_deals", "complete", tuple(rows))
@@ -54,9 +57,9 @@ class FakeAdapter:
         return ProviderResult("gflights", "explore", "complete", ())
 
     async def exact(self, *, origin, destination, departure_date, return_date=None, **kwargs):
-        source = next(row for row in self.rows if row.destination.iata == destination)
+        source = self._row(destination)
         exact = AirfareRecord(
-            record_id=f"exact-{destination}",
+            record_id=f"exact-{destination}-{departure_date}-{return_date}",
             provider="gflights",
             surface="exact",
             origin=AirportIdentity(origin),
@@ -77,6 +80,28 @@ class FakeAdapter:
             },
         )
         return ProviderResult("gflights", "exact", "complete", (exact,))
+
+    async def cheapest_dates(self, *, origin, destination, start_date, months=3, trip_duration_days=None):
+        source = self._row(destination)
+        record = AirfareRecord(
+            record_id=f"flex-{destination}", provider="gflights", surface="cheapest_dates",
+            origin=AirportIdentity(origin), destination=source.destination,
+            legs=(AirfareLeg(origin, destination, "2026-09-10"), AirfareLeg(destination, origin, "2026-09-14")),
+            current_price_twd=source.current_price_twd, observed_at=RUN_AT.isoformat(), verification_state="seed_only",
+            evidence_class="weak_seed", complete_airfare=True,
+        )
+        return ProviderResult("gflights", "cheapest_dates", "complete", (record,))
+
+    async def open_jaw(self, *, legs):
+        first_origin, first_destination, _ = legs[0]
+        record = AirfareRecord(
+            record_id=f"oj-{first_destination}-{legs[-1][0]}-{legs[-1][1]}", provider="gflights", surface="open_jaw",
+            origin=AirportIdentity(first_origin), destination=AirportIdentity(first_destination),
+            legs=tuple(AirfareLeg(origin, destination, day) for origin, destination, day in legs),
+            current_price_twd=7000, observed_at=RUN_AT.isoformat(), verification_state="revalidated",
+            evidence_class="exact_revalidated_candidate", complete_airfare=True, booking_token="token",
+        )
+        return ProviderResult("gflights", "open_jaw", "complete", (record,))
 
 
 class ProductionRuntimeRetentionTests(unittest.IsolatedAsyncioTestCase):
@@ -119,6 +144,7 @@ class ProductionRuntimeRetentionTests(unittest.IsolatedAsyncioTestCase):
                 item["state"] == "qualified_anomaly_candidate_pending_exact"
                 for item in manifest["signals"]
             ))
+            self.assertGreater(manifest["coverage"]["execution"]["flexible_dates"]["attempts"], 0)
 
 
 if __name__ == "__main__":

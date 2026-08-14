@@ -282,6 +282,15 @@ cost:
   - meals
   formal_deal_price_semantics: complete_airfare_only
 ranking:
+  destination_airport_anomaly_normalization:
+    enabled: true
+    destination_key: exact_destination_airport
+    taiwan_origin_scope: configured_origin_airports
+    candidate_current_fare: lowest_complete_airfare_across_configured_taiwan_origins_for_destination
+    external_typical_baseline: minimum_qualified_typical_price_for_same_destination_airport_across_configured_taiwan_origins_in_current_sweep
+    exact_itinerary_retains_actual_origin: true
+    origin_specific_typical_must_not_override_lower_same_destination_baseline: true
+    city_grouping_role: secondary_presentation
   preserve_views:
   - near_term_cheapest
   - absolute_cheapest
@@ -479,8 +488,14 @@ price_history:
   - id: d61_120
     min_days: 61
     max_days: 120
+  comparison_origin_airports:
+  - TPE
+  - TSA
+  - RMQ
+  - KHH
+  run_level_destination_sample: lowest_available_complete_airfare_across_comparison_origins
   comparison_dimensions:
-  - exact_route_when_available
+  - exact_destination_airport_across_configured_taiwan_origins
   - trip_type
   - departure_lead_time_bucket
   - season_or_month_when_history_sufficient
@@ -562,6 +577,10 @@ price_history:
   required_for_formal_deal: false
   external_anomaly_truth:
     preferred: true
+    normalization_scope: exact_destination_airport_across_configured_taiwan_origins
+    google_flight_deals_typical_pool: minimum_qualified_typical_price_for_same_destination_airport_in_current_sweep
+    candidate_selection: lowest_current_complete_airfare_for_same_destination_airport_before_exact_revalidation
+    preserve_exact_origin_identity: true
     qualification_requires:
     - stable_surface
     - current_price_reproducibility

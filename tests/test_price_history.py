@@ -76,6 +76,7 @@ class PriceHistoryPolicyTests(unittest.TestCase):
         self.assertEqual(self.policy["rolling_lows"]["windows_days"], [30, 90, 365])
         self.assertTrue(self.policy["rolling_lows"]["include_all_time"])
         self.assertEqual(self.policy["percentile"]["minimum_samples"], 10)
+        self.assertEqual(self.policy["comparison_origin_airports"], ["TPE", "TSA", "RMQ", "KHH"])
         self.assertEqual(
             self.policy["percentile"]["insufficient_samples_action"],
             "return_unknown",
@@ -104,13 +105,14 @@ class PriceHistoryComputationTests(unittest.TestCase):
         self.assertEqual(floors.near_term.observation_id, "near")
         self.assertEqual(floors.horizon_absolute.observation_id, "far")
 
-    def test_comparison_uses_same_route_trip_type_and_lead_bucket(self):
+    def test_comparison_pools_allowed_origins_for_same_destination_trip_type_and_lead_bucket(self):
         current = obs("current", departure_date="2026-08-21", price=4000)
         history = [
-            obs("same-1", radar_run_id="r1", observed_at="2026-08-01T12:00:00+00:00", departure_date="2026-08-11", price=5000),
-            obs("same-2", radar_run_id="r2", observed_at="2026-08-02T12:00:00+00:00", departure_date="2026-08-12", price=5200),
-            obs("same-3", radar_run_id="r3", observed_at="2026-08-03T12:00:00+00:00", departure_date="2026-08-13", price=5400),
-            obs("wrong-route", radar_run_id="r4", observed_at="2026-08-04T12:00:00+00:00", destination="PUS", departure_date="2026-08-14", price=1000),
+            obs("same-1", radar_run_id="r1", origin="KHH", observed_at="2026-08-01T12:00:00+00:00", departure_date="2026-08-11", price=5000),
+            obs("same-2", radar_run_id="r2", origin="RMQ", observed_at="2026-08-02T12:00:00+00:00", departure_date="2026-08-12", price=5200),
+            obs("same-3", radar_run_id="r3", origin="TSA", observed_at="2026-08-03T12:00:00+00:00", departure_date="2026-08-13", price=5400),
+            obs("wrong-destination", radar_run_id="r4", observed_at="2026-08-04T12:00:00+00:00", destination="PUS", departure_date="2026-08-14", price=1000),
+            obs("wrong-origin", radar_run_id="r6", origin="KNH", observed_at="2026-08-04T12:00:00+00:00", departure_date="2026-08-14", price=900),
             obs("wrong-bucket", radar_run_id="r5", observed_at="2026-08-01T12:00:00+00:00", departure_date="2026-09-20", price=1000),
         ]
         result = compare_with_history(current, history, self.policy)
