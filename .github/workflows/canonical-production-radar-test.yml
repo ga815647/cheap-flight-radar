@@ -44,8 +44,6 @@ jobs:
               raise SystemExit("isolated test evidence_ref must use test/radar-evidence/*")
           if not publication_ref.startswith("test/radar-publication/"):
               raise SystemExit("isolated test publication_ref must use test/radar-publication/*")
-          if evidence_ref == "history/price-observations" or publication_ref == "publication/radar-reports":
-              raise SystemExit("isolated test may not target production refs")
           print(f"REQUEST_DATE={requested_date}")
           print(f"EVIDENCE_REF={evidence_ref}")
           print(f"PUBLICATION_REF={publication_ref}")
@@ -106,8 +104,7 @@ jobs:
           STATUS="$(python -c 'import json; print(json.load(open("_state.json"))["status"])')"
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           case "$STATUS" in
-            acquire|recover_publication|published)
-              ;;
+            acquire|recover_publication|published) ;;
             *)
               echo "Isolated Radar test failed closed in state: $STATUS" >&2
               cat _state.json >&2
@@ -205,7 +202,7 @@ jobs:
             git push origin HEAD:"$PUBLICATION_REF"
           fi
 
-      - name: Explicitly dispatch Radar Pages isolated build
+      - name: Explicitly dispatch Radar Pages isolated TEST
         if: steps.restore.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -215,10 +212,10 @@ jobs:
             --arg ref main \
             --arg evidence "$EVIDENCE_REF" \
             --arg publication "$PUBLICATION_REF" \
-            '{ref:$ref, inputs:{evidence_ref:$evidence, publication_ref:$publication, deploy_live:"false"}}' \
+            '{ref:$ref, inputs:{evidence_ref:$evidence, publication_ref:$publication}}' \
             | gh api \
                 --method POST \
-                repos/${{ github.repository }}/actions/workflows/radar-pages.yml/dispatches \
+                repos/${{ github.repository }}/actions/workflows/radar-pages-isolated-test.yml/dispatches \
                 --input -
 
       - name: Upload isolated operational evidence
