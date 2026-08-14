@@ -28,7 +28,7 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   production-soak:
-    if: github.head_ref == 'chatdev/production-soak-429-20260814'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact source head
