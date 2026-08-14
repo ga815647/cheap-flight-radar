@@ -12,12 +12,21 @@ class IsolatedOperationalWorkflowTest(unittest.TestCase):
         self.assertIn('mode") != "isolated_canonical_test"', text)
         self.assertIn("test/radar-evidence/", text)
         self.assertIn("test/radar-publication/", text)
+        self.assertIn("Validate isolated publication/evidence baseline before claim", text)
         self.assertIn("python -m cheap_flight_radar.production_operations inspect", text)
         self.assertIn("python -m cheap_flight_radar.production_operations claim", text)
         self.assertIn("python -m cheap_flight_radar.production_runtime", text)
         self.assertIn("python -m cheap_flight_radar.production_operations stage-success", text)
         self.assertIn("python -m cheap_flight_radar.production_operations restore-publication", text)
         self.assertIn("radar-pages-isolated-test.yml/dispatches", text)
+        self.assertLess(
+            text.index("Validate isolated publication/evidence baseline before claim"),
+            text.index("Inspect isolated daily state"),
+        )
+        self.assertLess(
+            text.index("Validate isolated publication/evidence baseline before claim"),
+            text.index("Persist isolated one-attempt acquisition claim"),
+        )
         self.assertNotIn("ops/radar-request\n", text)
         self.assertNotIn("HEAD:history/price-observations", text)
         self.assertNotIn("HEAD:publication/radar-reports", text)

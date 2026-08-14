@@ -15,18 +15,21 @@ The request must use schema version 1, mode `isolated_canonical_test`, the curre
 
 The workflow refuses other refs. In particular, it never writes the TEST claim, snapshot, or recovery bundle to `history/price-observations`, never writes the TEST manifest to `publication/radar-reports`, and never uses `ops/radar-request`.
 
-The isolated evidence ref should start from a real prior history commit so ordinary historical comparison code remains exercised while the current production day's state is absent. The isolated publication ref may start from the current production publication ref because new manifests are append-only and remain confined to the test ref.
+The isolated evidence ref should start from a real prior history commit so ordinary historical comparison code remains exercised while the current production day's state is absent. The isolated publication ref must be based on a matching presentation state: every inherited publication manifest must reference a snapshot that exists on the isolated evidence ref. Do not copy a newer production publication head onto an older evidence baseline merely because manifests are append-only.
+
+Before inspecting or claiming the day, the TEST workflow builds the inherited publication baseline against the isolated evidence ref. Any presentation/evidence mismatch therefore fails closed before a live acquisition claim is written.
 
 ## Code-path fidelity
 
 Isolation is outside the acquisition/runtime boundary. The TEST workflow deliberately reuses the same merged code used by normal canonical production:
 
-1. `cheap_flight_radar.production_operations inspect`
-2. `cheap_flight_radar.production_operations claim`
-3. `cheap_flight_radar.production_runtime`
-4. `cheap_flight_radar.production_operations stage-success`
-5. `cheap_flight_radar.production_operations restore-publication`
-6. `cheap_flight_radar.production_publication`
+1. `cheap_flight_radar.production_publication` baseline preflight
+2. `cheap_flight_radar.production_operations inspect`
+3. `cheap_flight_radar.production_operations claim`
+4. `cheap_flight_radar.production_runtime`
+5. `cheap_flight_radar.production_operations stage-success`
+6. `cheap_flight_radar.production_operations restore-publication`
+7. `cheap_flight_radar.production_publication` recovered-manifest smoke build
 
 The live provider/search/runtime code is not mocked or replaced. A claim is committed before the live provider call. Once acquisition has occurred, any retry sees the same isolated durable guard state and may only recover publication or no-op; it may not perform another acquisition.
 
