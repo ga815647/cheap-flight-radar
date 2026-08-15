@@ -18,7 +18,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: canonical-production-radar
+  group: production-radar-acquisition
   cancel-in-progress: false
 
 jobs:
