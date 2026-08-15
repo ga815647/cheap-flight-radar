@@ -1,0 +1,232 @@
+name: Operator-requested production Radar
+
+on:
+  push:
+    branches:
+      - ops/radar-operator-request
+    paths:
+      - "requests/operator.json"
+  workflow_dispatch:
+    inputs:
+      request_date:
+        description: Asia/Taipei local date (YYYY-MM-DD)
+        required: true
+        type: string
+      request_id:
+        description: Unique explicit operator request id
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: production-radar-acquisition
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout trigger request
+        if: github.event_name == 'push'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          path: _request
+
+      - name: Resolve explicit operator request
+        id: request
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REQUEST_DATE="${{ inputs.request_date }}"
+            REQUEST_ID="${{ inputs.request_id }}"
+            ACTIVE=true
+          elif [ -f "_request/requests/operator.json" ]; then
+            REQUEST_DATE="$(python -c 'import json; p=json.load(open("_request/requests/operator.json")); assert p.get("schema_version")==1 and p.get("mode")=="operator_reacquisition"; print(p["requested_date"])')"
+            REQUEST_ID="$(python -c 'import json; p=json.load(open("_request/requests/operator.json")); assert p.get("schema_version")==1 and p.get("mode")=="operator_reacquisition"; print(p["request_id"])')"
+            ACTIVE=true
+          else
+            echo "Operator control reset removed the prior request; no acquisition is due."
+            ACTIVE=false
+            REQUEST_DATE=""
+            REQUEST_ID=""
+          fi
+          echo "active=$ACTIVE" >> "$GITHUB_OUTPUT"
+          echo "request_date=$REQUEST_DATE" >> "$GITHUB_OUTPUT"
+          echo "request_id=$REQUEST_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Validate local date
+        if: steps.request.outputs.active == 'true'
+        env:
+          REQUEST_DATE: ${{ steps.request.outputs.request_date }}
+        run: |
+          TODAY="$(TZ=Asia/Taipei date +%F)"
+          if [ "$REQUEST_DATE" != "$TODAY" ]; then
+            echo "Refusing stale/future operator request: request=$REQUEST_DATE today=$TODAY" >&2
+            exit 1
+          fi
+
+      - name: Checkout current application
+        if: steps.request.outputs.active == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: _app
+
+      - name: Checkout durable fare evidence
+        if: steps.request.outputs.active == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: history/price-observations
+          path: _history
+
+      - name: Checkout publication manifests
+        if: steps.request.outputs.active == 'true'
+        uses: actions/checkout@v6
+        with:
+          ref: publication/radar-reports
+          path: _publication
+
+      - name: Set up Python
+        if: steps.request.outputs.active == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install current application
+        if: steps.request.outputs.active == 'true'
+        run: python -m pip install -e _app
+
+      - name: Inspect operator request state
+        if: steps.request.outputs.active == 'true'
+        id: state
+        env:
+          REQUEST_DATE: ${{ steps.request.outputs.request_date }}
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+        run: |
+          python -m cheap_flight_radar.operator_operations inspect \
+            --history-dir _history --publication-dir _publication \
+            --date "$REQUEST_DATE" --request-id "$REQUEST_ID" --output _state.json
+          STATUS="$(python -c 'import json; print(json.load(open("_state.json"))["status"])')"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          case "$STATUS" in
+            acquire|recover_publication|published) ;;
+            *)
+              echo "Operator Radar failed closed in state: $STATUS" >&2
+              cat _state.json >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Persist operator request claim
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire'
+        env:
+          REQUEST_DATE: ${{ steps.request.outputs.request_date }}
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          CLAIMED_AT="$(TZ=Asia/Taipei date --iso-8601=seconds)"
+          python -m cheap_flight_radar.operator_operations claim \
+            --history-dir _history --date "$REQUEST_DATE" --request-id "$REQUEST_ID" \
+            --claimed-at "$CLAIMED_AT" --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "$RUN_URL" --trigger-sha "${{ github.sha }}"
+          cd _history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/operator-attempts
+          git commit -m "Claim operator Radar acquisition ${REQUEST_ID}"
+          git push origin HEAD:history/price-observations
+
+      - name: Run explicit operator production acquisition
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire'
+        id: acquisition
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+        run: |
+          set -o pipefail
+          python -m cheap_flight_radar.production_runtime \
+            --policy _app/flight-radar.yaml --history-dir _history --output-dir _out \
+            --run-id-prefix "operator-radar-${REQUEST_ID}" \
+            --execution-mode operator_requested_reacquisition 2>&1 | tee _runtime.log
+
+      - name: Stage immutable operator success and recovery evidence
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
+        id: success
+        env:
+          REQUEST_DATE: ${{ steps.request.outputs.request_date }}
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+        run: |
+          python -m cheap_flight_radar.operator_operations stage-success \
+            --output-dir _out --history-dir _history --date "$REQUEST_DATE" \
+            --request-id "$REQUEST_ID" --output _success.json
+          RUN_ID="$(python -c 'import json; print(json.load(open("_success.json"))["radar_run_id"])')"
+          echo "radar_run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cd _history
+          git add data/price-history data/run-evidence
+          git commit -m "Persist operator Radar evidence ${RUN_ID}"
+          git push origin HEAD:history/price-observations
+
+      - name: Refresh history checkout after acquisition
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
+        run: git -C _history pull --ff-only origin history/price-observations
+
+      - name: Restore operator publication manifest from durable evidence
+        if: steps.request.outputs.active == 'true' && (steps.state.outputs.status == 'recover_publication' || steps.state.outputs.status == 'published' || steps.acquisition.outcome == 'success')
+        id: restore
+        env:
+          REQUEST_DATE: ${{ steps.request.outputs.request_date }}
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+        run: |
+          python -m cheap_flight_radar.operator_operations restore-publication \
+            --history-dir _history --publication-dir _publication --date "$REQUEST_DATE" \
+            --request-id "$REQUEST_ID" --output _restore.json
+          RUN_ID="$(python -c 'import json; print(json.load(open("_restore.json"))["radar_run_id"])')"
+          echo "radar_run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-build publication before active push
+        if: steps.request.outputs.active == 'true' && steps.restore.outcome == 'success'
+        run: >-
+          python -m cheap_flight_radar.production_publication
+          --policy _app/flight-radar.yaml --history-dir _history
+          --manifest-dir _publication/publication/runs --site-dir _site-smoke
+
+      - name: Push active operator publication manifest
+        if: steps.request.outputs.active == 'true' && steps.restore.outcome == 'success'
+        run: |
+          cd _publication
+          if [ -n "$(git status --porcelain -- publication/runs)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add publication/runs
+            git commit -m "Publish operator Radar ${{ steps.restore.outputs.radar_run_id }}"
+            git push origin HEAD:publication/radar-reports
+          else
+            echo "Operator publication manifest already present; no data push required."
+          fi
+
+      - name: Explicitly dispatch Radar Pages
+        if: steps.request.outputs.active == 'true' && steps.restore.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method POST
+          repos/${{ github.repository }}/actions/workflows/radar-pages.yml/dispatches
+          -f ref=main
+
+      - name: Upload operator operational evidence
+        if: always() && steps.request.outputs.active == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-production-radar-${{ steps.request.outputs.request_id }}-${{ github.run_id }}
+          path: |
+            _state.json
+            _runtime.log
+            _success.json
+            _restore.json
+            _out/
+          if-no-files-found: warn
+          retention-days: 14
