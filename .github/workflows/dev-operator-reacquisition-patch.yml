@@ -23,6 +23,28 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Make patch script workflow-permission safe
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/patch_operator.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '    if count != 1:\n        raise SystemExit(f"expected one match in {path}, found {count}: {old[:80]!r}")\n    target.write_text(text.replace(old, new, 1), encoding="utf-8")',
+              '    if count == 0 and new in text:\n        return\n    if count != 1:\n        raise SystemExit(f"expected one match in {path}, found {count}: {old[:80]!r}")\n    target.write_text(text.replace(old, new, 1), encoding="utf-8")',
+          )
+          text = text.replace(
+              'Path(".github/workflows/operator-production-radar.yml").write_text(operator_workflow, encoding="utf-8")',
+              'if not Path(".github/workflows/operator-production-radar.yml").exists():\n    Path(".github/workflows/operator-production-radar.yml").write_text(operator_workflow, encoding="utf-8")',
+          )
+          text = text.replace(
+              'Path(".github/workflows/dev-operator-reacquisition-patch.yml").unlink()\n',
+              '',
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Apply durable operator reacquisition change
         run: python .github/patch_operator.py
 
@@ -32,11 +54,14 @@ jobs:
       - name: Run full Gate
         run: python -m unittest discover -s tests -v
 
-      - name: Commit durable patch and remove scaffold
+      - name: Commit durable non-workflow patch
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add PRODUCT_INTENT.md flight-radar.yaml docs/production-operationalization-2026-08-14.md \
+            src/cheap_flight_radar/production_runtime.py src/cheap_flight_radar/operator_operations.py \
+            tests/test_daily_operational_policy.py tests/test_operator_operations.py
+          git add -u .github/patch_operator.py
           git commit -m "Allow explicit same-day operator Radar reacquisition"
           git push origin HEAD:fix/operator-same-day-reacquisition-20260815
