@@ -206,7 +206,7 @@ def write_run_artifacts(
 
 def _replace_run_identity(value: Any, old_id: str, new_id: str) -> Any:
     if isinstance(value, str):
-        return value.replace(old_id, new_id)
+        return value.replace(old_id, new_id).replace(old_id.lower(), new_id.lower())
     if isinstance(value, list):
         return [_replace_run_identity(item, old_id, new_id) for item in value]
     if isinstance(value, dict):
