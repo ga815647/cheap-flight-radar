@@ -63,6 +63,24 @@ class OperatorOperationsTest(unittest.TestCase):
         self.assertEqual(state.status, "blocked_prior_operator_attempt")
         self.assertTrue((self.history / operator_claim_repository_path(self.day, self.request_id)).exists())
 
+    def test_operator_snapshot_without_claim_fails_closed(self):
+        run_id, history_rel = self.write_operator_output()
+        target = self.history / history_rel
+        target.parent.mkdir(parents=True)
+        target.write_text(
+            (self.output / "history" / history_rel).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        state = inspect_operator_state(
+            history_dir=self.history,
+            publication_dir=self.publication,
+            requested_date=self.day,
+            request_id=self.request_id,
+        )
+        self.assertEqual(state.radar_run_id, None)
+        self.assertEqual(state.status, "blocked_missing_operator_claim")
+        self.assertIn(run_id.replace("+", "-"), state.history_snapshot_path or "")
+
     def test_operator_success_recovers_and_publishes(self):
         self.claim()
         run_id, history_rel = self.write_operator_output()
@@ -82,7 +100,7 @@ class OperatorOperationsTest(unittest.TestCase):
         history_rel = f"data/price-history/2026/08/15/{old_safe}.json"
         snapshot_path = self.output / "history" / history_rel
         snapshot_path.parent.mkdir(parents=True)
-        snapshot_path.write_text(json.dumps({"schema_version": 1, "radar_run_id": old_id, "run_at": "2026-08-15T10:01:00+08:00", "observations": []}) + "\n", encoding="utf-8")
+        snapshot_path.write_text(json.dumps({"schema_version": 1, "radar_run_id": old_id, "run_at": "2026-08-15T10:01:00+08:00", "observations": [{"observation_id": old_id.lower() + "-khh-cju", "radar_run_id": old_id}]}) + "\n", encoding="utf-8")
         manifest_path = self.output / "publication" / "runs" / f"{old_id}.json"
         manifest_path.parent.mkdir(parents=True)
         manifest_path.write_text(json.dumps({"radar_run_id": old_id, "history_snapshot_path": history_rel, "deals": [], "signals": []}) + "\n", encoding="utf-8")
@@ -96,6 +114,7 @@ class OperatorOperationsTest(unittest.TestCase):
         self.assertEqual(result["execution_mode"], "operator_requested_reacquisition")
         self.assertEqual(manifest["execution_mode"], "operator_requested_reacquisition")
         self.assertEqual(snapshot["radar_run_id"], result["radar_run_id"])
+        self.assertTrue(snapshot["observations"][0]["observation_id"].startswith(result["radar_run_id"].lower()))
         self.assertFalse(snapshot_path.exists())
 
     def test_operator_workflow_is_explicit_and_unscheduled(self):
