@@ -126,7 +126,8 @@ Do not force one opaque "Best Value" score to replace the underlying price/anoma
 
 ## 11. Operational preferences that are genuinely product-level
 
-- Run the Radar about **once per day** for now; no immediate-alert requirement.
+- Routine automation should run the Radar about **once per day** for now; no immediate-alert requirement. This is a scheduling preference, not a prohibition on an explicit same-day operator-requested reacquisition when the user wants refreshed evidence, diagnosis, or a provider-health comparison.
+- An operator-requested same-day reacquisition must be explicitly identified and append immutable evidence. It must not weaken duplicate protection for the routine daily trigger, silently retry a failed automatic run, or overwrite the canonical daily observation.
 - Production should be sustainable at **ongoing TWD 0**: free public Web, free/open-source tooling, or APIs whose recurring free quota is actually sufficient for normal daily Radar use.
 - Paid APIs, expiring trial credits, or unknown/inadequate free quotas are not production-core dependencies.
 - Search should favor recall when free/stable resources permit: finding more legitimate possibilities is better than artificially optimizing for a very short runtime.

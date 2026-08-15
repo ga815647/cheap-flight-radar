@@ -142,3 +142,21 @@ For normal unattended use:
 9. Any retry on the same date is recovery/no-op only; it may never start a second live acquisition.
 
 Do not add GitHub cron, another provider, a daemon, a queue, or a database/state service to operate this protocol.
+
+## Explicit same-day operator reacquisition
+
+The once-per-day rule is a routine automation rule, not a prohibition on a user-requested same-day refresh. When the user or operator explicitly requests another live acquisition, use the separate operator control path rather than bypassing or mutating the canonical daily claim.
+
+- control branch: `ops/radar-operator-request`;
+- request file: `requests/operator.json`;
+- request mode: `operator_reacquisition`;
+- every intentional attempt requires a unique explicit `request_id`;
+- the request id gets its own immutable pre-acquisition claim under `data/operator-attempts/YYYY/MM/DD/{request_id}.json`;
+- operator run ids use `operator-radar-{request_id}-...`, so they append real observations to price history without entering or replacing the `production-radar-*` canonical daily namespace;
+- duplicate execution of the same `request_id` is recovery/no-op only and may not reacquire;
+- a new live attempt requires a new explicit request id, so there is no automatic retry loop;
+- canonical and operator acquisitions share the same Actions concurrency group so they cannot hit the provider concurrently;
+- successful operator runs persist the same immutable snapshot + recovery bundle, may publish as the newest Radar run, smoke-build, and explicitly dispatch Radar Pages.
+
+This path is for explicit refreshed evidence, diagnosis, or provider-health comparison. It must never be scheduled automatically and does not relax the routine canonical one-attempt guard.
+

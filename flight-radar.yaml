@@ -453,12 +453,26 @@ price_history:
     data_snapshot_write_is_not_policy_or_code_merge: true
     canonical_daily_acquisition:
       local_day_timezone: Asia/Taipei
-      max_attempts_per_local_day: 1
+      max_automatic_attempts_per_local_day: 1
+      scope: routine_automatic_control_only
       claim_path_template: data/production-attempts/YYYY/MM/DD/canonical.json
       claim_must_persist_before_live_provider_call: true
-      prior_claim_without_snapshot_action: fail_closed_no_same_day_reacquisition
+      prior_claim_without_snapshot_action: fail_closed_no_automatic_same_day_reacquisition
       run_recovery_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}
       recovery_manifest_required_before_active_publication: true
+    operator_requested_reacquisition:
+      enabled: true
+      requires_explicit_user_or_operator_request: true
+      automatic_retry: false
+      request_id_required: true
+      request_id_must_be_unique_per_intentional_attempt: true
+      claim_path_template: data/operator-attempts/YYYY/MM/DD/{request_id}.json
+      claim_must_persist_before_live_provider_call: true
+      duplicate_same_request_id_action: recovery_or_noop_never_reacquire
+      run_id_prefix_template: operator-radar-{request_id}-
+      snapshot_is_additional_immutable_price_history: true
+      does_not_consume_or_replace_canonical_daily_claim: true
+      does_not_overwrite_canonical_daily_snapshot: true
   backfill:
     synthetic_backfill: forbidden
     derive_only_from_observed_evidence: true
@@ -656,6 +670,15 @@ publication:
       request_mode: canonical_daily
       request_local_date_timezone: Asia/Taipei
       request_must_match_current_local_date: true
+    operator_reacquisition_control:
+      branch: ops/radar-operator-request
+      request_path: requests/operator.json
+      request_mode: operator_reacquisition
+      request_local_date_timezone: Asia/Taipei
+      request_must_match_current_local_date: true
+      request_id_required: true
+      requires_explicit_user_or_operator_request: true
+      scheduled_or_automatic_use: forbidden
     publication_trigger: presentation_manifest_push
     publication_trigger_semantics: durable_state_transition_not_assumed_recursive_workflow_event
     github_token_manifest_push_recursively_triggers_pages: false
