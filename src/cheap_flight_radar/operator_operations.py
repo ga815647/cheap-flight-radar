@@ -87,6 +87,15 @@ def inspect_operator_state(*, history_dir: Path, publication_dir: Path, requeste
         if claim_path.exists():
             return OperatorOperationState(requested_date, request_id, "blocked_prior_operator_attempt", claim_rel, reason="operator request claim exists without persisted success; same request id cannot reacquire")
         return OperatorOperationState(requested_date, request_id, "acquire", claim_rel, reason="new explicit operator request id")
+    if not claim_path.exists():
+        return OperatorOperationState(
+            requested_date,
+            request_id,
+            "blocked_missing_operator_claim",
+            claim_rel,
+            history_snapshot_path=snapshots[0].relative_to(history_dir).as_posix(),
+            reason="operator snapshot exists without its immutable pre-acquisition claim",
+        )
 
     snapshot_path = snapshots[0]
     snapshot = _read_json(snapshot_path)
