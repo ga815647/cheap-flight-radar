@@ -1,0 +1,131 @@
+{
+  "coverage": {
+    "all_origins_attempted": true,
+    "anomaly_normalization": "exact_destination_airport_across_tpe_tsa_rmq_khh",
+    "deal_acquisition_surface": "google_flight_deals",
+    "deep_search_candidate_limit": 20,
+    "destination_representative_count": 0,
+    "destination_representative_rule": "lowest_current_complete_airfare_per_destination",
+    "destination_scope": "asia_oceania",
+    "exact_completion_surface": "google_flights_exact",
+    "execution": {
+      "conventional_exact": {
+        "attempts": 0,
+        "failures": 0,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "explore": {
+        "attempts": 4,
+        "failures": 4,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "flexible_dates": {
+        "attempts": 0,
+        "failures": 0,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "flight_deals": {
+        "attempts": 12,
+        "failures": 12,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "mixed_taiwan_return": {
+        "attempts": 0,
+        "failures": 0,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "open_jaw": {
+        "attempts": 0,
+        "failures": 0,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      }
+    },
+    "expansion_seed_count": 0,
+    "expansion_seed_rule": "bounded_origin_date_variants_preserved_separately",
+    "final_shortlist_applied_after_deep_search": true,
+    "final_shortlist_limit": 10,
+    "fixed_watch_is_deal_coverage_authority": false,
+    "markets": {
+      "china": {
+        "deals": 0,
+        "discovered": 0,
+        "qualified": 0,
+        "revalidated": 0
+      },
+      "japan": {
+        "deals": 0,
+        "discovered": 0,
+        "qualified": 0,
+        "revalidated": 0
+      },
+      "korea": {
+        "deals": 0,
+        "discovered": 0,
+        "qualified": 0,
+        "revalidated": 0
+      },
+      "other_asia_oceania": {
+        "deals": 0,
+        "discovered": 0,
+        "qualified": 0,
+        "revalidated": 0
+      }
+    },
+    "origin_attempt_required": true,
+    "origins": {
+      "KHH": {
+        "asia_oceania_records": 0,
+        "errors": [],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "attempted"
+      },
+      "RMQ": {
+        "asia_oceania_records": 0,
+        "errors": [],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "attempted"
+      },
+      "TPE": {
+        "asia_oceania_records": 0,
+        "errors": [],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "attempted"
+      },
+      "TSA": {
+        "asia_oceania_records": 0,
+        "errors": [],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "attempted"
+      }
+    },
+    "same_destination_typical_rule": "lowest_qualified_google_flight_deals_typical"
+  },
+  "deal_count": 0,
+  "deals": [],
+  "provider_failures": [],
+  "radar_run_id": "production-radar-20260817T081335+0800",
+  "run_at": "2026-08-17T08:13:35.666749+08:00",
+  "signal_count": 0,
+  "signal_states": {},
+  "signals": []
+}
