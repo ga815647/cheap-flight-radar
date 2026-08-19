@@ -1,0 +1,2069 @@
+{
+  "coverage": {
+    "all_origins_attempted": true,
+    "anomaly_normalization": "exact_destination_airport_across_tpe_tsa_rmq_khh",
+    "deal_acquisition_surface": "google_flight_deals",
+    "deep_search_candidate_limit": 20,
+    "destination_representative_count": 20,
+    "destination_representative_rule": "lowest_current_complete_airfare_per_destination",
+    "destination_scope": "asia_oceania",
+    "exact_completion_surface": "google_flights_exact",
+    "execution": {
+      "conventional_exact": {
+        "attempts": 20,
+        "empty": 0,
+        "failures": 20,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "explore": {
+        "attempts": 4,
+        "empty": 0,
+        "failures": 4,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "flexible_dates": {
+        "attempts": 20,
+        "empty": 0,
+        "failures": 20,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "flight_deals": {
+        "attempts": 12,
+        "empty": 0,
+        "failures": 11,
+        "records": 30,
+        "successes": 1,
+        "unsupported": 0
+      },
+      "mixed_taiwan_return": {
+        "attempts": 4,
+        "empty": 0,
+        "failures": 4,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      },
+      "open_jaw": {
+        "attempts": 4,
+        "empty": 0,
+        "failures": 4,
+        "records": 0,
+        "successes": 0,
+        "unsupported": 0
+      }
+    },
+    "expansion_seed_count": 20,
+    "expansion_seed_rule": "bounded_origin_date_variants_preserved_separately",
+    "final_shortlist_applied_after_deep_search": true,
+    "final_shortlist_limit": 10,
+    "fixed_watch_is_deal_coverage_authority": false,
+    "markets": {
+      "china": {
+        "deals": 0,
+        "discovered": 2,
+        "qualified": 2,
+        "revalidated": 0
+      },
+      "japan": {
+        "deals": 0,
+        "discovered": 14,
+        "qualified": 14,
+        "revalidated": 0
+      },
+      "korea": {
+        "deals": 0,
+        "discovered": 1,
+        "qualified": 1,
+        "revalidated": 0
+      },
+      "other_asia_oceania": {
+        "deals": 0,
+        "discovered": 8,
+        "qualified": 8,
+        "revalidated": 0
+      }
+    },
+    "origin_attempt_required": true,
+    "origins": {
+      "KHH": {
+        "asia_oceania_records": 0,
+        "errors": [
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "explore: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
+        ],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "failed"
+      },
+      "RMQ": {
+        "asia_oceania_records": 0,
+        "errors": [
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "explore: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
+        ],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "failed"
+      },
+      "TPE": {
+        "asia_oceania_records": 25,
+        "errors": [
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "explore: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
+        ],
+        "explore_seeds": 0,
+        "qualified_deals": 25,
+        "returned_flight_deals": 30,
+        "status": "attempted"
+      },
+      "TSA": {
+        "asia_oceania_records": 0,
+        "errors": [
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "explore: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
+        ],
+        "explore_seeds": 0,
+        "qualified_deals": 0,
+        "returned_flight_deals": 0,
+        "status": "failed"
+      }
+    },
+    "provider_health": {
+      "coverage_collapse": false,
+      "deal_count_is_health_signal": false,
+      "degraded_origins": [],
+      "failed_origins": [
+        "KHH",
+        "RMQ",
+        "TSA"
+      ],
+      "reasons": [
+        "no usable Flight Deals or Explore coverage for: KHH, RMQ, TSA",
+        "63 technical provider execution failure(s) recorded",
+        "44 provider/operational failure evidence item(s) recorded"
+      ],
+      "status": "degraded",
+      "technical_failure_count": 63
+    },
+    "same_destination_typical_rule": "lowest_qualified_google_flight_deals_typical"
+  },
+  "deal_count": 0,
+  "deals": [],
+  "execution_mode": "operator_requested_reacquisition",
+  "provider_failures": [
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "surface": "explore"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TSA",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TSA",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TSA",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TSA",
+      "surface": "explore"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "RMQ",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "RMQ",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "RMQ",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "RMQ",
+      "surface": "explore"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "KHH",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "KHH",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "KHH",
+      "surface": "flight_deals"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "KHH",
+      "surface": "explore"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-FKS",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-TAE",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-DYG",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-MDC",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-YGJ",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-HSG",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-ISG",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-BWN",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-HNA",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-PNK",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-ATQ",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-OIT",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-KMI",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-LBJ",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-TOY",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-KIJ",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-BPN",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-HKD",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-KCZ",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-SAI",
+      "surface": "exact"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-FKS-TSA",
+      "surface": "mixed_taiwan_return"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-FKS/YGJ-TPE",
+      "surface": "open_jaw"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-TAE-TSA",
+      "surface": "mixed_taiwan_return"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-TAE/FKS-TPE",
+      "surface": "open_jaw"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-DYG-TSA",
+      "surface": "mixed_taiwan_return"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-DYG/FKS-TPE",
+      "surface": "open_jaw"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-MDC-TSA",
+      "surface": "mixed_taiwan_return"
+    },
+    {
+      "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "origin": "TPE",
+      "route": "TPE-MDC/PNK-TPE",
+      "surface": "open_jaw"
+    },
+    {
+      "error": "execution counters recorded 20 technical failure(s) on flexible_dates; 20 lacked explicit per-call failure evidence",
+      "kind": "counter_reconciliation",
+      "origin": "run",
+      "surface": "flexible_dates"
+    }
+  ],
+  "provider_health": {
+    "coverage_collapse": false,
+    "deal_count_is_health_signal": false,
+    "degraded_origins": [],
+    "failed_origins": [
+      "KHH",
+      "RMQ",
+      "TSA"
+    ],
+    "reasons": [
+      "no usable Flight Deals or Explore coverage for: KHH, RMQ, TSA",
+      "63 technical provider execution failure(s) recorded",
+      "44 provider/operational failure evidence item(s) recorded"
+    ],
+    "status": "degraded",
+    "technical_failure_count": 63
+  },
+  "radar_run_id": "operator-radar-op-20260819-1445-e2e-health-20260819T144821+0800",
+  "run_at": "2026-08-19T14:48:21.377189+08:00",
+  "signal_count": 25,
+  "signal_states": {
+    "qualified_anomaly_candidate_pending_exact": 5,
+    "weak_seed": 20
+  },
+  "signals": [
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 74.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 11497,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTAaCgjpWRAAGgNUV0Q4OHDLmQI=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhojEgoyMDI2LTA4LTI4agcIARIDVFBFcgwIAhIIL20vMGdxa3gaIxIKMjAyNi0wOS0wNGoMCAISCC9tLzBncWt4cgcIARIDVFBFQAFIAVIDVFdEenxDalJJWDJ4ak5ISTBWV1pFWmxsQlEwWnVPV2RDUnkwdExTMHRMUzB0TFMxd2FubHdOMEZCUVVGQlIzRkdWV0pWUjJkVlUxbEJFaEpFWldGc1EyOXVjM1J5WVdsdWRITXdMVEFhQ2dqcFdSQUFHZ05VVjBRNE9IRExtUUk9&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 11497,
+        "destination": {
+          "city": "Fukushima",
+          "country": "Japan",
+          "iata": "FKS"
+        },
+        "discount_percent": 74.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhojEgoyMDI2LTA4LTI4agcIARIDVFBFcgwIAhIIL20vMGdxa3gaIxIKMjAyNi0wOS0wNGoMCAISCC9tLzBncWt4cgcIARIDVFBFQAFIAVIDVFdEenxDalJJWDJ4ak5ISTBWV1pFWmxsQlEwWnVPV2RDUnkwdExTMHRMUzB0TFMxd2FubHdOMEZCUVVGQlIzRkdWV0pWUjJkVlUxbEJFaEpFWldGc1EyOXVjM1J5WVdsdWRITXdMVEFhQ2dqcFdSQUFHZ05VVjBRNE9IRExtUUk9&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-28",
+            "departure_time": null,
+            "destination": "FKS",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-04",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "FKS"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923721+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-a77b67f29caeaa9cb454",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 43706,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 51.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 4329,
+      "discovery": {
+        "airlines": [
+          "T'Way Air",
+          "TW"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTEzGgoI6SEQABoDVFdEODhwg2o=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMwagcIARIDVFBFcg0IAhIJL20vMDF2c2tuGiQSCjIwMjYtMDktMDhqDQgCEgkvbS8wMXZza25yBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXpHZ29JNlNFUUFCb0RWRmRFT0Rod2cybz0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 4329,
+        "destination": {
+          "city": "Daegu",
+          "country": "South Korea",
+          "iata": "TAE"
+        },
+        "discount_percent": 51.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMwagcIARIDVFBFcg0IAhIJL20vMDF2c2tuGiQSCjIwMjYtMDktMDhqDQgCEgkvbS8wMXZza25yBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXpHZ29JNlNFUUFCb0RWRmRFT0Rod2cybz0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-30",
+            "departure_time": null,
+            "destination": "TAE",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-08",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "TAE"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924213+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-c18d574299cc044dbea2",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 8798,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 36.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 10392,
+      "discovery": {
+        "airlines": [
+          "China Southern",
+          "CZ"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTIxGgoImFEQABoDVFdEODhww/4B",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTI0agcIARIDVFBFcg0IAhIJL20vMDkwOTYwGiQSCjIwMjYtMTAtMDFqDQgCEgkvbS8wOTA5NjByBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXhHZ29JbUZFUUFCb0RWRmRFT0Rod3cvNEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 10392,
+        "destination": {
+          "city": "Zhangjiajie",
+          "country": "China",
+          "iata": "DYG"
+        },
+        "discount_percent": 36.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTI0agcIARIDVFBFcg0IAhIJL20vMDkwOTYwGiQSCjIwMjYtMTAtMDFqDQgCEgkvbS8wOTA5NjByBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXhHZ29JbUZFUUFCb0RWRmRFT0Rod3cvNEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-24",
+            "departure_time": null,
+            "destination": "DYG",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-10-01",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "DYG"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924482+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-b6576634cb600bc8608b",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 16145,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 66.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8108,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTQaCgisPxAAGgNUV0Q4OHDKxgE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA2agcIARIDVFBFcg0IAhIJL20vMDNnZnpiGiQSCjIwMjYtMDktMTNqDQgCEgkvbS8wM2dmemJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUUWFDZ2lzUHhBQUdnTlVWMFE0T0hES3hnRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8108,
+        "destination": {
+          "city": "Manado",
+          "country": "Indonesia",
+          "iata": "MDC"
+        },
+        "discount_percent": 66.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA2agcIARIDVFBFcg0IAhIJL20vMDNnZnpiGiQSCjIwMjYtMDktMTNqDQgCEgkvbS8wM2dmemJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUUWFDZ2lzUHhBQUdnTlVWMFE0T0hES3hnRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-06",
+            "departure_time": null,
+            "destination": "MDC",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-13",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "MDC"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923919+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-5b4054f5322390580b34",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 23539,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 71.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8697,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTEaCgj5QxAAGgNUV0Q4OHCB1QE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMGdwNmZ0GiQSCjIwMjYtMDktMDdqDQgCEgkvbS8wZ3A2ZnRyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURWFDZ2o1UXhBQUdnTlVWMFE0T0hDQjFRRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8697,
+        "destination": {
+          "city": "Yonago",
+          "country": "Japan",
+          "iata": "YGJ"
+        },
+        "discount_percent": 71.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMGdwNmZ0GiQSCjIwMjYtMDktMDdqDQgCEgkvbS8wZ3A2ZnRyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURWFDZ2o1UXhBQUdnTlVWMFE0T0hDQjFRRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-31",
+            "departure_time": null,
+            "destination": "YGJ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-07",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "YGJ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923797+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-fb682e0f2ab692b16125",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 29942,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 70.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 6797,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTIaCgiNNRAAGgNUV0Q4OHC8pgE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI3agcIARIDVFBFcg0IAhIJL20vMGdwNnkyGiQSCjIwMjYtMDktMDNqDQgCEgkvbS8wZ3A2eTJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSWFDZ2lOTlJBQUdnTlVWMFE0T0hDOHBnRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 6797,
+        "destination": {
+          "city": "Saga",
+          "country": "Japan",
+          "iata": "HSG"
+        },
+        "discount_percent": 70.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI3agcIARIDVFBFcg0IAhIJL20vMGdwNnkyGiQSCjIwMjYtMDktMDNqDQgCEgkvbS8wZ3A2eTJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSWFDZ2lOTlJBQUdnTlVWMFE0T0hDOHBnRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-27",
+            "departure_time": null,
+            "destination": "HSG",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-03",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "HSG"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923843+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-734c3aa31a2e0f31522a",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 22910,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 68.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 5897,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTMaCgiJLhAAGgNUV0Q4OHC3kAE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTEyLTA0agcIARIDVFBFcg4IAhIKL20vMDdzOF9jdBolEgoyMDI2LTEyLTExag4IAhIKL20vMDdzOF9jdHIHCAESA1RQRUABSAFSA1RXRHp8Q2pSSVgyeGpOSEkwVldaRVpsbEJRMFp1T1dkQ1J5MHRMUzB0TFMwdExTMXdhbmx3TjBGQlFVRkJSM0ZHVldKVlIyZFZVMWxCRWhKRVpXRnNRMjl1YzNSeVlXbHVkSE13TFRNYUNnaUpMaEFBR2dOVVYwUTRPSEMza0FFPQ&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 5897,
+        "destination": {
+          "city": "Ishigaki",
+          "country": "Japan",
+          "iata": "ISG"
+        },
+        "discount_percent": 68.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTEyLTA0agcIARIDVFBFcg4IAhIKL20vMDdzOF9jdBolEgoyMDI2LTEyLTExag4IAhIKL20vMDdzOF9jdHIHCAESA1RQRUABSAFSA1RXRHp8Q2pSSVgyeGpOSEkwVldaRVpsbEJRMFp1T1dkQ1J5MHRMUzB0TFMwdExTMXdhbmx3TjBGQlFVRkJSM0ZHVldKVlIyZFZVMWxCRWhKRVpXRnNRMjl1YzNSeVlXbHVkSE13TFRNYUNnaUpMaEFBR2dOVVYwUTRPSEMza0FFPQ&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-12-04",
+            "departure_time": null,
+            "destination": "ISG",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-12-11",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "ISG"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923882+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-1eeb706a8040478a8016",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 18221,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 64.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 6000,
+      "discovery": {
+        "airlines": [
+          "Royal Brunei",
+          "BI"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTUaCgjwLhAAGgNUV0Q4OHD6kgE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhojEgoyMDI2LTA5LTA2agcIARIDVFBFcgwIAhIIL20vMGZuMW0aIxIKMjAyNi0wOS0xM2oMCAISCC9tLzBmbjFtcgcIARIDVFBFQAFIAVIDVFdEenxDalJJWDJ4ak5ISTBWV1pFWmxsQlEwWnVPV2RDUnkwdExTMHRMUzB0TFMxd2FubHdOMEZCUVVGQlIzRkdWV0pWUjJkVlUxbEJFaEpFWldGc1EyOXVjM1J5WVdsdWRITXdMVFVhQ2dqd0xoQUFHZ05VVjBRNE9IRDZrZ0U9&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 6000,
+        "destination": {
+          "city": "Bandar Seri Begawan",
+          "country": "Brunei",
+          "iata": "BWN"
+        },
+        "discount_percent": 64.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhojEgoyMDI2LTA5LTA2agcIARIDVFBFcgwIAhIIL20vMGZuMW0aIxIKMjAyNi0wOS0xM2oMCAISCC9tLzBmbjFtcgcIARIDVFBFQAFIAVIDVFdEenxDalJJWDJ4ak5ISTBWV1pFWmxsQlEwWnVPV2RDUnkwdExTMHRMUzB0TFMxd2FubHdOMEZCUVVGQlIzRkdWV0pWUjJkVlUxbEJFaEpFWldGc1EyOXVjM1J5WVdsdWRITXdMVFVhQ2dqd0xoQUFHZ05VVjBRNE9IRDZrZ0U9&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-06",
+            "departure_time": null,
+            "destination": "BWN",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-13",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "BWN"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923956+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-e35ed2df802bd394141c",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 16451,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 62.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8397,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTYaCgjNQRAAGgNUV0Q4OHDUzQE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMDF3ZnI0GiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wMXdmcjRyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUWWFDZ2pOUVJBQUdnTlVWMFE0T0hEVXpRRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8397,
+        "destination": {
+          "city": "Hanamaki",
+          "country": "Japan",
+          "iata": "HNA"
+        },
+        "discount_percent": 62.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMDF3ZnI0GiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wMXdmcjRyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUWWFDZ2pOUVJBQUdnTlVWMFE0T0hEVXpRRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-05",
+            "departure_time": null,
+            "destination": "HNA",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-12",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "HNA"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.923989+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-6f81dd7a554783078cbf",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 22299,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 61.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 7062,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTcaCgiWNxAAGgNUV0Q4OHD7rAE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMDVycjRnGiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wNXJyNGdyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUY2FDZ2lXTnhBQUdnTlVWMFE0T0hEN3JBRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 7062,
+        "destination": {
+          "city": "Pontianak",
+          "country": "Indonesia",
+          "iata": "PNK"
+        },
+        "discount_percent": 61.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMDVycjRnGiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wNXJyNGdyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUY2FDZ2lXTnhBQUdnTlVWMFE0T0hEN3JBRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-05",
+            "departure_time": null,
+            "destination": "PNK",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-12",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "PNK"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924021+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-7466a903ebdfb225a62f",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 18040,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 60.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 12771,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTgaCgjjYxAAGgNUV0Q4OHDluAI=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI5agcIARIDVFBFcg0IAhIJL20vMDI5a3B5GiQSCjIwMjYtMDktMDZqDQgCEgkvbS8wMjlrcHlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUZ2FDZ2pqWXhBQUdnTlVWMFE0T0hEbHVBST0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 12771,
+        "destination": {
+          "city": "Amritsar",
+          "country": "India",
+          "iata": "ATQ"
+        },
+        "discount_percent": 60.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI5agcIARIDVFBFcg0IAhIJL20vMDI5a3B5GiQSCjIwMjYtMDktMDZqDQgCEgkvbS8wMjlrcHlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUZ2FDZ2pqWXhBQUdnTlVWMFE0T0hEbHVBST0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-29",
+            "departure_time": null,
+            "destination": "ATQ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-06",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "ATQ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924053+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-62c2c1c8361afbdc5872",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 32328,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 59.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 5897,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhJEZWFsQ29uc3RyYWludHMwLTkaCgiJLhAAGgNUV0Q4OHC3kAE=",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMGdwNl93GiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wZ3A2X3dyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUa2FDZ2lKTGhBQUdnTlVWMFE0T0hDM2tBRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 5897,
+        "destination": {
+          "city": "Oita",
+          "country": "Japan",
+          "iata": "OIT"
+        },
+        "discount_percent": 59.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTA1agcIARIDVFBFcg0IAhIJL20vMGdwNl93GiQSCjIwMjYtMDktMTJqDQgCEgkvbS8wZ3A2X3dyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoSkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUa2FDZ2lKTGhBQUdnTlVWMFE0T0hDM2tBRT0&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-05",
+            "departure_time": null,
+            "destination": "OIT",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-12",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "OIT"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924086+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-ab896f6b707e38d63bfc",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 14520,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 57.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 5843,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTEwGgoI0y0QABoDVFdEODhwjo8B",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE0agcIARIDVFBFcg0IAhIJL20vMGdwNzA5GiQSCjIwMjYtMDktMjFqDQgCEgkvbS8wZ3A3MDlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXdHZ29JMHkwUUFCb0RWRmRFT0Rod2pvOEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 5843,
+        "destination": {
+          "city": "Miyazaki",
+          "country": "Japan",
+          "iata": "KMI"
+        },
+        "discount_percent": 57.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE0agcIARIDVFBFcg0IAhIJL20vMGdwNzA5GiQSCjIwMjYtMDktMjFqDQgCEgkvbS8wZ3A3MDlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXdHZ29JMHkwUUFCb0RWRmRFT0Rod2pvOEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-14",
+            "departure_time": null,
+            "destination": "KMI",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-21",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "KMI"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924117+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-cb17b9609a329d45d781",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 13573,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 56.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 12793,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTExGgoI+WMQABoDVFdEODhwqrkC",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTEwLTA0agcIARIDVFBFcg4IAhIKL20vMDl2NGg4cBolEgoyMDI2LTEwLTEzag4IAhIKL20vMDl2NGg4cHIHCAESA1RQRUABSAFSA1RXRHp8Q2pSSVgyeGpOSEkwVldaRVpsbEJRMFp1T1dkQ1J5MHRMUzB0TFMwdExTMXdhbmx3TjBGQlFVRkJSM0ZHVldKVlIyZFZVMWxCRWhORVpXRnNRMjl1YzNSeVlXbHVkSE13TFRFeEdnb0krV01RQUJvRFZGZEVPRGh3cXJrQw&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 12793,
+        "destination": {
+          "city": "Labuan Bajo",
+          "country": "Indonesia",
+          "iata": "LBJ"
+        },
+        "discount_percent": 56.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTEwLTA0agcIARIDVFBFcg4IAhIKL20vMDl2NGg4cBolEgoyMDI2LTEwLTEzag4IAhIKL20vMDl2NGg4cHIHCAESA1RQRUABSAFSA1RXRHp8Q2pSSVgyeGpOSEkwVldaRVpsbEJRMFp1T1dkQ1J5MHRMUzB0TFMwdExTMXdhbmx3TjBGQlFVRkJSM0ZHVldKVlIyZFZVMWxCRWhORVpXRnNRMjl1YzNSeVlXbHVkSE13TFRFeEdnb0krV01RQUJvRFZGZEVPRGh3cXJrQw&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-10-04",
+            "departure_time": null,
+            "destination": "LBJ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-10-13",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "LBJ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924149+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-8d830461790e37ae4a63",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 29334,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 54.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 11845,
+      "discovery": {
+        "airlines": [
+          "China Airlines",
+          "CI"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTEyGgoIxVwQABoDVFdEODhwjqIC",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMGdwNTlxGiQSCjIwMjYtMDktMDdqDQgCEgkvbS8wZ3A1OXFyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXlHZ29JeFZ3UUFCb0RWRmRFT0Rod2pxSUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 11845,
+        "destination": {
+          "city": "Toyama",
+          "country": "Japan",
+          "iata": "TOY"
+        },
+        "discount_percent": 54.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMGdwNTlxGiQSCjIwMjYtMDktMDdqDQgCEgkvbS8wZ3A1OXFyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURXlHZ29JeFZ3UUFCb0RWRmRFT0Rod2pxSUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-31",
+            "departure_time": null,
+            "destination": "TOY",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-07",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "TOY"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924182+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-5f1fb27568444bff8546",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 25662,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 47.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8743,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTE0GgoIp0QQABoDVFdEODhwkdYB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE4agcIARIDVFBFcg0IAhIJL20vMGdwNmJuGiQSCjIwMjYtMDktMjVqDQgCEgkvbS8wZ3A2Ym5yBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTBHZ29JcDBRUUFCb0RWRmRFT0Rod2tkWUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8743,
+        "destination": {
+          "city": "Niigata",
+          "country": "Japan",
+          "iata": "KIJ"
+        },
+        "discount_percent": 47.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE4agcIARIDVFBFcg0IAhIJL20vMGdwNmJuGiQSCjIwMjYtMDktMjVqDQgCEgkvbS8wZ3A2Ym5yBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTBHZ29JcDBRUUFCb0RWRmRFT0Rod2tkWUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-18",
+            "departure_time": null,
+            "destination": "KIJ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-25",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "KIJ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924244+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-937a8b40bd21a1e72dd3",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 16623,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 44.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8287,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTE1GgoI30AQABoDVFdEODhw/MoB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI4agcIARIDVFBFcg0IAhIJL20vMDJsYjZ4GiQSCjIwMjYtMDktMDRqDQgCEgkvbS8wMmxiNnhyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTFHZ29JMzBBUUFCb0RWRmRFT0Rody9Nb0I&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8287,
+        "destination": {
+          "city": "Balikpapan",
+          "country": "Indonesia",
+          "iata": "BPN"
+        },
+        "discount_percent": 44.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI4agcIARIDVFBFcg0IAhIJL20vMDJsYjZ4GiQSCjIwMjYtMDktMDRqDQgCEgkvbS8wMmxiNnhyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTFHZ29JMzBBUUFCb0RWRmRFT0Rody9Nb0I&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-28",
+            "departure_time": null,
+            "destination": "BPN",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-04",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "BPN"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924275+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-e9497c6ca237d4a9e079",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 14850,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 44.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 10737,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTE2GgoI8VMQABoDVFdEODhw/IYC",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMDFkMHhyGiQSCjIwMjYtMDktMDlqDQgCEgkvbS8wMWQweHJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTJHZ29JOFZNUUFCb0RWRmRFT0Rody9JWUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 10737,
+        "destination": {
+          "city": "Hakodate",
+          "country": "Japan",
+          "iata": "HKD"
+        },
+        "discount_percent": 44.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMDFkMHhyGiQSCjIwMjYtMDktMDlqDQgCEgkvbS8wMWQweHJyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTJHZ29JOFZNUUFCb0RWRmRFT0Rody9JWUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-31",
+            "departure_time": null,
+            "destination": "HKD",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-09",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "HKD"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924305+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-0fd9b5b7dfe675826582",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 19274,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 37.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 9397,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTE4GgoItUkQABoDVFdEODhwk+YB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE5agcIARIDVFBFcg0IAhIJL20vMDF3cG14GiQSCjIwMjYtMDktMjZqDQgCEgkvbS8wMXdwbXhyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTRHZ29JdFVrUUFCb0RWRmRFT0Rod2srWUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 9397,
+        "destination": {
+          "city": "Kochi",
+          "country": "Japan",
+          "iata": "KCZ"
+        },
+        "discount_percent": 37.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTE5agcIARIDVFBFcg0IAhIJL20vMDF3cG14GiQSCjIwMjYtMDktMjZqDQgCEgkvbS8wMXdwbXhyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTRHZ29JdFVrUUFCb0RWRmRFT0Rod2srWUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-19",
+            "departure_time": null,
+            "destination": "KCZ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-26",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "KCZ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924368+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-e907b0b4a93d4dd57274",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 14929,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 37.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 10529,
+      "discovery": {
+        "airlines": [
+          "Vietjet",
+          "VJ"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTE5GgoIoVIQABoDVFdEODhw8IEC",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTEyLTE0agcIARIDVFBFcg0IAhIJL20vMGdnZGx6GiQSCjIwMjYtMTItMjNqDQgCEgkvbS8wZ2dkbHpyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTVHZ29Jb1ZJUUFCb0RWRmRFT0RodzhJRUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 10529,
+        "destination": {
+          "city": "Krong Siem Reap",
+          "country": "Cambodia",
+          "iata": "SAI"
+        },
+        "discount_percent": 37.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTEyLTE0agcIARIDVFBFcg0IAhIJL20vMGdnZGx6GiQSCjIwMjYtMTItMjNqDQgCEgkvbS8wZ2dkbHpyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xURTVHZ29Jb1ZJUUFCb0RWRmRFT0RodzhJRUM&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-12-14",
+            "departure_time": null,
+            "destination": "SAI",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-12-23",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "SAI"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924418+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-8c4f3882a590a4ee422d",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 16592,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "exact revalidation failed closed: GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+      "state": "weak_seed"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 36.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 9496,
+      "discovery": {
+        "airlines": [
+          "Scoot",
+          "TR"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTIwGgoImEoQABoDVFdEODhwyugB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMDN4NjIxGiQSCjIwMjYtMDktMDhqDQgCEgkvbS8wM3g2MjFyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXdHZ29JbUVvUUFCb0RWRmRFT0Rod3l1Z0I&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 9496,
+        "destination": {
+          "city": "Miri",
+          "country": "Malaysia",
+          "iata": "MYY"
+        },
+        "discount_percent": 36.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTMxagcIARIDVFBFcg0IAhIJL20vMDN4NjIxGiQSCjIwMjYtMDktMDhqDQgCEgkvbS8wM3g2MjFyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXdHZ29JbUVvUUFCb0RWRmRFT0Rod3l1Z0I&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-31",
+            "departure_time": null,
+            "destination": "MYY",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-08",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "MYY"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924451+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-1a381928b567e21f7766",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 14765,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "qualified Flight Deals anomaly retained; exact completion was not selected under the current run compute budget",
+      "state": "qualified_anomaly_candidate_pending_exact"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 35.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 10392,
+      "discovery": {
+        "airlines": [
+          "China Southern",
+          "CZ"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTIzGgoImFEQABoDVFdEODhww/4B",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI3agcIARIDVFBFcg0IAhIJL20vMDE4bHd0GiQSCjIwMjYtMDktMDJqDQgCEgkvbS8wMThsd3RyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXpHZ29JbUZFUUFCb0RWRmRFT0Rod3cvNEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 10392,
+        "destination": {
+          "city": "Shenyang",
+          "country": "China",
+          "iata": "SHE"
+        },
+        "discount_percent": 35.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA4LTI3agcIARIDVFBFcg0IAhIJL20vMDE4bHd0GiQSCjIwMjYtMDktMDJqDQgCEgkvbS8wMThsd3RyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSXpHZ29JbUZFUUFCb0RWRmRFT0Rod3cvNEI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-27",
+            "departure_time": null,
+            "destination": "SHE",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-02",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "SHE"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924545+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-9befe3d1c89eb710a142",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 16018,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "qualified Flight Deals anomaly retained; exact completion was not selected under the current run compute budget",
+      "state": "qualified_anomaly_candidate_pending_exact"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 34.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 8543,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTI1GgoI30IQABoDVFdEODhwntEB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTAzagcIARIDVFBFcg0IAhIJL20vMDF3andnGiQSCjIwMjYtMDktMTBqDQgCEgkvbS8wMXdqd2dyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTFHZ29JMzBJUUFCb0RWRmRFT0Rod250RUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 8543,
+        "destination": {
+          "city": "Komatsu",
+          "country": "Japan",
+          "iata": "KMQ"
+        },
+        "discount_percent": 34.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTAzagcIARIDVFBFcg0IAhIJL20vMDF3andnGiQSCjIwMjYtMDktMTBqDQgCEgkvbS8wMXdqd2dyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTFHZ29JMzBJUUFCb0RWRmRFT0Rod250RUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-03",
+            "departure_time": null,
+            "destination": "KMQ",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-10",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "KMQ"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924649+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-e8e377fc63e9ce7d3357",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 12848,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "qualified Flight Deals anomaly retained; exact completion was not selected under the current run compute budget",
+      "state": "qualified_anomaly_candidate_pending_exact"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 33.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 9897,
+      "discovery": {
+        "airlines": [
+          "Tigerair Taiwan",
+          "IT"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTI2GgoIqU0QABoDVFdEODhws/IB",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTAzagcIARIDVFBFcg0IAhIJL20vMDE5NjQ5GiQSCjIwMjYtMDktMTBqDQgCEgkvbS8wMTk2NDlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTJHZ29JcVUwUUFCb0RWRmRFT0Rod3MvSUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 9897,
+        "destination": {
+          "city": "Akita",
+          "country": "Japan",
+          "iata": "AXT"
+        },
+        "discount_percent": 33.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAhokEgoyMDI2LTA5LTAzagcIARIDVFBFcg0IAhIJL20vMDE5NjQ5GiQSCjIwMjYtMDktMTBqDQgCEgkvbS8wMTk2NDlyBwgBEgNUUEVAAUgBUgNUV0R6fENqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTJHZ29JcVUwUUFCb0RWRmRFT0Rod3MvSUI&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-09-03",
+            "departure_time": null,
+            "destination": "AXT",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-10",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "AXT"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924682+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-6c81098956ca9a3825a3",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 14782,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "qualified Flight Deals anomaly retained; exact completion was not selected under the current run compute budget",
+      "state": "qualified_anomaly_candidate_pending_exact"
+    },
+    {
+      "anomaly_baseline_twd": null,
+      "anomaly_scope": null,
+      "anomaly_source": "google_flight_deals",
+      "anomaly_strength_percent": 33.0,
+      "classification": "Signal",
+      "current_complete_airfare_twd": 18758,
+      "discovery": {
+        "airlines": [
+          "*"
+        ],
+        "anomaly_authority": "google_flight_deals",
+        "booking_token": "CjRIX2xjNHI0VWZEZllBQ0ZuOWdCRy0tLS0tLS0tLS1wanlwN0FBQUFBR3FGVWJVR2dVU1lBEhNEZWFsQ29uc3RyYWludHMwLTI3GgsIxpIBEAAaA1RXRDg4cLbLAw==",
+        "booking_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTA4LTI3agcIARIDVFBFcg4IAhIKL20vMDNxY2g4bholEgoyMDI2LTA5LTAyag4IAhIKL20vMDNxY2g4bnIHCAESA1RQRUABSAFSA1RXRHqAAUNqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTNHZ3NJeHBJQkVBQWFBMVJYUkRnNGNMYkxBdz09&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "complete_airfare": true,
+        "current_price_twd": 18758,
+        "destination": {
+          "city": "Yakushima",
+          "country": "Japan",
+          "iata": "KUM"
+        },
+        "discount_percent": 33.0,
+        "evidence_class": "qualified_round_trip_deal",
+        "evidence_url": "https://www.google.com/travel/flights?tfs=CCoQAholEgoyMDI2LTA4LTI3agcIARIDVFBFcg4IAhIKL20vMDNxY2g4bholEgoyMDI2LTA5LTAyag4IAhIKL20vMDNxY2g4bnIHCAESA1RQRUABSAFSA1RXRHqAAUNqUklYMnhqTkhJMFZXWkVabGxCUTBadU9XZENSeTB0TFMwdExTMHRMUzF3YW5sd04wRkJRVUZCUjNGR1ZXSlZSMmRWVTFsQkVoTkVaV0ZzUTI5dWMzUnlZV2x1ZEhNd0xUSTNHZ3NJeHBJQkVBQWFBMVJYUkRnNGNMYkxBdz09&curr=TWD&hl=en-TW&gl=TW&gsas=1",
+        "legs": [
+          {
+            "arrival_time": null,
+            "date": "2026-08-27",
+            "departure_time": null,
+            "destination": "KUM",
+            "origin": "TPE"
+          },
+          {
+            "arrival_time": null,
+            "date": "2026-09-02",
+            "departure_time": null,
+            "destination": "TPE",
+            "origin": "KUM"
+          }
+        ],
+        "observed_at": "2026-08-19T06:48:24.924737+00:00",
+        "origin": {
+          "city": null,
+          "country": null,
+          "iata": "TPE"
+        },
+        "provider": "gflights",
+        "record_id": "gf-6536d7f6aced14aaebba",
+        "reproducible_search": {
+          "country": "TW",
+          "currency": "TWD",
+          "date": "2026-09-02",
+          "origin": "TPE",
+          "return_date": "2026-09-05"
+        },
+        "surface": "flight_deals",
+        "typical_price_twd": 27963,
+        "verification_state": "discovery"
+      },
+      "exact": null,
+      "observation_id": null,
+      "reason": "qualified Flight Deals anomaly retained; exact completion was not selected under the current run compute budget",
+      "state": "qualified_anomaly_candidate_pending_exact"
+    }
+  ]
+}
