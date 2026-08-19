@@ -1079,6 +1079,73 @@ return_windows_policy:
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
   status: pending_activation
+  absolute_low_non_deal_producer:
+    enabled: true
+    contract_version: "1.0"
+    contract_state: implemented_pre_activation
+    output_state: ftr_absolute_low_non_deal
+    source_collection: current_run_exact_non_deal_candidates
+    input_states:
+    - exact_revalidated_candidate
+    generic_signal_isolation:
+      generic_signal_collection_is_not_selector_input: true
+      classification_signal_alone_is_ineligible: true
+      weak_seed_promotion: forbidden
+      cached_or_promotional_hint_promotion: forbidden
+    deal_isolation:
+      formal_deal_input: excluded
+      matching_deal_record_or_itinerary: excluded
+      formal_deal_relabel_or_duplicate: forbidden
+    eligibility:
+      require_non_deal: true
+      require_exact_record: true
+      verification_state: revalidated
+      evidence_class: exact_revalidated_candidate
+      allowed_surfaces:
+      - exact
+      - open_jaw
+      require_complete_outbound_return_airfare: true
+      require_positive_complete_airfare_twd: true
+      require_exact_outbound_and_return_dates: true
+      require_concrete_itinerary_identity: true
+      require_reproducible_search_identity: true
+      require_source_evidence_provenance: true
+      require_existing_cfr_revalidation_trust: true
+      require_current_observation: true
+      max_observation_age_hours: 24
+      trusted_evidence_any_of:
+      - booking_url
+      - evidence_url
+      - booking_token
+      - provider_leg_identity
+    exclusions:
+    - generic_signal_without_dedicated_exact_pool_membership
+    - weak_seed
+    - promotion_or_cached_hint
+    - incomplete_airfare
+    - non_exact_or_non_revalidated
+    - failed_or_non_converged_exact
+    - stale_only_evidence
+    - formal_deal
+    budget:
+      max_selected_count: 5
+      independent_of_search_final_shortlist_limit: true
+      independent_of_publication_display_limits: true
+      new_provider_calls: 0
+    ordering:
+    - current_complete_airfare_twd_asc
+    - outbound_date_asc
+    - return_date_asc
+    - taiwan_origin_gateway_asc
+    - destination_arrival_airport_asc
+    - destination_departure_airport_asc
+    - record_id_asc
+    anomaly_ranking_role: none
+    ftr_weighted_score: forbidden
+    normal_cfr_deal_ranking_unchanged: true
+    preserve_existing_route_identity: true
+    rp06_new_open_jaw_or_return_gateway_acquisition: out_of_scope
+    canonical_ftr_activation: pending_disabled_until_RP-04
   canonical_activation:
     enabled: false
     enable_only_in_package: RP-04

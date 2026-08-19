@@ -143,6 +143,7 @@ def run_result(
     *,
     deals=(),
     signals=(),
+    absolute_low_non_deals=(),
     health="healthy",
     origins=None,
     execution=None,
@@ -157,6 +158,7 @@ def run_result(
         "run_at": run_at,
         "deals": list(deals),
         "signals": list(signals),
+        "ftr_absolute_low_non_deals": list(absolute_low_non_deals),
         "coverage": {
             "origins": origins if origins is not None else healthy_origins(),
             "markets": markets if markets is not None else market_rows(),
@@ -312,17 +314,20 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
         }
         self.assertEqual(shapes, {("KIX", "KIX"), ("KIX", "FUK")})
 
-    def test_only_explicit_absolute_low_signal_is_promoted(self):
-        generic = item(record("generic-signal", price=4300), classification="Signal", state="exact_revalidated_candidate")
-        absolute = item(record("absolute-low", price=4200), classification="Signal", state="ftr_absolute_low_non_deal")
+    def test_only_dedicated_selected_absolute_low_state_is_consumed(self):
+        generic = item(record("generic-signal", price=4100), classification="Signal", state="exact_revalidated_candidate")
+        forged = item(record("forged-in-signal-journal", price=4000), classification="Signal", state="ftr_absolute_low_non_deal")
+        selected = item(record("absolute-low", price=4200), classification="Signal", state="ftr_absolute_low_non_deal")
         snapshot = build_snapshot(
-            run_result(signals=(generic, absolute)),
+            run_result(signals=(generic, forged), absolute_low_non_deals=(selected,)),
             producer_commit_sha="abc123",
             generated_at="2026-08-19T08:05:00+08:00",
         )
         self.assertEqual(snapshot["candidate_counts"]["variants"], 1)
         self.assertEqual(snapshot["candidate_counts"]["absolute_low_non_deals"], 1)
-        self.assertEqual(snapshot["opportunities"][0]["variants"][0]["variant_id"], "absolute-low")
+        variant = snapshot["opportunities"][0]["variants"][0]
+        self.assertEqual(variant["variant_id"], "absolute-low")
+        self.assertEqual(variant["candidate_kind"], "absolute_low_non_deal")
 
     def test_scoped_manifest_never_moves_canonical_latest(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -41,6 +41,7 @@ from .production_radar import (
     write_run_artifacts as _write_run_artifacts,
 )
 from .providers.gflights import GFlightsAdapter
+from .ftr_absolute_low import apply_absolute_low_selection
 
 
 STICKY_RATE_LIMIT_MARKERS = (
@@ -195,6 +196,8 @@ def retain_pending_qualified_candidates(
         signals=tuple([*result.signals, *pending]),
         coverage=result.coverage,
         provider_failures=result.provider_failures,
+        exact_non_deal_candidates=result.exact_non_deal_candidates,
+        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,
     )
 
 
@@ -211,11 +214,12 @@ async def run_once(
         adapter=recorder,
         prior_history=prior_history,
     ).run(run_at=run_at)
-    return retain_pending_qualified_candidates(
+    retained = retain_pending_qualified_candidates(
         base_result,
         flight_deal_records=recorder.flight_deal_records,
         policy=policy,
     )
+    return apply_absolute_low_selection(retained, policy=policy)
 
 
 def write_run_artifacts(
@@ -234,6 +238,10 @@ def write_run_artifacts(
         state: sum(1 for item in result.signals if item.state == state)
         for state in sorted({item.state for item in result.signals})
     }
+    payload["ftr_absolute_low_non_deal_count"] = len(result.ftr_absolute_low_non_deals)
+    payload["ftr_absolute_low_non_deals"] = [
+        _item_json(item) for item in result.ftr_absolute_low_non_deals
+    ]
     result_path.write_text(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",

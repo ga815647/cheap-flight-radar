@@ -119,7 +119,11 @@ Each retained variant carries:
 - verification state;
 - evidence/provenance reference.
 
-Generic CFR Signals are not automatically eligible. `absolute_low_non_deal` must be explicitly selected upstream by the dedicated bounded price-floor producer path.
+Generic CFR Signals are not automatically eligible. `absolute_low_non_deal` is selected only by the dedicated RP-02 price-floor producer from the current run's explicit exact non-Deal outcome pool. The selector does not scan or rewrite the generic Signal journal and performs no additional acquisition.
+
+The machine policy lives at `ftr_handoff.absolute_low_non_deal_producer` in `flight-radar.yaml`. Eligibility requires a non-Deal `exact_revalidated_candidate` with a positive complete outbound+return fare, exact dates, concrete/reproducible itinerary identity, current timezone-aware observation, and existing CFR revalidation/provenance evidence. Weak seeds, cached/promotional hints, incomplete/non-converged/non-exact/stale evidence and anything matching a formal Deal identity fail closed.
+
+The producer is deliberately bounded independently of CFR display/publication limits: it selects at most five variants, ordered by complete airfare ascending and then exact dates, Taiwan origin, destination-side route shape and record ID. This is a downstream handoff candidate set, not a CFR leaderboard and not an anomaly ranking. Existing qualifying route identity, including an already-produced open-jaw shape or different Taiwan return gateway, is retained without adding RP-06 search/eligibility expansion.
 
 ## Atomic canonical publication
 
