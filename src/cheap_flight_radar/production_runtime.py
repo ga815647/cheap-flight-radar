@@ -43,35 +43,72 @@ from .production_radar import (
 from .providers.gflights import GFlightsAdapter
 
 
-class ProductionExecutionAdapter:
-    """Reserve a separate fixed provider client for multi-city request budget.
+STICKY_RATE_LIMIT_MARKERS = (
+    "HTTP 429 Too Many Requests",
+    "all further requests on this client are blocked",
+)
 
-    The primary and multi-city adapters are both constructed once at process
-    start. A primary-client 429 therefore cannot make the library's client-local
-    sticky rate-limit state suppress every later multi-city request. The
-    dedicated multi-city client does not change IP, proxy, User-Agent, locale,
-    currency, or anti-bot behavior; a provider-side refusal still fails closed
-    normally.
+
+def _is_sticky_rate_limit(result: ProviderResult) -> bool:
+    error = result.error or ""
+    return bool(
+        result.provider == "gflights"
+        and result.coverage_state == "failed"
+        and all(marker in error for marker in STICKY_RATE_LIMIT_MARKERS)
+    )
+
+
+class ProductionExecutionAdapter:
+    """Reserve fixed provider lanes and stop known-local sticky 429 follow-ons.
+
+    gflights marks an ``ApiClient`` sticky after an HTTP 429 and locally refuses
+    every later call on that same client. Once Radar observes that exact sticky
+    error, later logical work on the same fixed lane is failed closed without
+    invoking the client again. The first sticky failure remains a real technical
+    provider call/failure; later work is circuit-suppressed evidence. No retry,
+    reset, new identity, proxy, or client rotation is performed.
     """
 
     def __init__(self, *, primary: Any, multi_city: Any) -> None:
         self._primary = primary
         self._multi_city = multi_city
+        self._circuit_reason: dict[str, str | None] = {"primary": None, "multi_city": None}
+
+    def _suppressed(self, *, lane: str, surface: str) -> ProviderResult:
+        trigger = self._circuit_reason[lane] or "sticky provider rate-limit state"
+        return ProviderResult(
+            "gflights",
+            surface,
+            "failed",
+            error=(
+                f"circuit_open: {lane} gflights client is already locally blocked after sticky HTTP 429; "
+                f"no provider request sent; trigger={trigger}"
+            ),
+            request_sent=False,
+        )
+
+    async def _call(self, *, lane: str, surface: str, method: Any, kwargs: Mapping[str, Any]) -> ProviderResult:
+        if self._circuit_reason[lane] is not None:
+            return self._suppressed(lane=lane, surface=surface)
+        result = await method(**kwargs)
+        if _is_sticky_rate_limit(result):
+            self._circuit_reason[lane] = result.error or "sticky HTTP 429"
+        return result
 
     async def flight_deals(self, **kwargs: Any) -> ProviderResult:
-        return await self._primary.flight_deals(**kwargs)
+        return await self._call(lane="primary", surface="flight_deals", method=self._primary.flight_deals, kwargs=kwargs)
 
     async def explore(self, **kwargs: Any) -> ProviderResult:
-        return await self._primary.explore(**kwargs)
+        return await self._call(lane="primary", surface="explore", method=self._primary.explore, kwargs=kwargs)
 
     async def exact(self, **kwargs: Any) -> ProviderResult:
-        return await self._primary.exact(**kwargs)
+        return await self._call(lane="primary", surface="exact", method=self._primary.exact, kwargs=kwargs)
 
     async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
-        return await self._primary.cheapest_dates(**kwargs)
+        return await self._call(lane="primary", surface="cheapest_dates", method=self._primary.cheapest_dates, kwargs=kwargs)
 
     async def open_jaw(self, **kwargs: Any) -> ProviderResult:
-        return await self._multi_city.open_jaw(**kwargs)
+        return await self._call(lane="multi_city", surface="open_jaw", method=self._multi_city.open_jaw, kwargs=kwargs)
 
 
 class RecordingFlightDealsAdapter:

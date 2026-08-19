@@ -120,6 +120,26 @@ class ProductionPublicationTests(unittest.TestCase):
             self.assertIn("TPE → NRT (2026-09-10) / KIX → TSA (2026-09-14)", text)
             self.assertIn("2026-09-10 → 2026-09-14 · open_jaw_airfare_alternative", text)
 
+    def test_v2_execution_distinguishes_client_calls_from_circuit_suppression(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history, manifests, site, run_id = self._write_v2(Path(tmp))
+            manifest_path = manifests / f"{run_id}.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["coverage"]["execution"] = {
+                "flight_deals": {
+                    "attempts": 12, "provider_calls": 1, "records": 0, "successes": 0,
+                    "empty": 0, "failures": 1, "suppressed": 11, "unsupported": 0,
+                }
+            }
+            manifest["provider_health"] = {
+                "status": "degraded", "reasons": ["sticky rate limit"], "deal_count_is_health_signal": False
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
+            text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
+            self.assertIn("12 logical attempts · 1 client calls · 11 circuit-suppressed", text)
+            self.assertIn("1 technical failed", text)
+
     def test_provider_failed_zero_deal_is_not_rendered_as_normal_market_zero(self):
         with tempfile.TemporaryDirectory() as tmp:
             history, manifests, site, run_id = self._write_v2(Path(tmp))

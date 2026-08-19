@@ -146,6 +146,7 @@ class ProviderResult:
     coverage_state: str
     records: tuple[AirfareRecord, ...] = ()
     error: str | None = None
+    request_sent: bool = True
 
 
 def normalize_country_name(country: str | None) -> str | None:

@@ -9,6 +9,7 @@ from cheap_flight_radar.operational_status import (
     decide_notification,
     derive_provider_health,
     reconcile_provider_failures,
+    suppressed_request_count,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +63,27 @@ class OperationalCorrectnessTests(unittest.TestCase):
         self.assertEqual(health["status"], "provider_failed")
         self.assertTrue(any(item.get("kind") == "coverage_collapse" for item in failures))
 
+    def test_circuit_suppression_is_not_counted_as_new_technical_failure(self):
+        coverage = {
+            "all_origins_attempted": True,
+            "origins": {
+                origin: {"status": "failed", "returned_flight_deals": 0, "explore_seeds": 0}
+                for origin in ("TPE", "TSA", "RMQ", "KHH")
+            },
+            "execution": {
+                "flight_deals": execution_surface(attempts=12, provider_calls=1, failures=1, suppressed=11),
+                "explore": execution_surface(attempts=4, provider_calls=0, suppressed=4),
+            },
+        }
+        existing = ({"origin": "TPE", "surface": "flight_deals", "error": "sticky HTTP 429"},)
+        failures = reconcile_provider_failures(coverage, existing)
+        health = derive_provider_health(coverage, failures)
+        self.assertEqual(suppressed_request_count(coverage), 15)
+        self.assertEqual(health["technical_failure_count"], 1)
+        self.assertEqual(health["suppressed_request_count"], 15)
+        self.assertEqual(health["status"], "provider_failed")
+        self.assertTrue(any("circuit-suppressed" in reason for reason in health["reasons"]))
+
     def test_legacy_failure_counters_do_not_reclassify_healthy_coverage(self):
         coverage = {
             "all_origins_attempted": True,
@@ -100,6 +122,7 @@ class OperationalCorrectnessTests(unittest.TestCase):
         operator = policy["price_history"]["persistence"]["operator_requested_reacquisition"]
         completion = policy["publication"]["orchestration"]["completion_evidence"]
         notifications = policy["notifications"]
+        circuit = policy["operational_health"]["provider_acquisition"]["sticky_rate_limit_circuit"]
         self.assertEqual(canonical["max_automatic_attempts_per_local_day"], 1)
         self.assertTrue(operator["enabled"])
         self.assertEqual(operator["duplicate_same_request_id_action"], "recovery_or_noop_never_reacquire")
@@ -108,6 +131,13 @@ class OperationalCorrectnessTests(unittest.TestCase):
         self.assertTrue(completion["control_request_submission_is_not_completion"])
         self.assertIn("provider_or_coverage_degradation", notifications["notify_on"])
         self.assertTrue(notifications["decision_requires_final_immutable_evidence"])
+        self.assertEqual(circuit["fixed_client_lanes"], ["primary", "multi_city"])
+        self.assertFalse(circuit["later_same_lane_logical_calls"]["invoke_provider_client"])
+        self.assertFalse(circuit["later_same_lane_logical_calls"]["count_as_new_technical_failure"])
+        self.assertFalse(circuit["complete_empty_opens_circuit"])
+        self.assertFalse(circuit["generic_429_without_sticky_marker_opens_circuit"])
+        self.assertEqual(circuit["reset_rate_limit"], "forbidden")
+        self.assertFalse(circuit["automatic_retry"])
 
     def test_tracked_automation_prompt_scopes_same_day_guard_to_automatic_path_and_requires_final_evidence(self):
         text = (ROOT / "docs" / "daily-flight-radar-automation-prompt.md").read_text(encoding="utf-8")

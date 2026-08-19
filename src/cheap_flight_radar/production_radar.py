@@ -317,7 +317,16 @@ def _market_coverage_template() -> dict[str, dict[str, int]]:
 
 def _execution_template() -> dict[str, dict[str, int]]:
     return {
-        surface: {"attempts": 0, "records": 0, "successes": 0, "empty": 0, "failures": 0, "unsupported": 0}
+        surface: {
+            "attempts": 0,
+            "provider_calls": 0,
+            "records": 0,
+            "successes": 0,
+            "empty": 0,
+            "failures": 0,
+            "suppressed": 0,
+            "unsupported": 0,
+        }
         for surface in EXECUTION_SURFACES
     }
 
@@ -325,6 +334,11 @@ def _execution_template() -> dict[str, dict[str, int]]:
 def _count_provider_result(execution: dict[str, dict[str, int]], surface: str, result: ProviderResult) -> None:
     counter = execution[surface]
     counter["records"] += len(result.records)
+    if result.request_sent:
+        counter["provider_calls"] += 1
+    else:
+        counter["suppressed"] += 1
+        return
     if result.coverage_state == "complete" and result.records:
         counter["successes"] += 1
     elif result.coverage_state == "failed":
@@ -519,8 +533,10 @@ class ProductionRadar:
                 _count_provider_result(execution, "flight_deals", result)
                 if result.coverage_state == "failed":
                     message = result.error or "provider failure"
-                    origin_errors.append(message)
-                    provider_failures.append({"origin": origin, "surface": "flight_deals", "error": message})
+                    if message not in origin_errors:
+                        origin_errors.append(message)
+                    if result.request_sent:
+                        provider_failures.append({"origin": origin, "surface": "flight_deals", "error": message})
                 else:
                     origin_records.extend(result.records)
 
@@ -575,8 +591,11 @@ class ProductionRadar:
             _count_provider_result(execution, "explore", explore)
             if explore.coverage_state == "failed":
                 message = explore.error or "provider failure"
-                provider_failures.append({"origin": origin, "surface": "explore", "error": message})
-                origin_errors.append(f"explore: {message}")
+                if explore.request_sent:
+                    provider_failures.append({"origin": origin, "surface": "explore", "error": message})
+                rendered = f"explore: {message}"
+                if rendered not in origin_errors:
+                    origin_errors.append(rendered)
             else:
                 for record in explore.records:
                     if not is_international_asia_oceania(record.destination.country):
@@ -656,7 +675,7 @@ class ProductionRadar:
             _count_provider_result(execution, "conventional_exact", exact_result)
             if exact_result.coverage_state != "complete" or not exact_result.records:
                 message = exact_result.error or exact_result.coverage_state
-                if exact_result.coverage_state == "failed":
+                if exact_result.coverage_state == "failed" and exact_result.request_sent:
                     provider_failures.append({
                         "origin": discovery.origin.iata,
                         "surface": "exact",
@@ -690,6 +709,13 @@ class ProductionRadar:
                 trip_duration_days=seed_duration,
             )
             _count_provider_result(execution, "flexible_dates", flexible)
+            if flexible.coverage_state == "failed" and flexible.request_sent:
+                provider_failures.append({
+                    "origin": discovery.origin.iata,
+                    "surface": "flexible_dates",
+                    "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
+                    "error": flexible.error or "provider failure",
+                })
             best = _best_flexible_record(flexible.records, run_date, horizon_end)
             if best is None or not best.outbound_date or not best.return_date:
                 continue
@@ -698,9 +724,11 @@ class ProductionRadar:
                 execution["flexible_dates"]["unsupported"] += 1
                 continue
             execution["flexible_dates"].setdefault("exact_attempts", 0)
+            execution["flexible_dates"].setdefault("exact_provider_calls", 0)
             execution["flexible_dates"].setdefault("exact_successes", 0)
             execution["flexible_dates"].setdefault("exact_empty", 0)
             execution["flexible_dates"].setdefault("exact_failures", 0)
+            execution["flexible_dates"].setdefault("exact_suppressed", 0)
             execution["flexible_dates"]["exact_attempts"] += 1
             exact_result = await self.adapter.exact(
                 origin=discovery.origin.iata,
@@ -708,6 +736,10 @@ class ProductionRadar:
                 departure_date=best.outbound_date,
                 return_date=best.return_date,
             )
+            if exact_result.request_sent:
+                execution["flexible_dates"]["exact_provider_calls"] += 1
+            else:
+                execution["flexible_dates"]["exact_suppressed"] += 1
             if exact_result.coverage_state == "complete" and exact_result.records:
                 execution["flexible_dates"]["exact_successes"] += 1
                 exact = exact_result.records[0]
@@ -717,7 +749,7 @@ class ProductionRadar:
                     exact_signals.append(RadarItem("Signal", "exact_revalidated_candidate", discovery, exact, discovery.anomaly_authority, None, "flexible-date exact result lacked a complete >24h current airfare"))
             else:
                 message = exact_result.error or exact_result.coverage_state
-                if exact_result.coverage_state == "failed":
+                if exact_result.coverage_state == "failed" and exact_result.request_sent:
                     execution["flexible_dates"]["exact_failures"] += 1
                     provider_failures.append({
                         "origin": discovery.origin.iata,
@@ -725,7 +757,7 @@ class ProductionRadar:
                         "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
                         "error": message,
                     })
-                else:
+                elif exact_result.coverage_state != "failed":
                     execution["flexible_dates"]["exact_empty"] += 1
 
         best_same_destination: dict[str, tuple[AirfareRecord, AirfareRecord, str]] = {}
@@ -820,7 +852,7 @@ class ProductionRadar:
                                 observation.observation_id,
                             )
                         )
-                elif mixed_result.coverage_state == "failed":
+                elif mixed_result.coverage_state == "failed" and mixed_result.request_sent:
                     provider_failures.append({
                         "origin": discovery.origin.iata,
                         "surface": "mixed_taiwan_return",
@@ -857,7 +889,7 @@ class ProductionRadar:
                                 observation.observation_id,
                             )
                         )
-                elif open_jaw_result.coverage_state == "failed":
+                elif open_jaw_result.coverage_state == "failed" and open_jaw_result.request_sent:
                     provider_failures.append({
                         "origin": discovery.origin.iata,
                         "surface": "open_jaw",

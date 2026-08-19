@@ -71,6 +71,15 @@ def technical_failure_count(coverage: Mapping[str, Any]) -> int:
     return sum(count for _, count in _counter_failure_requirements(coverage))
 
 
+def suppressed_request_count(coverage: Mapping[str, Any]) -> int:
+    total = 0
+    for raw in _execution(coverage).values():
+        details = _mapping(raw)
+        total += _as_int(details.get("suppressed"))
+        total += _as_int(details.get("exact_suppressed"))
+    return total
+
+
 def _origin_gaps(coverage: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     origins = _mapping(coverage.get("origins"))
     failed: list[str] = []
@@ -107,6 +116,7 @@ def derive_provider_health(
 ) -> Mapping[str, Any]:
     failed_origins, degraded_origins = _origin_gaps(coverage)
     technical_failures = technical_failure_count(coverage)
+    suppressed_requests = suppressed_request_count(coverage)
     collapse = _discovery_collapse(coverage)
     reasons: list[str] = []
 
@@ -118,15 +128,21 @@ def derive_provider_health(
             reasons.append("no usable Flight Deals or Explore coverage for: " + ", ".join(sorted(failed_origins)))
         if degraded_origins:
             reasons.append("primary Flight Deals coverage missing but fallback coverage survived for: " + ", ".join(sorted(degraded_origins)))
-        if technical_failures:
-            reasons.append(f"{technical_failures} technical provider execution failure(s) recorded")
-        if provider_failures:
-            reasons.append(f"{len(provider_failures)} provider/operational failure evidence item(s) recorded")
-        status = "degraded" if reasons else "healthy"
+        status = "healthy"
+
+    if technical_failures:
+        reasons.append(f"{technical_failures} technical provider execution failure(s) recorded")
+    if suppressed_requests:
+        reasons.append(f"{suppressed_requests} provider request(s) circuit-suppressed after sticky rate-limit state")
+    if provider_failures:
+        reasons.append(f"{len(provider_failures)} provider/operational failure evidence item(s) recorded")
+    if not collapse and reasons:
+        status = "degraded"
 
     return {
         "status": status,
         "technical_failure_count": technical_failures,
+        "suppressed_request_count": suppressed_requests,
         "coverage_collapse": collapse,
         "failed_origins": sorted(failed_origins),
         "degraded_origins": sorted(degraded_origins),
