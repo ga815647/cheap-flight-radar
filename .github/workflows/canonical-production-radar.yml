@@ -231,16 +231,16 @@ jobs:
           repos/${{ github.repository }}/actions/workflows/radar-pages.yml/dispatches
           -f ref=main
 
-      - name: Upload operational evidence
-        if: always() && steps.request.outputs.active == 'true'
+      - name: Upload failure debug evidence (best effort)
+        if: failure() && steps.request.outputs.active == 'true'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: canonical-production-radar-${{ steps.request.outputs.request_date }}-${{ github.run_id }}
+          name: canonical-production-radar-failure-${{ steps.request.outputs.request_date }}-${{ github.run_id }}
           path: |
             _state.json
             _runtime.log
             _success.json
             _restore.json
-            _out/
-          if-no-files-found: warn
-          retention-days: 14
+          if-no-files-found: ignore
+          retention-days: 2
