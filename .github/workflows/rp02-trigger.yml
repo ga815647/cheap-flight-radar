@@ -27,10 +27,8 @@ jobs:
       - name: Install
         run: python -m pip install -e .
 
-      - name: Apply idempotent RP-02 implementation
-        run: |
-          python scripts/rp02_prepare.py
-          python scripts/rp02_continue.py
+      - name: Apply RP-02 final review fixes
+        run: python scripts/rp02_review_fix.py
 
       - name: Full deterministic Gate
         run: python -m unittest discover -s tests -v
@@ -46,5 +44,5 @@ jobs:
             src/cheap_flight_radar/ftr_handoff.py \
             src/cheap_flight_radar/ftr_absolute_low.py \
             tests/test_ftr_handoff.py tests/test_ftr_absolute_low.py
-          git commit -m 'RP-02: add bounded FTR absolute-low non-Deal producer'
+          git commit -m 'RP-02: harden selector contract and deterministic ties'
           git push origin HEAD:feat/rp02-ftr-absolute-low-producer
