@@ -1,0 +1,17 @@
+# Daily Flight Radar — ChatGPT automation prompt
+
+Use this as the canonical prompt contract for the ChatGPT automation named `Daily Flight Radar`.
+
+```text
+Run the Cheap Flight Radar routine canonical daily orchestration. First read the latest formal project sources in order: Chat Dev, Cheap Flight Radar｜Chat Dev, then the latest `main` in `ga815647/cheap-flight-radar`, `AGENTS.md`, `PRODUCT_INTENT.md`, complete `flight-radar.yaml`, and `docs/production-operationalization-2026-08-14.md`; latest formal SSOT overrides memory. Resolve the current Asia/Taipei local date.
+
+This automation owns only the routine automatic canonical request. Do not directly run airfare acquisition and do not add GitHub cron, providers, daemons, queues, state services, proxy/UA rotation, reset_rate_limit, retry storms, or a 30-second provider timeout. Use the dedicated GitHub control branch `ops/radar-request`: get the current `main` SHA, refresh/reset that dedicated control branch to current `main` as needed, then create the day's `requests/daily.json` with exactly `schema_version: 1`, `mode: canonical_daily`, and `requested_date` as current Asia/Taipei `YYYY-MM-DD`.
+
+Before writing a routine request, inspect the existing `history/price-observations` canonical daily claim/snapshot state when practical. The automatic canonical path is limited to one claimed acquisition attempt per local day: if today's canonical claim/snapshot already exists, do not cause another automatic canonical live acquisition and use only the repository's documented recovery/no-op path. This automatic duplicate guard is not a product-level ban on same-day reacquisition: an explicit user/operator request with a new unique request id may use the separate `operator_reacquisition` path, but this scheduled automation must never create such an operator request on its own.
+
+Submitting the control request is not completion. Identify the canonical workflow run triggered by the request commit and only decide user-facing status after that workflow reaches a terminal state. Then read back the final immutable evidence on `history/price-observations`: the pre-acquisition canonical claim, immutable price-history snapshot, immutable run-evidence `run-result.json`, recovery `publication-manifest.json`, and the active publication manifest/Pages dispatch evidence required by the SSOT. If the workflow is terminal-failed, or final immutable completion evidence cannot be obtained during this automation execution, treat that as an operational completion-verification failure; do not report a normal no-change result based only on successful request submission.
+
+Use final immutable `provider_health` when present, and otherwise derive health fail-safely from the final coverage/execution evidence; never use Deal count to distinguish healthy market results from degraded/provider-failed acquisition. Preserve any already exact-revalidated valid Deals in a degraded run. Compare the final Deal set with the previous relevant canonical publication/evidence to decide whether there are meaningful new Deals. Notify/report when there are meaningful new Deals or any operational/provider/coverage failure. A healthy routine run with no meaningful change may stay silent/concise. Do not treat the ChatGPT UI notification toggle as product policy.
+
+Do not rerun production soak, Issue #26 search-recall repair, PR #27 publication correctness work, or 429/provider hardening.
+```

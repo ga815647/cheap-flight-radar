@@ -15,6 +15,7 @@ import shutil
 from typing import Any, Mapping, Sequence
 
 from . import publication as legacy
+from .operational_status import derive_provider_health
 from .price_history import FareHistorySnapshot, FareObservation, compare_with_history, snapshot_from_json
 
 MANIFEST_SCHEMA_VERSION = 2
@@ -237,6 +238,44 @@ def _signal_card(item: Mapping[str, Any]) -> str:
     )
 
 
+
+def _provider_health(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
+    health = manifest.get("provider_health")
+    if isinstance(health, Mapping) and health.get("status"):
+        return health
+    coverage = manifest.get("coverage")
+    failures = manifest.get("provider_failures")
+    failure_rows = (
+        tuple(item for item in failures if isinstance(item, Mapping))
+        if isinstance(failures, Sequence) and not isinstance(failures, (str, bytes))
+        else ()
+    )
+    return derive_provider_health(coverage if isinstance(coverage, Mapping) else {}, failure_rows)
+
+
+def _health_warning_html(manifest: Mapping[str, Any]) -> str:
+    health = _provider_health(manifest)
+    status = str(health.get("status") or "unknown")
+    if status == "healthy":
+        return ""
+    reasons = health.get("reasons")
+    if isinstance(reasons, Sequence) and not isinstance(reasons, (str, bytes)):
+        reason_text = "; ".join(str(item) for item in reasons if item)
+    else:
+        reason_text = "provider/coverage health is not fully healthy"
+    if status == "provider_failed":
+        title = "Provider acquisition failed"
+        body = "This run does not represent a normal zero-Deal market result. Required provider/coverage evidence collapsed; inspect execution evidence before interpreting absence of Deals."
+    else:
+        title = "Coverage degraded"
+        body = "Some provider or origin coverage was degraded. Already exact-revalidated Deals remain valid and are retained, but missing coverage must not be interpreted as market absence."
+    return (
+        '<section class="details-card"><p class="eyebrow">Operational warning</p>'
+        f'<h2>{escape(title)}</h2><p class="sparse-note">{escape(body)}</p>'
+        f'<p class="sparse-note">{escape(reason_text)}</p></section>'
+    )
+
+
 def _coverage_html(manifest: Mapping[str, Any]) -> str:
     coverage = manifest.get("coverage")
     if not isinstance(coverage, Mapping):
@@ -269,7 +308,8 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
             '<li><span>' + escape(surface.replace("_", " ")) + '</span><span class="status-badge neutral">'
             + escape(
                 f"{details.get('attempts', 0)} attempts · {details.get('successes', 0)} success · "
-                f"{details.get('records', 0)} records · {details.get('failures', 0)} failed · {details.get('unsupported', 0)} unsupported"
+                f"{details.get('records', 0)} records · {details.get('empty', 0)} empty · "
+                f"{details.get('failures', 0)} technical failed · {details.get('unsupported', 0)} unsupported"
             ) + '</span></li>'
         )
     if coverage.get("deep_search_candidate_limit") is not None:
@@ -313,10 +353,16 @@ def render_v2_run_page(manifest: Mapping[str, Any], snapshot: FareHistorySnapsho
     by_id = {item.observation_id: item for item in snapshot.observations}
     deals = manifest.get("deals") if isinstance(manifest.get("deals"), Sequence) else []
     signals = manifest.get("signals") if isinstance(manifest.get("signals"), Sequence) else []
+    health = _provider_health(manifest)
+    empty_deals = (
+        '<p class="empty">Deal result unavailable as a normal market-zero interpretation because provider acquisition failed.</p>'
+        if health.get("status") == "provider_failed"
+        else '<p class="empty">No qualified current Deal survived exact revalidation in this run.</p>'
+    )
     deal_cards = "".join(
         _deal_card(item, by_id=by_id, all_history=all_history, policy=policy)
         for item in deals if isinstance(item, Mapping)
-    ) or '<p class="empty">No qualified current Deal survived exact revalidation in this run.</p>'
+    ) or empty_deals
     signal_cards = "".join(_signal_card(item) for item in signals if isinstance(item, Mapping)) or '<p class="empty">No weaker Signals recorded in this run.</p>'
     history_path = escape(str(manifest["history_snapshot_path"]))
     return (
@@ -332,7 +378,8 @@ def render_v2_run_page(manifest: Mapping[str, Any], snapshot: FareHistorySnapsho
         '<div class="run-meta">'
         f'<span class="chip">Run at {escape(snapshot.run_at)}</span><span class="chip">TPE · TSA · RMQ · KHH</span>'
         '<span class="chip">Flight Deals → exact / flexible / multi-city</span></div></header>'
-        '<div class="section-heading"><div><h2>Deals</h2><p>Qualified external anomaly truth + current exact complete airfare.</p></div></div>'
+        + _health_warning_html(manifest)
+        + '<div class="section-heading"><div><h2>Deals</h2><p>Qualified external anomaly truth + current exact complete airfare.</p></div></div>'
         '<section class="hero-grid" aria-label="Qualified Deals">' + deal_cards + '</section>'
         '<div class="section-heading"><div><h2>Signals &amp; airfare alternatives</h2><p>Weak seeds, non-converged evidence, mixed Taiwan returns, and open-jaw alternatives stay separate from formal Deal ranking.</p></div></div>'
         '<section class="market-section"><div class="candidate-list">' + signal_cards + '</div></section>'

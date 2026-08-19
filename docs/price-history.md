@@ -48,6 +48,8 @@ The SSOT uses a dedicated durable evidence ref, `history/price-observations`, co
 
 Each run creates one new snapshot file and never rewrites an older run snapshot. Baselines, percentiles, and lows are derived from snapshots when needed; derived values are not a second authoritative state store.
 
+Canonical automatic runs and explicit operator reacquisitions are both real immutable observations, but they remain in separate run/claim namespaces: one `production-radar-*` canonical observation per routine local day, and request-id-scoped `operator-radar-{request_id}-*` observations for explicitly requested same-day refreshes. A duplicate operator request id is recovery/no-op only and never creates another observation.
+
 ChatGPT remains scheduler/orchestrator/decision layer. It may create a validated snapshot directly through the GitHub connector. When data volume or aggregation justifies it, ChatGPT may delegate short-lived GitHub Actions compute. The Action remains disposable compute; the evidence ref is the durable store.
 
 GitHub Actions artifacts are short-term handoff/deployment material only and must not become the 365-day/all-time history source.

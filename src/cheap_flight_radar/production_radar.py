@@ -31,6 +31,7 @@ from .price_history import (
 )
 from .providers.gflights import GFlightsAdapter
 from .models import OriginSweepRequest, SearchRequest
+from .operational_status import derive_provider_health, reconcile_provider_failures
 from .source_router import build_source_plan
 
 PROJECT_TIMEZONE = ZoneInfo("Asia/Taipei")
@@ -316,7 +317,7 @@ def _market_coverage_template() -> dict[str, dict[str, int]]:
 
 def _execution_template() -> dict[str, dict[str, int]]:
     return {
-        surface: {"attempts": 0, "records": 0, "successes": 0, "failures": 0, "unsupported": 0}
+        surface: {"attempts": 0, "records": 0, "successes": 0, "empty": 0, "failures": 0, "unsupported": 0}
         for surface in EXECUTION_SURFACES
     }
 
@@ -326,10 +327,12 @@ def _count_provider_result(execution: dict[str, dict[str, int]], surface: str, r
     counter["records"] += len(result.records)
     if result.coverage_state == "complete" and result.records:
         counter["successes"] += 1
+    elif result.coverage_state == "failed":
+        counter["failures"] += 1
     elif result.coverage_state == "unsupported":
         counter["unsupported"] += 1
     else:
-        counter["failures"] += 1
+        counter["empty"] += 1
 
 
 def _best_flexible_record(records: Sequence[AirfareRecord], run_date: date, horizon_end: date) -> AirfareRecord | None:
@@ -601,8 +604,14 @@ class ProductionRadar:
                         )
                     )
 
+            if not origin_records and explore_count == 0:
+                origin_status = "failed"
+            elif not origin_records:
+                origin_status = "degraded"
+            else:
+                origin_status = "attempted"
             origin_coverage[origin] = {
-                "status": "failed" if not origin_records and origin_errors else "attempted",
+                "status": origin_status,
                 "returned_flight_deals": len(origin_records),
                 "asia_oceania_records": len(region_records),
                 "qualified_deals": len(qualified_records),
@@ -647,12 +656,13 @@ class ProductionRadar:
             _count_provider_result(execution, "conventional_exact", exact_result)
             if exact_result.coverage_state != "complete" or not exact_result.records:
                 message = exact_result.error or exact_result.coverage_state
-                provider_failures.append({
-                    "origin": discovery.origin.iata,
-                    "surface": "exact",
-                    "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
-                    "error": message,
-                })
+                if exact_result.coverage_state == "failed":
+                    provider_failures.append({
+                        "origin": discovery.origin.iata,
+                        "surface": "exact",
+                        "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
+                        "error": message,
+                    })
                 exact_signals.append(RadarItem("Signal", "weak_seed", discovery, None, discovery.anomaly_authority, discovery.discount_percent, f"exact revalidation failed closed: {message}"))
                 continue
             exact = exact_result.records[0]
@@ -689,6 +699,7 @@ class ProductionRadar:
                 continue
             execution["flexible_dates"].setdefault("exact_attempts", 0)
             execution["flexible_dates"].setdefault("exact_successes", 0)
+            execution["flexible_dates"].setdefault("exact_empty", 0)
             execution["flexible_dates"].setdefault("exact_failures", 0)
             execution["flexible_dates"]["exact_attempts"] += 1
             exact_result = await self.adapter.exact(
@@ -705,14 +716,17 @@ class ProductionRadar:
                 else:
                     exact_signals.append(RadarItem("Signal", "exact_revalidated_candidate", discovery, exact, discovery.anomaly_authority, None, "flexible-date exact result lacked a complete >24h current airfare"))
             else:
-                execution["flexible_dates"]["exact_failures"] += 1
                 message = exact_result.error or exact_result.coverage_state
-                provider_failures.append({
-                    "origin": discovery.origin.iata,
-                    "surface": "flexible_exact",
-                    "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
-                    "error": message,
-                })
+                if exact_result.coverage_state == "failed":
+                    execution["flexible_dates"]["exact_failures"] += 1
+                    provider_failures.append({
+                        "origin": discovery.origin.iata,
+                        "surface": "flexible_exact",
+                        "route": f"{discovery.origin.iata}-{discovery.destination.iata}",
+                        "error": message,
+                    })
+                else:
+                    execution["flexible_dates"]["exact_empty"] += 1
 
         best_same_destination: dict[str, tuple[AirfareRecord, AirfareRecord, str]] = {}
         for candidate in same_destination_exact:
@@ -806,7 +820,7 @@ class ProductionRadar:
                                 observation.observation_id,
                             )
                         )
-                else:
+                elif mixed_result.coverage_state == "failed":
                     provider_failures.append({
                         "origin": discovery.origin.iata,
                         "surface": "mixed_taiwan_return",
@@ -843,7 +857,7 @@ class ProductionRadar:
                                 observation.observation_id,
                             )
                         )
-                else:
+                elif open_jaw_result.coverage_state == "failed":
                     provider_failures.append({
                         "origin": discovery.origin.iata,
                         "surface": "open_jaw",
@@ -880,6 +894,8 @@ class ProductionRadar:
             "same_destination_typical_rule": "lowest_qualified_google_flight_deals_typical",
             "fixed_watch_is_deal_coverage_authority": False,
         }
+        provider_failures = list(reconcile_provider_failures(coverage, provider_failures))
+        coverage["provider_health"] = derive_provider_health(coverage, provider_failures)
         return RadarRunResult(run_id, local_run_at.isoformat(), tuple(deals), tuple(signal_by_key.values()), coverage, tuple(provider_failures))
 
     async def revalidate_open_jaw(self, *, legs: Sequence[tuple[str, str, str]]) -> ProviderResult:
@@ -921,6 +937,7 @@ def build_run_artifacts(result: RadarRunResult, *, policy: Mapping[str, Any]) ->
         "deals": [_item_json(item) for item in result.deals],
         "signals": [_item_json(item) for item in result.signals],
         "coverage": result.coverage,
+        "provider_health": result.coverage.get("provider_health", {}),
         "provider_failures": list(result.provider_failures),
         "anomaly_truth_priority": list(policy["source_routing"]["anomaly_truth_priority"]),
         "formal_deal_order": "relative_anomaly_strength_desc_then_current_complete_airfare_twd_asc",
@@ -947,6 +964,7 @@ def write_run_artifacts(result: RadarRunResult, *, policy: Mapping[str, Any], ou
                 "signal_count": len(result.signals),
                 "deals": [_item_json(item) for item in result.deals],
                 "coverage": result.coverage,
+                "provider_health": result.coverage.get("provider_health", {}),
                 "provider_failures": list(result.provider_failures),
             },
             ensure_ascii=False,

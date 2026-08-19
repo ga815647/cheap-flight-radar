@@ -120,6 +120,52 @@ class ProductionPublicationTests(unittest.TestCase):
             self.assertIn("TPE → NRT (2026-09-10) / KIX → TSA (2026-09-14)", text)
             self.assertIn("2026-09-10 → 2026-09-14 · open_jaw_airfare_alternative", text)
 
+    def test_provider_failed_zero_deal_is_not_rendered_as_normal_market_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history, manifests, site, run_id = self._write_v2(Path(tmp))
+            manifest_path = manifests / f"{run_id}.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["deals"] = []
+            manifest["provider_health"] = {
+                "status": "provider_failed",
+                "reasons": ["synthetic full discovery collapse"],
+                "deal_count_is_health_signal": False,
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
+            failed_text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Provider acquisition failed", failed_text)
+            self.assertIn("does not represent a normal zero-Deal market result", failed_text)
+            self.assertIn("Deal result unavailable as a normal market-zero interpretation", failed_text)
+
+            manifest["provider_health"] = {"status": "healthy", "reasons": [], "deal_count_is_health_signal": False}
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
+            healthy_text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
+            self.assertNotIn("Provider acquisition failed", healthy_text)
+            self.assertIn("No qualified current Deal survived exact revalidation", healthy_text)
+
+    def test_legacy_coverage_can_surface_provider_failed_warning_without_rewriting_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history, manifests, site, run_id = self._write_v2(Path(tmp))
+            manifest_path = manifests / f"{run_id}.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.pop("provider_health", None)
+            manifest["deals"] = []
+            manifest["coverage"]["origins"] = {
+                origin: {"status": "attempted", "returned_flight_deals": 0, "explore_seeds": 0}
+                for origin in ("TPE", "TSA", "RMQ", "KHH")
+            }
+            manifest["coverage"]["all_origins_attempted"] = True
+            manifest["coverage"]["execution"] = {
+                "flight_deals": {"attempts": 12, "records": 0, "successes": 0, "failures": 12, "unsupported": 0},
+                "explore": {"attempts": 4, "records": 0, "successes": 0, "failures": 4, "unsupported": 0},
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            build_site(policy_path=POLICY, history_dir=history, manifest_dir=manifests, site_dir=site)
+            text = (site / "runs" / run_id / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Provider acquisition failed", text)
+
     def test_wrapper_still_renders_legacy_schema_v1_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
