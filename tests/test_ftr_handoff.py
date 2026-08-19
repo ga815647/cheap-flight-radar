@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+import yaml
+
 from cheap_flight_radar.ftr_handoff import (
     CANONICAL_LATEST_PATH,
     CURRENT_STATUS_PATH,
@@ -180,6 +182,15 @@ def generic_provider_signal(record_id="provider-evidence"):
     return item(record(record_id), classification="Signal", state="weak_seed")
 
 
+def assert_nested_paths(test_case, payload, paths):
+    for path in paths:
+        current = payload
+        for component in path.split("."):
+            test_case.assertIsInstance(current, dict, msg=f"{path}: {component} parent is not an object")
+            test_case.assertIn(component, current, msg=f"machine SSOT required path missing: {path}")
+            current = current[component]
+
+
 class FTRHandoffCoverageTest(unittest.TestCase):
     def test_fully_healthy_coverage_is_slice_faithful(self):
         result = run_result(deals=(item(record("deal")),))
@@ -264,6 +275,9 @@ class FTRHandoffCoverageTest(unittest.TestCase):
             generated_at="2026-08-19T08:05:00+08:00",
         )
         self.assertEqual(snapshot["candidate_counts"]["deals"], 0)
+        self.assertEqual(snapshot["candidate_counts"]["variants"], 0)
+        self.assertEqual(snapshot["opportunities"], [])
+        self.assertEqual(snapshot["coverage"]["providers"]["gflights"]["status"], "succeeded")
         self.assertEqual(snapshot["coverage_state"], "complete")
         self.assertEqual(snapshot["coverage"]["semantics"], "execution_and_coverage_evidence_not_candidate_or_deal_count")
 
@@ -400,6 +414,26 @@ class FTRRepairIncidentTest(unittest.TestCase):
             },
             incident_set_at="2026-08-19T12:10:00+08:00",
         )
+
+    def test_machine_ssot_required_current_status_paths_match_persisted_payloads(self):
+        policy = yaml.safe_load(Path("flight-radar.yaml").read_text(encoding="utf-8"))
+        contract = policy["ftr_handoff"]["current_status"]
+        required_top_level = contract["required_top_level_fields"]
+        conditional_paths = contract["required_nested_paths"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history = Path(tmp)
+            self._seed_last_good(history)
+            healthy = load_current_status(history_dir=history)
+            for field in required_top_level:
+                self.assertIn(field, healthy, msg=f"machine SSOT required top-level field missing: {field}")
+            assert_nested_paths(self, healthy, conditional_paths["when_last_good_present"])
+
+            repair = self._set_incident(history)
+            for field in required_top_level:
+                self.assertIn(field, repair, msg=f"machine SSOT required top-level field missing: {field}")
+            assert_nested_paths(self, repair, conditional_paths["when_last_good_present"])
+            assert_nested_paths(self, repair, conditional_paths["when_repair_required"])
 
     def test_failed_attempt_preserves_last_good_and_exposes_stale_reference_only_in_current_status(self):
         with tempfile.TemporaryDirectory() as tmp:
