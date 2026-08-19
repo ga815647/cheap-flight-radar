@@ -1,0 +1,44 @@
+name: One-shot operational correctness patch
+
+on:
+  push:
+    branches:
+      - fix/operator-same-day-reacquisition-20260815
+    paths:
+      - ".github/workflows/dev-operational-correctness-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout operator PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/operator-same-day-reacquisition-20260815
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply operational correctness package
+        run: python scripts/dev_operational_correctness_patch.py
+
+      - name: Install
+        run: python -m pip install -e .
+
+      - name: Gate
+        run: python -m unittest discover -s tests -v
+
+      - name: Commit durable package
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PRODUCT_INTENT.md flight-radar.yaml docs src tests
+          git commit -m "Fix Radar operational health and notification semantics"
+          git push origin HEAD:fix/operator-same-day-reacquisition-20260815
