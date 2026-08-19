@@ -143,6 +143,8 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
             radar_item(replace(base, record_id="incomplete", complete_airfare=False)),
             radar_item(replace(base, record_id="nonexact", verification_state="exact_search")),
             radar_item(replace(base, record_id="wrong-class", evidence_class="weak_seed")),
+            radar_item(replace(base, record_id="failed"), state="exact_search_failed"),
+            radar_item(replace(base, record_id="non-converged"), state="exact_search_non_converged"),
             radar_item(replace(base, record_id="stale", observed_at="2026-08-17T00:00:00+08:00")),
             radar_item(replace(base, record_id="no-provenance", booking_token=None, legs=(AirfareLeg("TPE", "KIX", "2026-10-05"),))),
             radar_item(None, state="weak_seed"),
@@ -161,12 +163,14 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
         self.assertEqual([item.exact.record_id for item in selected], ["p2000", "p2500"])
 
     def test_equal_price_ties_have_stable_complete_order(self):
-        pool = (
-            radar_item(exact_record("z-id", price=3000)),
-            radar_item(exact_record("a-id", price=3000)),
+        first = exact_record("a-id", price=3000)
+        second = replace(
+            exact_record("z-id", price=3000),
+            legs=(AirfareLeg("TPE", "KIX", "2026-10-05", "09:00+08:00", "13:00+09:00"),),
         )
+        pool = (radar_item(second), radar_item(first))
         selected = select_absolute_low_non_deals(run_result(pool=pool), policy=deepcopy(self.policy))
-        self.assertEqual([item.exact.record_id for item in selected], ["a-id"])
+        self.assertEqual([item.exact.record_id for item in selected], ["a-id", "z-id"])
 
     def test_identical_input_repeated_and_reordered_has_identical_selected_ids(self):
         first = radar_item(exact_record("first", price=2500, destination="FUK"))
@@ -192,10 +196,16 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
         self.assertEqual(tuple(producer["ordering"]), SUPPORTED_ORDERING)
         self.assertEqual(producer["budget"]["max_selected_count"], 5)
         self.assertFalse(self.policy["ftr_handoff"]["canonical_activation"]["enabled"])
-        drifted = deepcopy(self.policy)
-        drifted["ftr_handoff"]["absolute_low_non_deal_producer"]["ordering"] = ["record_id_asc"]
-        with self.assertRaisesRegex(FTRAbsoluteLowPolicyError, "ordering drifted"):
-            validate_absolute_low_policy(drifted)
+        drift_cases = (
+            ("source_collection", "generic_signals", "source_collection drifted"),
+            ("ordering", ["record_id_asc"], "ordering drifted"),
+        )
+        for field, value, message in drift_cases:
+            with self.subTest(field=field):
+                drifted = deepcopy(self.policy)
+                drifted["ftr_handoff"]["absolute_low_non_deal_producer"][field] = value
+                with self.assertRaisesRegex(FTRAbsoluteLowPolicyError, message):
+                    validate_absolute_low_policy(drifted)
 
 
 class NonAnomalyRuntimeAdapter:

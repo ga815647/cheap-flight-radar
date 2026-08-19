@@ -48,6 +48,10 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
         raise FTRAbsoluteLowPolicyError("absolute-low producer contract_version is unsupported")
     if str(producer.get("output_state") or "") != OUTPUT_STATE:
         raise FTRAbsoluteLowPolicyError("absolute-low producer output_state drifted")
+    if str(producer.get("contract_state") or "") != "implemented_pre_activation":
+        raise FTRAbsoluteLowPolicyError("absolute-low producer contract_state drifted")
+    if str(producer.get("source_collection") or "") != "current_run_exact_non_deal_candidates":
+        raise FTRAbsoluteLowPolicyError("absolute-low producer source_collection drifted")
     if tuple(str(value) for value in (producer.get("input_states") or ())) != SUPPORTED_INPUT_STATES:
         raise FTRAbsoluteLowPolicyError("absolute-low producer input_states drifted")
     if tuple(str(value) for value in (producer.get("ordering") or ())) != SUPPORTED_ORDERING:
@@ -56,6 +60,12 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
     limit = budget.get("max_selected_count")
     if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
         raise FTRAbsoluteLowPolicyError("absolute-low max_selected_count must be a positive integer")
+    if budget.get("independent_of_search_final_shortlist_limit") is not True:
+        raise FTRAbsoluteLowPolicyError("absolute-low budget must remain independent of search shortlist")
+    if budget.get("independent_of_publication_display_limits") is not True:
+        raise FTRAbsoluteLowPolicyError("absolute-low budget must remain independent of publication limits")
+    if budget.get("new_provider_calls") != 0:
+        raise FTRAbsoluteLowPolicyError("absolute-low producer must not add provider calls")
     eligibility = _mapping(producer.get("eligibility"))
     max_age = eligibility.get("max_observation_age_hours")
     if isinstance(max_age, bool) or not isinstance(max_age, int) or max_age <= 0:
@@ -66,14 +76,55 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
         raise FTRAbsoluteLowPolicyError("absolute-low evidence_class must remain exact_revalidated_candidate")
     if tuple(str(value) for value in (eligibility.get("allowed_surfaces") or ())) != ("exact", "open_jaw"):
         raise FTRAbsoluteLowPolicyError("absolute-low allowed_surfaces drifted")
+    required_eligibility_flags = (
+        "require_non_deal",
+        "require_exact_record",
+        "require_complete_outbound_return_airfare",
+        "require_positive_complete_airfare_twd",
+        "require_exact_outbound_and_return_dates",
+        "require_concrete_itinerary_identity",
+        "require_reproducible_search_identity",
+        "require_source_evidence_provenance",
+        "require_existing_cfr_revalidation_trust",
+        "require_current_observation",
+    )
+    if any(eligibility.get(field) is not True for field in required_eligibility_flags):
+        raise FTRAbsoluteLowPolicyError("absolute-low required eligibility flags drifted")
+    if tuple(str(value) for value in (eligibility.get("trusted_evidence_any_of") or ())) != (
+        "booking_url",
+        "evidence_url",
+        "booking_token",
+        "provider_leg_identity",
+    ):
+        raise FTRAbsoluteLowPolicyError("absolute-low trusted evidence contract drifted")
     isolation = _mapping(producer.get("generic_signal_isolation"))
     if isolation.get("generic_signal_collection_is_not_selector_input") is not True:
         raise FTRAbsoluteLowPolicyError("generic Signal isolation must remain enabled")
     if isolation.get("classification_signal_alone_is_ineligible") is not True:
         raise FTRAbsoluteLowPolicyError("Signal classification alone must remain ineligible")
+    if isolation.get("weak_seed_promotion") != "forbidden":
+        raise FTRAbsoluteLowPolicyError("weak-seed promotion must remain forbidden")
+    if isolation.get("cached_or_promotional_hint_promotion") != "forbidden":
+        raise FTRAbsoluteLowPolicyError("cached/promotional hint promotion must remain forbidden")
     deal_isolation = _mapping(producer.get("deal_isolation"))
+    if deal_isolation.get("formal_deal_input") != "excluded":
+        raise FTRAbsoluteLowPolicyError("formal Deal input must remain excluded")
+    if deal_isolation.get("matching_deal_record_or_itinerary") != "excluded":
+        raise FTRAbsoluteLowPolicyError("matching Deal identity must remain excluded")
     if deal_isolation.get("formal_deal_relabel_or_duplicate") != "forbidden":
         raise FTRAbsoluteLowPolicyError("formal Deal relabel/duplicate must remain forbidden")
+    if str(producer.get("anomaly_ranking_role") or "") != "none":
+        raise FTRAbsoluteLowPolicyError("absolute-low producer must not become anomaly ranking")
+    if str(producer.get("ftr_weighted_score") or "") != "forbidden":
+        raise FTRAbsoluteLowPolicyError("FTR weighted score must remain forbidden")
+    if producer.get("normal_cfr_deal_ranking_unchanged") is not True:
+        raise FTRAbsoluteLowPolicyError("normal CFR Deal ranking must remain unchanged")
+    if producer.get("preserve_existing_route_identity") is not True:
+        raise FTRAbsoluteLowPolicyError("existing route identity preservation drifted")
+    if str(producer.get("rp06_new_open_jaw_or_return_gateway_acquisition") or "") != "out_of_scope":
+        raise FTRAbsoluteLowPolicyError("RP-06 acquisition boundary drifted")
+    if str(producer.get("canonical_ftr_activation") or "") != "pending_disabled_until_RP-04":
+        raise FTRAbsoluteLowPolicyError("canonical FTR activation boundary drifted")
     canonical = _mapping(ftr.get("canonical_activation"))
     if canonical.get("enabled") is not False:
         raise FTRAbsoluteLowPolicyError("RP-02 must not activate canonical FTR runtime")

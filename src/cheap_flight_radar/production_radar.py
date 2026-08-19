@@ -931,17 +931,17 @@ class ProductionRadar:
         provider_failures = list(reconcile_provider_failures(coverage, provider_failures))
         coverage["provider_health"] = derive_provider_health(coverage, provider_failures)
         return RadarRunResult(
-  run_id,
-  local_run_at.isoformat(),
-  tuple(deals),
-  tuple(signal_by_key.values()),
-  coverage,
-  tuple(provider_failures),
-  exact_non_deal_candidates=tuple(
-      item
-      for item in exact_signals
-      if item.state == "exact_revalidated_candidate" and item.exact is not None
-  ),
+            run_id,
+            local_run_at.isoformat(),
+            tuple(deals),
+            tuple(signal_by_key.values()),
+            coverage,
+            tuple(provider_failures),
+            exact_non_deal_candidates=tuple(
+                item
+                for item in exact_signals
+                if item.state == "exact_revalidated_candidate" and item.exact is not None
+            ),
         )
 
     async def revalidate_open_jaw(self, *, legs: Sequence[tuple[str, str, str]]) -> ProviderResult:
