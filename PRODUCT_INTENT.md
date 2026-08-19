@@ -157,3 +157,16 @@ When deciding future architecture or policy, ask first:
 If a crawler rule, scoring rule, transport model, source-coverage requirement, or historical-model requirement does not serve that product goal, it is a candidate for simplification or removal.
 
 Do not ask the user to decide implementation questions that can only be answered after source/tool experimentation. Measure first, then propose the smallest policy necessary.
+
+## 15. Downstream Family Trip Radar handoff
+
+Cheap Flight Radar is the airfare producer for Family Trip Radar (FTR), but the two products keep separate ranking semantics. CFR continues to decide airfare Deal truth from airfare evidence; FTR decides whole-trip worth after adding home access, lodging, usable time, child fit and other travel factors.
+
+- CFR should publish a compact, machine-readable downstream feed from terminal acquisition evidence instead of requiring FTR to scrape CFR presentation output or depend on chat/project memory.
+- The downstream feed contains formal CFR Deals plus a **bounded, explicitly selected absolute-low non-Deal airfare set**. A generic Signal is never silently promoted into that absolute-low set merely because it has a low-looking price.
+- Every downstream airfare variant retains exact dates, complete airfare, actual Taiwan outbound/return gateway, destination-side route shape, observed time, verification/evidence references and whether it came from Deal or absolute-low selection. CFR anomaly score/classification remains provenance; it is not FTR's travel-value score.
+- Canonical handoff evidence is immutable and Git-backed. A mutable latest manifest may advance only after a terminal, schema-valid, consumable snapshot has been written and checksummed. Failed production must preserve the previous last-good manifest rather than synthesize or overwrite it.
+- A truthfully partial run may publish degraded coverage when fresh usable evidence survives. Broad provider/coverage collapse must not masquerade as a healthy fresh snapshot.
+- Explicit Search-mode/scoped acquisitions and same-day recovery acquisitions use separate provenance modes. Scoped search evidence never overwrites canonical daily latest; successful same-day recovery may advance canonical latest after proving fresh health.
+- GitHub Actions artifacts are **optional debug convenience only**, never a correctness or handoff dependency. Artifact quota exhaustion must not prevent acquisition evidence, canonical manifest publication, or downstream FTR consumption.
+- The producer contract is versioned. Breaking field/meaning changes require a schema-major change; consumers fail closed on unsupported major versions, missing snapshots, checksum mismatch, or non-terminal producer state.
