@@ -27,31 +27,22 @@ jobs:
       - name: Install
         run: python -m pip install -e .
 
-      - name: Extract and run RP-02 implementation payload
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          text = Path('.github/workflows/rp02-bootstrap.yml').read_text(encoding='utf-8')
-          start = text.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
-          end = text.index("\n          PY\n", start)
-          body = text[start:end]
-          body = '\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines()) + '\n'
-          Path('/tmp/rp02_apply.py').write_text(body, encoding='utf-8')
-          PY
-          python /tmp/rp02_apply.py
-
-      - name: Remove transient workflows from final branch diff
-        run: rm .github/workflows/rp02-bootstrap.yml .github/workflows/rp02-trigger.yml
+      - name: Apply idempotent RP-02 implementation
+        run: python scripts/rp02_continue.py
 
       - name: Full deterministic Gate
         run: python -m unittest discover -s tests -v
 
-      - name: Commit tested implementation
+      - name: Commit only tested RP-02 product changes
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add flight-radar.yaml docs/ftr-handoff.md \
+            src/cheap_flight_radar/production_radar.py \
+            src/cheap_flight_radar/production_runtime.py \
+            src/cheap_flight_radar/ftr_handoff.py \
+            src/cheap_flight_radar/ftr_absolute_low.py \
+            tests/test_ftr_handoff.py tests/test_ftr_absolute_low.py
           git commit -m 'RP-02: add bounded FTR absolute-low non-Deal producer'
           git push origin HEAD:feat/rp02-ftr-absolute-low-producer
