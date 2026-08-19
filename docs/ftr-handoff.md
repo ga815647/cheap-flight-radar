@@ -10,7 +10,9 @@ The handoff therefore carries airfare facts and provenance only. It must never e
 
 ## Schema and modes
 
-Current schema: `1.0`.
+Current snapshot/manifest schema: `2.0`.
+
+RP-01 advances the pre-activation contract from `1.0` to `2.0` because coverage slice state and freshness meaning are now stricter: provider/surface/origin/market states must come from execution evidence, and `stale_reference` is a mutable current-usability interpretation rather than an immutable snapshot state. This is a semantic change, not an optional-field-only addition.
 
 Schema versions use `MAJOR.MINOR`:
 
@@ -22,7 +24,9 @@ Run modes:
 
 - `canonical_daily` — routine canonical feed;
 - `scoped_search` — user/Search-mode date-scoped acquisition; immutable but never advances canonical `latest.json`;
-- `same_day_recovery` — explicit post-repair reacquisition; may advance canonical latest after it satisfies the same consumability contract.
+- `same_day_recovery` — explicit post-repair reacquisition identity; a future producer transition may advance canonical latest only after the recovery satisfies the consumability/recovery contract.
+
+`operator_reacquisition` is a separate CFR acquisition identity. It is **not** an FTR snapshot mode and cannot impersonate `same_day_recovery` for repair clearing.
 
 ## Durable paths
 
@@ -38,9 +42,13 @@ Scoped-search manifest:
 
 `data/ftr-feed/scoped/<run_id>.json`
 
-The history ref is the durable Git-backed evidence substrate. Actions artifacts are not part of this contract.
+Mutable current-status / repair incident envelope:
 
-## Snapshot contract
+`data/ftr-feed/current-status.json`
+
+These paths live on the Git-backed CFR evidence ref defined by `flight-radar.yaml`. Actions artifacts are not part of correctness or persistence.
+
+## Immutable snapshot contract
 
 Every snapshot contains at least:
 
@@ -52,12 +60,40 @@ Every snapshot contains at least:
 - `producer_commit_sha`;
 - `terminal_state`;
 - `coverage_state`;
-- `freshness_state`;
-- normalized coverage/provenance;
+- snapshot-generation `freshness_state`;
+- normalized execution/coverage/provenance;
 - `candidate_counts`;
 - `opportunities` with retained variants.
 
-A snapshot is consumable only when `terminal_state=success`, its schema is supported, and producer coverage has not collapsed. A truthfully partial fresh run may be consumable with `coverage_state=degraded` / `freshness_state=degraded`.
+Snapshot freshness is historical truth at generation time and is limited to:
+
+- `fresh` — complete current producer coverage;
+- `degraded` — current, usable surviving evidence with truthfully incomplete coverage.
+
+`stale_reference` is deliberately **not** a valid immutable snapshot freshness value. If a later producer attempt fails, an old snapshot remains byte-for-byte unchanged; the mutable current-status envelope is what says that the preserved last-good feed is now only a stale reference.
+
+A snapshot is consumable only when `terminal_state=success`, its schema is supported, and producer coverage has not collapsed. A truthfully partial fresh run may be consumable as `coverage_state=degraded` / `freshness_state=degraded`. Broad producer collapse is not a new consumable snapshot.
+
+## Slice-faithful coverage truth
+
+The FTR handoff carries explicit provider, surface, origin and market states. The only exported slice states are:
+
+- `succeeded`;
+- `failed`;
+- `not_attempted`.
+
+The producer normalizes these states from real CFR execution/coverage evidence. It must not infer success from Deal count, candidate count, the mere absence of `provider_failed`, or an unknown source status.
+
+Key rules:
+
+- `Deal` count is never provider-health or coverage truth.
+- Surface state comes from execution attempts/provider calls/outcomes/suppression/unsupported evidence. A complete-but-empty provider response may still be an execution success; zero records by itself is not a technical failure.
+- Origin state preserves the producer's attempted/degraded/failed/not-attempted evidence. A degraded or failed origin cannot become `succeeded` because some other origin worked.
+- Market state may use the shared destination-free origin sweep as its execution basis; market candidate counters remain metrics only and never decide success.
+- Provider identity must be traceable to normalized record, failure or explicit provider-execution evidence. The handoff does not hard-code `gflights` as a universal truth.
+- Multiple providers require explicit per-provider execution evidence; aggregate health is insufficient to invent individual provider state.
+- Unknown or contradictory execution evidence fails closed.
+- Optional surfaces may truthfully be `not_attempted`. Required discovery-surface gaps degrade/fail the run rather than becoming silent success.
 
 ## Opportunity and variant identity
 
@@ -85,15 +121,9 @@ Each retained variant carries:
 
 Generic CFR Signals are not automatically eligible. `absolute_low_non_deal` must be explicitly selected upstream by the dedicated bounded price-floor producer path.
 
-## Coverage truth
+## Atomic canonical publication
 
-Deal count is never provider-health evidence. The handoff carries explicit execution/coverage state so downstream zero candidates cannot be mistaken for proof of a healthy zero-opportunity market.
-
-At minimum, downstream consumers can see provider health, origin coverage, market coverage metrics and provider/operational failures. The producer must represent partial coverage as degraded rather than silently dropping failed slices.
-
-## Atomic publication
-
-Publication order is strict:
+Publication order remains strict:
 
 1. build normalized snapshot from terminal run evidence;
 2. validate schema and consumability;
@@ -106,6 +136,59 @@ If any step before manifest publication fails, the previous canonical `latest.js
 
 A snapshot path is immutable. Reusing an existing path is allowed only when the bytes are identical.
 
+During an active `repair_required` incident, future recovery orchestration must not advance canonical latest using an invalid/incomplete recovery. RP-01 provides the deterministic validation/state-transition primitive; live `same_day_recovery` acquisition/orchestration remains out of scope.
+
+## Durable current status and `repair_required`
+
+`current-status.json` is mutable current usability state; it is **not** historical fare evidence. It records at least:
+
+- current producer status/health interpretation;
+- boolean `repair_required`;
+- `current_freshness_state` (`fresh`, `degraded`, `stale_reference`, or `unavailable` when no last-good exists);
+- preserved `last_good` run, snapshot path, manifest path and SHA-256;
+- active repair incident set time;
+- trigger/latest failed attempt identity, terminal/validation state and evidence reference;
+- deterministic clearing contract.
+
+On a failed or invalid new canonical producer attempt:
+
+1. do **not** rewrite/delete the last-good immutable snapshot;
+2. do **not** rewrite/delete canonical `latest.json`;
+3. persist/update `current-status.json` with `repair_required=true`;
+4. preserve the last-good pointer/checksum;
+5. expose that preserved feed only as `current_freshness_state=stale_reference` (or `unavailable` if no last-good exists).
+
+The preserved snapshot's own `freshness_state` remains exactly what it was when produced. A later failure never rewrites historical bytes from `fresh` to `stale_reference`.
+
+Scoped-search and operator-reacquisition failures cannot create/replace the canonical FTR repair incident. They remain distinct identities and cannot alter canonical current-state semantics merely by existing.
+
+## Repair clearing contract
+
+RP-01 defines and tests the transition contract but does **not** perform live recovery acquisition.
+
+For the current contract, an active `repair_required` incident clears only when durable canonical evidence proves all of the following:
+
+- transition identity is `same_day_recovery`;
+- canonical latest points to that exact recovery run;
+- terminal state is success;
+- schema major is supported;
+- snapshot validates;
+- coverage is complete;
+- snapshot freshness is `fresh`;
+- producer health is healthy;
+- manifest/snapshot run identity matches;
+- SHA-256 of immutable snapshot bytes matches the manifest.
+
+The incident does **not** clear merely because:
+
+- a workflow is green;
+- an `operator_reacquisition` exists;
+- a `scoped_search` exists;
+- publication recovery succeeded;
+- a stale/last-good snapshot still exists.
+
+An invalid clearing attempt leaves the durable incident unchanged. A successful clear retains a durable cleared transition record identifying the recovery run and checksum.
+
 ## Consumer fail-closed behavior
 
 A consumer rejects the feed when any of these occur:
@@ -116,17 +199,12 @@ A consumer rejects the feed when any of these occur:
 - referenced snapshot missing;
 - SHA-256 mismatch;
 - snapshot schema invalid;
-- manifest/snapshot run identity mismatch.
+- manifest/snapshot run identity mismatch;
+- unknown or inconsistent coverage state.
+
+When `repair_required=true`, a consumer must consult `current-status.json`: preserved last-good bytes may be inspected only as a stale reference/current fallback, never as current bookable evidence.
 
 The consumer does not guess, patch or fabricate missing producer fields.
-
-## Degraded and stale behavior
-
-A broad provider/coverage collapse is not published as a new fresh consumable snapshot. The last-good canonical snapshot may remain available as historical/stale reference, but FTR must not present it as current bookable evidence.
-
-A partially degraded but fresh run may publish a degraded snapshot when surviving evidence is still valid. FTR may use those fresh variants while clearly reporting incomplete coverage.
-
-Persistent `repair_required` incident state and automatic same-day recovery orchestration are separate operational layers built on top of this producer contract; they must never mutate stale evidence into fresh evidence.
 
 ## GitHub Actions artifact policy
 
@@ -140,11 +218,4 @@ Production correctness depends on Git-backed evidence, not Actions artifact stor
 
 ## Activation sequence
 
-The contract primitive and tests may land before runtime activation. Normal production handoff activation should occur only after:
-
-1. the operational SSOT contains the handoff policy;
-2. the bounded absolute-low non-Deal producer path is explicit and tested;
-3. canonical success staging writes snapshot + manifest to the durable history ref;
-4. scoped Search-mode evidence cannot advance canonical latest;
-5. recovery semantics are tested;
-6. the full repository unit-test gate and exact-head PR checks pass.
+The contract primitive and tests may land before runtime activation. **Canonical FTR handoff remains pending/disabled in RP-01.** Normal production handoff activation should occur only after the later repair packages satisfy the SSOT activation gates, including bounded absolute-low production, scoped-search wiring, canonical producer staging and live recovery orchestration.
