@@ -29,16 +29,20 @@ class OperationalCorrectnessTests(unittest.TestCase):
                 "TSA": {"status": "attempted", "returned_flight_deals": 3, "explore_seeds": 2},
             },
             "execution": {
-                "flight_deals": execution_surface(attempts=2, records=6, successes=1, failures=1),
+                "flight_deals": execution_surface(attempts=3, records=6, successes=1, failures=2),
                 "explore": execution_surface(attempts=2, records=4, successes=2),
             },
         }
-        failures = reconcile_provider_failures(coverage, ())
+        existing = ({"origin": "TPE", "surface": "flight_deals", "error": "one explicit provider failure"},)
+        failures = reconcile_provider_failures(coverage, existing)
         health = derive_provider_health(coverage, failures)
         self.assertEqual(health["status"], "degraded")
-        self.assertEqual(health["technical_failure_count"], 1)
-        self.assertTrue(failures)
-        self.assertEqual(failures[0]["surface"], "execution_counters")
+        self.assertEqual(health["technical_failure_count"], 2)
+        self.assertEqual(failures[0]["surface"], "flight_deals")
+        reconciled = [item for item in failures if item.get("kind") == "counter_reconciliation"]
+        self.assertEqual(len(reconciled), 1)
+        self.assertEqual(reconciled[0]["surface"], "flight_deals")
+        self.assertIn("1 lacked explicit per-call failure evidence", reconciled[0]["error"])
 
     def test_complete_empty_is_not_technical_failure_but_broad_discovery_collapse_is_provider_failed(self):
         coverage = {
