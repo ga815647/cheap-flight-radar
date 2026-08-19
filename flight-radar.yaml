@@ -1147,15 +1147,33 @@ ftr_handoff:
     ref: history/price-observations
     path: data/ftr-feed/current-status.json
     mutable_current_usability_not_historical_fare_truth: true
-    required_fields:
-    - current_producer_status
+    required_top_level_fields:
+    - schema_version
+    - updated_at
+    - producer_status
     - producer_health_status
     - repair_required
     - current_freshness_state
-    - preserved_last_good_reference
-    - failed_attempt_identity_and_evidence_reference
-    - incident_set_time
+    - last_good
+    - repair_incident
     - clearing_contract
+    required_nested_paths:
+      when_last_good_present:
+      - last_good.run_id
+      - last_good.schema_version
+      - last_good.snapshot_path
+      - last_good.snapshot_sha256
+      - last_good.snapshot_freshness_at_generation
+      - last_good.manifest_path
+      when_repair_required:
+      - repair_incident.state
+      - repair_incident.set_at
+      - repair_incident.trigger_attempt
+      - repair_incident.latest_failed_attempt
+      - repair_incident.latest_failed_attempt.run_id
+      - repair_incident.latest_failed_attempt.mode
+      - repair_incident.latest_failed_attempt.attempt_state
+      - repair_incident.latest_failed_attempt.evidence_ref
     failed_attempt_preserves_last_good_latest: true
     failed_attempt_preserves_last_good_snapshot_bytes: true
     failed_or_invalid_canonical_attempt_sets_repair_required: true
