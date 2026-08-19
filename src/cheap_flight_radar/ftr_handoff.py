@@ -1,8 +1,8 @@
 """Durable Cheap Flight Radar -> Family Trip Radar handoff contract.
 
 This module is a deterministic producer-contract primitive. It does not schedule
-or perform airfare acquisition. It keeps immutable historical snapshot truth
-separate from the mutable current-usability / repair-incident envelope.
+or perform airfare acquisition. Immutable snapshot truth is deliberately kept
+separate from mutable current-usability / repair-incident state.
 """
 from __future__ import annotations
 
@@ -14,21 +14,17 @@ import re
 from typing import Any, Mapping, Sequence
 
 
-# RP-01 intentionally advances the pre-activation contract major. Coverage
-# slice status semantics are now execution-faithful, and stale_reference is no
-# longer a mutable interpretation that may be written into an old snapshot.
+# RP-01 advances the pre-activation contract major because coverage slice state
+# and freshness meaning change incompatibly from the 1.0 implementation.
 SCHEMA_VERSION = "2.0"
 SUPPORTED_SCHEMA_MAJOR = 2
 VALID_MODES = frozenset({"canonical_daily", "scoped_search", "same_day_recovery"})
 VALID_ATTEMPT_IDENTITIES = frozenset({
-    "canonical_daily",
-    "scoped_search",
-    "same_day_recovery",
-    "operator_reacquisition",
+    "canonical_daily", "scoped_search", "same_day_recovery", "operator_reacquisition",
 })
 VALID_SNAPSHOT_FRESHNESS_STATES = frozenset({"fresh", "degraded"})
+VALID_FRESHNESS_STATES = VALID_SNAPSHOT_FRESHNESS_STATES  # compatibility alias
 VALID_CURRENT_FRESHNESS_STATES = frozenset({"fresh", "degraded", "stale_reference", "unavailable"})
-VALID_COVERAGE_STATES = frozenset({"complete", "degraded", "failed"})
 VALID_SLICE_STATES = frozenset({"succeeded", "failed", "not_attempted"})
 VALID_CANDIDATE_KINDS = frozenset({"deal", "absolute_low_non_deal"})
 VALID_PROVIDER_HEALTH_STATES = frozenset({"healthy", "degraded", "provider_failed"})
@@ -64,8 +60,7 @@ def _safe_component(value: str) -> str:
 
 
 def _schema_major(version: Any) -> int:
-    text = str(version or "")
-    match = re.fullmatch(r"(\d+)\.(\d+)", text)
+    match = re.fullmatch(r"(\d+)\.(\d+)", str(version or ""))
     if not match:
         raise FTRHandoffError("schema_version must use MAJOR.MINOR")
     return int(match.group(1))
@@ -84,15 +79,11 @@ def _nonnegative_int(value: Any, *, field: str) -> int:
 
 
 def _record_for_item(item: Mapping[str, Any]) -> Mapping[str, Any]:
-    exact = _mapping(item.get("exact"))
-    if exact:
-        return exact
-    return _mapping(item.get("discovery"))
+    return _mapping(item.get("exact")) or _mapping(item.get("discovery"))
 
 
 def _record_iata(record: Mapping[str, Any], field: str) -> str:
-    identity = _mapping(record.get(field))
-    value = str(identity.get("iata") or "")
+    value = str(_mapping(record.get(field)).get("iata") or "")
     if len(value) != 3 or value != value.upper() or not value.isalpha():
         raise FTRHandoffError(f"record {field} must contain exact uppercase IATA")
     return value
@@ -109,8 +100,7 @@ def _outbound_date(record: Mapping[str, Any]) -> str:
 
 
 def _return_date(record: Mapping[str, Any]) -> str:
-    reproducible = _mapping(record.get("reproducible_search"))
-    requested = reproducible.get("return_date")
+    requested = _mapping(record.get("reproducible_search")).get("return_date")
     if isinstance(requested, str) and requested:
         return requested
     legs = record.get("legs")
@@ -169,7 +159,6 @@ def _variant_from_item(item: Mapping[str, Any]) -> Mapping[str, Any] | None:
 
     outbound_gateway = _record_iata(record, "origin")
     arrival_airport, departure_airport = _destination_route_shape(record)
-    return_gateway = _taiwan_return_gateway(record, outbound_gateway=outbound_gateway)
     record_id = str(record.get("record_id") or "")
     if not record_id:
         raise FTRHandoffError("eligible airfare item missing record_id")
@@ -178,8 +167,8 @@ def _variant_from_item(item: Mapping[str, Any]) -> Mapping[str, Any] | None:
         airlines = ()
     legs = record.get("legs")
     normalized_legs = list(legs) if isinstance(legs, Sequence) and not isinstance(legs, (str, bytes)) else []
-    destination_identity = _mapping(record.get("destination"))
     origin_identity = _mapping(record.get("origin"))
+    destination_identity = _mapping(record.get("destination"))
     return {
         "variant_id": record_id,
         "candidate_kind": kind,
@@ -189,15 +178,9 @@ def _variant_from_item(item: Mapping[str, Any]) -> Mapping[str, Any] | None:
         "outbound_date": _outbound_date(record),
         "return_date": _return_date(record),
         "taiwan_origin_gateway": outbound_gateway,
-        "taiwan_return_gateway": return_gateway,
-        "destination_route_shape": {
-            "arrival_airport": arrival_airport,
-            "departure_airport": departure_airport,
-        },
-        "destination": {
-            "city": destination_identity.get("city"),
-            "country": destination_identity.get("country"),
-        },
+        "taiwan_return_gateway": _taiwan_return_gateway(record, outbound_gateway=outbound_gateway),
+        "destination_route_shape": {"arrival_airport": arrival_airport, "departure_airport": departure_airport},
+        "destination": {"city": destination_identity.get("city"), "country": destination_identity.get("country")},
         "airlines": [str(value) for value in airlines],
         "legs": normalized_legs,
         "verification_state": record.get("verification_state"),
@@ -224,7 +207,8 @@ def _surface_state(name: str, raw: Mapping[str, Any]) -> Mapping[str, Any]:
     if counters["successes"] + counters["empty"] + counters["failures"] > provider_calls:
         raise FTRHandoffError(f"coverage.execution.{name} outcomes exceed provider_calls")
 
-    for key in ("exact_attempts", "exact_provider_calls", "exact_successes", "exact_empty", "exact_failures", "exact_suppressed"):
+    exact_keys = ("exact_attempts", "exact_provider_calls", "exact_successes", "exact_empty", "exact_failures", "exact_suppressed")
+    for key in exact_keys:
         if key in raw:
             counters[key] = _nonnegative_int(raw.get(key), field=f"coverage.execution.{name}.{key}")
     if "exact_attempts" in counters:
@@ -234,11 +218,8 @@ def _surface_state(name: str, raw: Mapping[str, Any]) -> Mapping[str, Any]:
             raise FTRHandoffError(f"coverage.execution.{name} exact outcomes exceed exact_provider_calls")
 
     failed = bool(
-        counters["failures"]
-        or counters["suppressed"]
-        or counters["unsupported"]
-        or counters.get("exact_failures", 0)
-        or counters.get("exact_suppressed", 0)
+        counters["failures"] or counters["suppressed"] or counters["unsupported"]
+        or counters.get("exact_failures", 0) or counters.get("exact_suppressed", 0)
     )
     if attempts == 0 and counters["unsupported"] == 0:
         status = "not_attempted"
@@ -251,17 +232,14 @@ def _surface_state(name: str, raw: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _origin_state(origin: str, raw: Mapping[str, Any]) -> Mapping[str, Any]:
     source_status = str(raw.get("status") or "")
-    mapping = {
-        "attempted": "succeeded",
-        "complete": "succeeded",
-        "degraded": "failed",
-        "failed": "failed",
-        "not_attempted": "not_attempted",
+    source_to_slice = {
+        "attempted": "succeeded", "complete": "succeeded", "degraded": "failed",
+        "failed": "failed", "not_attempted": "not_attempted",
     }
-    if source_status not in mapping:
+    if source_status not in source_to_slice:
         raise FTRHandoffError(f"unknown origin coverage state for {origin}: {source_status or '<missing>'}")
     return {
-        "status": mapping[source_status],
+        "status": source_to_slice[source_status],
         "source_status": source_status,
         "returned_flight_deals": _nonnegative_int(raw.get("returned_flight_deals", 0), field=f"coverage.origins.{origin}.returned_flight_deals"),
         "explore_seeds": _nonnegative_int(raw.get("explore_seeds", 0), field=f"coverage.origins.{origin}.explore_seeds"),
@@ -273,35 +251,27 @@ def _market_state(market: str, raw: Mapping[str, Any], origin_states: Sequence[s
     source_status = raw.get("status")
     if source_status is None:
         if origin_states and all(value == "succeeded" for value in origin_states):
-            status = "succeeded"
-            basis = "shared_destination_free_origin_coverage"
+            status, basis = "succeeded", "shared_destination_free_origin_coverage"
         elif origin_states and all(value == "not_attempted" for value in origin_states):
-            status = "not_attempted"
-            basis = "shared_destination_free_origin_coverage"
+            status, basis = "not_attempted", "shared_destination_free_origin_coverage"
         elif origin_states:
-            status = "failed"
-            basis = "shared_destination_free_origin_coverage"
+            status, basis = "failed", "shared_destination_free_origin_coverage"
         else:
             raise FTRHandoffError(f"market coverage for {market} has no execution basis")
     else:
-        source = str(source_status)
-        mapping = {
-            "attempted": "succeeded",
-            "complete": "succeeded",
-            "succeeded": "succeeded",
-            "degraded": "failed",
-            "failed": "failed",
-            "not_attempted": "not_attempted",
+        source_to_slice = {
+            "attempted": "succeeded", "complete": "succeeded", "succeeded": "succeeded",
+            "degraded": "failed", "failed": "failed", "not_attempted": "not_attempted",
         }
-        if source not in mapping:
+        source = str(source_status)
+        if source not in source_to_slice:
             raise FTRHandoffError(f"unknown market coverage state for {market}: {source}")
-        status = mapping[source]
+        status = source_to_slice[source]
         basis = str(raw.get("coverage_basis") or "explicit_market_execution")
     metrics: dict[str, int] = {}
     for key, value in raw.items():
-        if key in {"status", "coverage_basis"}:
-            continue
-        metrics[str(key)] = _nonnegative_int(value, field=f"coverage.markets.{market}.{key}")
+        if key not in {"status", "coverage_basis"}:
+            metrics[str(key)] = _nonnegative_int(value, field=f"coverage.markets.{market}.{key}")
     return {"status": status, "basis": basis, "metrics": metrics}
 
 
@@ -324,13 +294,7 @@ def _provider_ids(run_result: Mapping[str, Any], coverage: Mapping[str, Any]) ->
 
 
 def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Normalize actual producer execution into FTR slice-faithful coverage.
-
-    Candidate/Deal counts are preserved only as market metrics. They never
-    decide provider, surface, origin, market, or overall health state.
-    Unknown or contradictory execution evidence fails closed.
-    """
-
+    """Normalize real execution evidence into slice-faithful FTR coverage."""
     coverage = _mapping(run_result.get("coverage"))
     if not coverage:
         raise FTRHandoffError("producer run is missing coverage evidence")
@@ -363,10 +327,7 @@ def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
     markets_raw = _mapping(coverage.get("markets"))
     if not markets_raw:
         raise FTRHandoffError("producer run is missing market coverage evidence")
-    markets = {
-        str(market): _market_state(str(market), _mapping(raw), origin_states)
-        for market, raw in markets_raw.items()
-    }
+    markets = {str(name): _market_state(str(name), _mapping(raw), origin_states) for name, raw in markets_raw.items()}
 
     provider_ids = _provider_ids(run_result, coverage)
     if not provider_ids:
@@ -379,11 +340,11 @@ def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
     if explicit_provider_execution:
         for provider in provider_ids:
             raw = _mapping(explicit_provider_execution.get(provider))
-            source_status = str(raw.get("status") or "")
-            if source_status not in VALID_SLICE_STATES:
+            status = str(raw.get("status") or "")
+            if status not in VALID_SLICE_STATES:
                 raise FTRHandoffError(f"provider {provider} requires explicit succeeded/failed/not_attempted state")
             providers[provider] = {
-                "status": source_status,
+                "status": status,
                 "health_status": str(raw.get("health_status") or health_status),
                 "surfaces": [str(value) for value in (raw.get("surfaces") or [])],
                 "reasons": [str(value) for value in (raw.get("reasons") or provider_health.get("reasons") or [])],
@@ -401,7 +362,7 @@ def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
         raise FTRHandoffError("provider_failed health contradicts succeeded provider execution")
 
     failed_slice = any(value["status"] == "failed" for value in surfaces.values())
-    failed_slice = failed_slice or any(value != "succeeded" for value in origins.values())
+    failed_slice = failed_slice or any(value["status"] != "succeeded" for value in origins.values())
     failed_slice = failed_slice or any(value["status"] != "succeeded" for value in markets.values())
     required_surface_gap = any(surfaces[name]["status"] != "succeeded" for name in REQUIRED_DISCOVERY_SURFACES)
     if health_status == "provider_failed":
@@ -410,7 +371,6 @@ def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
         overall_state = "degraded"
     else:
         overall_state = "complete"
-
     return {
         "providers": providers,
         "surfaces": surfaces,
@@ -424,14 +384,9 @@ def summarize_coverage(run_result: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def build_snapshot(
-    run_result: Mapping[str, Any],
-    *,
-    producer_commit_sha: str,
-    mode: str | None = None,
-    generated_at: str | None = None,
+    run_result: Mapping[str, Any], *, producer_commit_sha: str,
+    mode: str | None = None, generated_at: str | None = None,
 ) -> Mapping[str, Any]:
-    """Build one normalized, consumable FTR airfare-feed snapshot."""
-
     run_id = str(run_result.get("radar_run_id") or run_result.get("run_id") or "")
     if not run_id:
         raise FTRHandoffError("run_result missing run_id")
@@ -472,16 +427,13 @@ def build_snapshot(
     grouped: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
     for variant in by_variant.values():
         shape = _mapping(variant["destination_route_shape"])
-        key = (str(shape["arrival_airport"]), str(shape["departure_airport"]))
-        grouped.setdefault(key, []).append(variant)
+        grouped.setdefault((str(shape["arrival_airport"]), str(shape["departure_airport"])), []).append(variant)
 
     opportunities: list[Mapping[str, Any]] = []
     for (arrival, departure), variants in sorted(grouped.items()):
         variants.sort(key=lambda value: (
-            int(value["complete_airfare_twd"]),
-            str(value["outbound_date"]),
-            str(value["return_date"]),
-            str(value["variant_id"]),
+            int(value["complete_airfare_twd"]), str(value["outbound_date"]),
+            str(value["return_date"]), str(value["variant_id"]),
         ))
         opportunities.append({
             "opportunity_id": f"air-{arrival.lower()}-{departure.lower()}",
@@ -574,12 +526,18 @@ def validate_snapshot(snapshot: Mapping[str, Any], *, supported_major: int = SUP
 
 def snapshot_repository_path(snapshot: Mapping[str, Any]) -> str:
     observed = datetime.fromisoformat(_aware_timestamp(snapshot.get("observed_at"), field="observed_at").replace("Z", "+00:00"))
-    run_id = _safe_component(str(snapshot.get("run_id") or ""))
-    return f"data/ftr-feed/{observed:%Y/%m/%d}/{run_id}.json"
+    return f"data/ftr-feed/{observed:%Y/%m/%d}/{_safe_component(str(snapshot.get('run_id') or ''))}.json"
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
     return (json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+
+
+def _atomic_write(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(payload)
+    temporary.replace(path)
 
 
 def snapshot_checksum(snapshot: Mapping[str, Any]) -> str:
@@ -613,36 +571,6 @@ def manifest_repository_path(snapshot: Mapping[str, Any]) -> str:
     raise FTRHandoffError(f"unsupported handoff mode: {mode}")
 
 
-def _atomic_write(path: Path, payload: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(payload)
-    temporary.replace(path)
-
-
-def stage_snapshot(*, history_dir: Path, snapshot: Mapping[str, Any]) -> Mapping[str, str]:
-    """Write immutable snapshot first and its manifest last."""
-    validate_snapshot(snapshot)
-    snapshot_rel = snapshot_repository_path(snapshot)
-    manifest_rel = manifest_repository_path(snapshot)
-    snapshot_path = history_dir / snapshot_rel
-    manifest_path = history_dir / manifest_rel
-    snapshot_data = _json_bytes(snapshot)
-    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-    if snapshot_path.exists():
-        if snapshot_path.read_bytes() != snapshot_data:
-            raise FileExistsError(f"immutable FTR snapshot already exists with different content: {snapshot_path}")
-    else:
-        _atomic_write(snapshot_path, snapshot_data)
-    manifest = manifest_for_snapshot(snapshot)
-    _atomic_write(manifest_path, _json_bytes(manifest))
-    return {
-        "snapshot_path": snapshot_rel,
-        "manifest_path": manifest_rel,
-        "snapshot_sha256": str(manifest["snapshot_sha256"]),
-    }
-
-
 def _read_json_mapping(path: Path, *, label: str) -> Mapping[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -653,25 +581,40 @@ def _read_json_mapping(path: Path, *, label: str) -> Mapping[str, Any]:
     return raw
 
 
-def _load_manifest(*, history_dir: Path, manifest_path: str) -> Mapping[str, Any]:
-    path = history_dir / manifest_path
-    if not path.exists():
-        raise FTRHandoffError(f"handoff manifest missing: {manifest_path}")
-    manifest = _read_json_mapping(path, label="handoff manifest")
-    if _schema_major(manifest.get("schema_version")) != SUPPORTED_SCHEMA_MAJOR:
-        raise FTRHandoffError("handoff manifest schema major unsupported")
-    if str(manifest.get("terminal_state") or "") != "success":
-        raise FTRHandoffError("handoff manifest is not terminal success")
-    return manifest
+def stage_snapshot(*, history_dir: Path, snapshot: Mapping[str, Any]) -> Mapping[str, str]:
+    """Write immutable snapshot first and manifest last, fail-closed under repair."""
+    validate_snapshot(snapshot)
+    snapshot_rel = snapshot_repository_path(snapshot)
+    manifest_rel = manifest_repository_path(snapshot)
+
+    # While repair is active, canonical latest can move only to a complete,
+    # fresh same-day recovery. Scoped snapshots remain isolated.
+    status_path = history_dir / CURRENT_STATUS_PATH
+    if manifest_rel == CANONICAL_LATEST_PATH and status_path.exists():
+        current = load_current_status(history_dir=history_dir)
+        if bool(current.get("repair_required")):
+            if str(snapshot.get("mode")) != "same_day_recovery":
+                raise FTRHandoffError("active repair incident blocks non-recovery canonical latest advancement")
+            if str(snapshot.get("coverage_state")) != "complete" or str(snapshot.get("freshness_state")) != "fresh":
+                raise FTRHandoffError("incomplete recovery cannot advance canonical latest while repair_required")
+
+    snapshot_path = history_dir / snapshot_rel
+    snapshot_data = _json_bytes(snapshot)
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    if snapshot_path.exists():
+        if snapshot_path.read_bytes() != snapshot_data:
+            raise FileExistsError(f"immutable FTR snapshot already exists with different content: {snapshot_path}")
+    else:
+        _atomic_write(snapshot_path, snapshot_data)
+    manifest = manifest_for_snapshot(snapshot)
+    _atomic_write(history_dir / manifest_rel, _json_bytes(manifest))
+    return {"snapshot_path": snapshot_rel, "manifest_path": manifest_rel, "snapshot_sha256": str(manifest["snapshot_sha256"])}
 
 
 def load_manifest_snapshot(
-    *,
-    history_dir: Path,
-    manifest_path: str = CANONICAL_LATEST_PATH,
+    *, history_dir: Path, manifest_path: str = CANONICAL_LATEST_PATH,
     supported_major: int = SUPPORTED_SCHEMA_MAJOR,
 ) -> Mapping[str, Any]:
-    """Fail-closed consumer helper used by contract tests and future FTR code."""
     manifest_file = history_dir / manifest_path
     if not manifest_file.exists():
         raise FTRHandoffError(f"handoff manifest missing: {manifest_path}")
@@ -702,10 +645,10 @@ def load_manifest_snapshot(
 
 
 def _last_good_reference(*, history_dir: Path) -> Mapping[str, Any] | None:
-    manifest_path = history_dir / CANONICAL_LATEST_PATH
-    if not manifest_path.exists():
+    path = history_dir / CANONICAL_LATEST_PATH
+    if not path.exists():
         return None
-    manifest = _read_json_mapping(manifest_path, label="canonical latest manifest")
+    manifest = _read_json_mapping(path, label="canonical latest manifest")
     snapshot = load_manifest_snapshot(history_dir=history_dir)
     return {
         "run_id": str(snapshot["run_id"]),
@@ -717,10 +660,26 @@ def _last_good_reference(*, history_dir: Path) -> Mapping[str, Any] | None:
     }
 
 
+def _clearing_contract() -> Mapping[str, bool | str]:
+    return {
+        "required_mode": "same_day_recovery",
+        "requires_terminal_success": True,
+        "requires_supported_schema": True,
+        "requires_complete_coverage": True,
+        "requires_fresh_snapshot": True,
+        "requires_manifest_snapshot_checksum_match": True,
+        "operator_reacquisition_cannot_clear": True,
+        "scoped_search_cannot_clear": True,
+        "publication_recovery_cannot_clear": True,
+    }
+
+
 def validate_current_status(status: Mapping[str, Any], *, supported_major: int = SUPPORTED_SCHEMA_MAJOR) -> None:
     if _schema_major(status.get("schema_version")) != supported_major:
         raise FTRHandoffError("current status schema major unsupported")
     _aware_timestamp(status.get("updated_at"), field="current_status.updated_at")
+    if not str(status.get("producer_status") or "") or not str(status.get("producer_health_status") or ""):
+        raise FTRHandoffError("current status must retain producer status and health")
     repair_required = status.get("repair_required")
     if not isinstance(repair_required, bool):
         raise FTRHandoffError("current status repair_required must be boolean")
@@ -767,76 +726,48 @@ def _write_current_status(*, history_dir: Path, status: Mapping[str, Any]) -> Ma
 
 
 def stage_current_status_from_snapshot(
-    *,
-    history_dir: Path,
-    snapshot: Mapping[str, Any],
-    updated_at: str | None = None,
+    *, history_dir: Path, snapshot: Mapping[str, Any], updated_at: str | None = None,
 ) -> Mapping[str, Any]:
-    """Record current healthy/degraded state after a canonical manifest exists.
-
-    This is a persistence primitive only; no production workflow calls it in
-    RP-01. An active repair incident may not be cleared by ordinary canonical,
-    scoped, or operator identity.
-    """
+    """Persist healthy/degraded current state; does not activate any workflow."""
     validate_snapshot(snapshot)
     if str(snapshot.get("mode")) not in {"canonical_daily", "same_day_recovery"}:
         raise FTRHandoffError("only canonical/recovery snapshots can define canonical current status")
     loaded = load_manifest_snapshot(history_dir=history_dir)
     if str(loaded.get("run_id")) != str(snapshot.get("run_id")):
         raise FTRHandoffError("canonical latest does not reference the supplied snapshot")
-    status_path = history_dir / CURRENT_STATUS_PATH
-    if status_path.exists():
+    if (history_dir / CURRENT_STATUS_PATH).exists():
         existing = load_current_status(history_dir=history_dir)
         if bool(existing.get("repair_required")):
             raise FTRHandoffError("active repair incident may clear only through validated recovery transition")
     manifest = _read_json_mapping(history_dir / CANONICAL_LATEST_PATH, label="canonical latest manifest")
-    status = {
+    provider_health = _mapping(_mapping(snapshot.get("coverage")).get("provider_health"))
+    return _write_current_status(history_dir=history_dir, status={
         "schema_version": SCHEMA_VERSION,
         "updated_at": _aware_timestamp(updated_at or datetime.now(timezone.utc).isoformat(), field="current_status.updated_at"),
         "producer_status": "healthy" if snapshot["coverage_state"] == "complete" else "degraded",
-        "producer_health_status": str(_mapping(snapshot["coverage"]).get("provider_health", {}).get("status") or ""),
+        "producer_health_status": str(provider_health.get("status") or "unknown"),
         "repair_required": False,
         "current_freshness_state": str(snapshot["freshness_state"]),
         "last_good": {
-            "run_id": str(snapshot["run_id"]),
-            "schema_version": str(snapshot["schema_version"]),
-            "snapshot_path": str(manifest["snapshot_path"]),
-            "snapshot_sha256": str(manifest["snapshot_sha256"]),
-            "snapshot_freshness_at_generation": str(snapshot["freshness_state"]),
-            "manifest_path": CANONICAL_LATEST_PATH,
+            "run_id": str(snapshot["run_id"]), "schema_version": str(snapshot["schema_version"]),
+            "snapshot_path": str(manifest["snapshot_path"]), "snapshot_sha256": str(manifest["snapshot_sha256"]),
+            "snapshot_freshness_at_generation": str(snapshot["freshness_state"]), "manifest_path": CANONICAL_LATEST_PATH,
         },
         "repair_incident": None,
-        "clearing_contract": {
-            "required_mode": "same_day_recovery",
-            "requires_terminal_success": True,
-            "requires_supported_schema": True,
-            "requires_complete_coverage": True,
-            "requires_fresh_snapshot": True,
-            "requires_manifest_snapshot_checksum_match": True,
-            "operator_reacquisition_cannot_clear": True,
-            "scoped_search_cannot_clear": True,
-            "publication_recovery_cannot_clear": True,
-        },
-    }
-    return _write_current_status(history_dir=history_dir, status=status)
+        "clearing_contract": _clearing_contract(),
+    })
 
 
 def mark_repair_required(
-    *,
-    history_dir: Path,
-    failed_attempt: Mapping[str, Any],
-    incident_set_at: str | None = None,
+    *, history_dir: Path, failed_attempt: Mapping[str, Any], incident_set_at: str | None = None,
 ) -> Mapping[str, Any]:
-    """Persist a canonical repair incident without touching last-good bytes."""
+    """Persist canonical repair incident without touching last-good snapshot/latest."""
     mode = str(failed_attempt.get("mode") or "")
     if mode not in {"canonical_daily", "same_day_recovery"}:
         raise FTRHandoffError("scoped/operator attempts cannot create or replace the canonical repair incident")
-    attempt_state = str(failed_attempt.get("attempt_state") or "")
-    if attempt_state not in {"failed", "invalid"}:
+    if str(failed_attempt.get("attempt_state") or "") not in {"failed", "invalid"}:
         raise FTRHandoffError("repair incident requires failed or invalid producer attempt")
-    run_id = str(failed_attempt.get("run_id") or "")
-    evidence_ref = str(failed_attempt.get("evidence_ref") or "")
-    if not run_id or not evidence_ref:
+    if not str(failed_attempt.get("run_id") or "") or not str(failed_attempt.get("evidence_ref") or ""):
         raise FTRHandoffError("failed attempt requires run_id and evidence_ref")
     now = _aware_timestamp(incident_set_at or datetime.now(timezone.utc).isoformat(), field="repair_incident.set_at")
     last_good = _last_good_reference(history_dir=history_dir)
@@ -844,15 +775,13 @@ def mark_repair_required(
     if (history_dir / CURRENT_STATUS_PATH).exists():
         existing = load_current_status(history_dir=history_dir)
     existing_incident = _mapping(existing.get("repair_incident")) if existing and existing.get("repair_required") else {}
-    set_at = str(existing_incident.get("set_at") or now)
-    trigger_attempt = _mapping(existing_incident.get("trigger_attempt")) or dict(failed_attempt)
     incident = {
         "state": "repair_required",
-        "set_at": set_at,
-        "trigger_attempt": dict(trigger_attempt),
+        "set_at": str(existing_incident.get("set_at") or now),
+        "trigger_attempt": dict(_mapping(existing_incident.get("trigger_attempt")) or failed_attempt),
         "latest_failed_attempt": dict(failed_attempt),
     }
-    status = {
+    return _write_current_status(history_dir=history_dir, status={
         "schema_version": SCHEMA_VERSION,
         "updated_at": now,
         "producer_status": "failed",
@@ -861,34 +790,14 @@ def mark_repair_required(
         "current_freshness_state": "stale_reference" if last_good is not None else "unavailable",
         "last_good": last_good,
         "repair_incident": incident,
-        "clearing_contract": {
-            "required_mode": "same_day_recovery",
-            "requires_terminal_success": True,
-            "requires_supported_schema": True,
-            "requires_complete_coverage": True,
-            "requires_fresh_snapshot": True,
-            "requires_manifest_snapshot_checksum_match": True,
-            "operator_reacquisition_cannot_clear": True,
-            "scoped_search_cannot_clear": True,
-            "publication_recovery_cannot_clear": True,
-        },
-    }
-    return _write_current_status(history_dir=history_dir, status=status)
+        "clearing_contract": _clearing_contract(),
+    })
 
 
 def clear_repair_required(
-    *,
-    history_dir: Path,
-    recovery_run_id: str,
-    attempt_mode: str,
-    cleared_at: str | None = None,
+    *, history_dir: Path, recovery_run_id: str, attempt_mode: str, cleared_at: str | None = None,
 ) -> Mapping[str, Any]:
-    """Clear repair state only after a validated fresh same-day recovery.
-
-    The canonical latest manifest must already point to the exact recovery
-    snapshot, so terminal/schema/snapshot/checksum checks are all re-read from
-    durable bytes. Invalid transitions leave the incident file untouched.
-    """
+    """Clear incident only after exact durable same-day recovery validation."""
     current = load_current_status(history_dir=history_dir)
     if not bool(current.get("repair_required")):
         raise FTRHandoffError("no active repair incident to clear")
@@ -901,7 +810,7 @@ def clear_repair_required(
         raise FTRHandoffError("canonical latest snapshot is not same_day_recovery")
     if str(snapshot.get("coverage_state")) != "complete" or str(snapshot.get("freshness_state")) != "fresh":
         raise FTRHandoffError("recovery must prove complete fresh coverage before clearing repair_required")
-    health = str(_mapping(snapshot.get("coverage")).get("provider_health", {}).get("status") or "")
+    health = str(_mapping(_mapping(snapshot.get("coverage")).get("provider_health")).get("status") or "")
     if health != "healthy":
         raise FTRHandoffError("recovery provider health must be healthy before clearing repair_required")
     manifest = _read_json_mapping(history_dir / CANONICAL_LATEST_PATH, label="canonical latest manifest")
@@ -911,13 +820,11 @@ def clear_repair_required(
         "state": "cleared",
         "cleared_at": clear_time,
         "cleared_by": {
-            "mode": "same_day_recovery",
-            "run_id": str(recovery_run_id),
-            "snapshot_path": str(manifest["snapshot_path"]),
-            "snapshot_sha256": str(manifest["snapshot_sha256"]),
+            "mode": "same_day_recovery", "run_id": str(recovery_run_id),
+            "snapshot_path": str(manifest["snapshot_path"]), "snapshot_sha256": str(manifest["snapshot_sha256"]),
         },
     })
-    status = {
+    return _write_current_status(history_dir=history_dir, status={
         "schema_version": SCHEMA_VERSION,
         "updated_at": clear_time,
         "producer_status": "healthy",
@@ -925,34 +832,32 @@ def clear_repair_required(
         "repair_required": False,
         "current_freshness_state": "fresh",
         "last_good": {
-            "run_id": str(snapshot["run_id"]),
-            "schema_version": str(snapshot["schema_version"]),
-            "snapshot_path": str(manifest["snapshot_path"]),
-            "snapshot_sha256": str(manifest["snapshot_sha256"]),
-            "snapshot_freshness_at_generation": str(snapshot["freshness_state"]),
-            "manifest_path": CANONICAL_LATEST_PATH,
+            "run_id": str(snapshot["run_id"]), "schema_version": str(snapshot["schema_version"]),
+            "snapshot_path": str(manifest["snapshot_path"]), "snapshot_sha256": str(manifest["snapshot_sha256"]),
+            "snapshot_freshness_at_generation": str(snapshot["freshness_state"]), "manifest_path": CANONICAL_LATEST_PATH,
         },
         "repair_incident": incident,
         "clearing_contract": dict(_mapping(current.get("clearing_contract"))),
-    }
-    return _write_current_status(history_dir=history_dir, status=status)
+    })
 
 
 def load_current_reference(*, history_dir: Path) -> Mapping[str, Any]:
-    """Expose current usability without mutating immutable snapshot truth."""
+    """Expose stale-current fallback without mutating immutable snapshot bytes."""
     status = load_current_status(history_dir=history_dir)
     if bool(status.get("repair_required")):
         last_good = _mapping(status.get("last_good"))
         if not last_good:
             return {"current_freshness_state": "unavailable", "snapshot": None, "status": status}
-        snapshot_path = str(last_good.get("snapshot_path") or "")
-        snapshot_file = history_dir / snapshot_path
+        snapshot_file = history_dir / str(last_good.get("snapshot_path") or "")
         if not snapshot_file.exists():
             raise FTRHandoffError("last-good snapshot referenced by current status is missing")
         payload = snapshot_file.read_bytes()
         if hashlib.sha256(payload).hexdigest() != str(last_good.get("snapshot_sha256") or ""):
             raise FTRHandoffError("last-good snapshot checksum mismatch")
-        snapshot = json.loads(payload.decode("utf-8"))
+        try:
+            snapshot = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise FTRHandoffError("last-good snapshot is unreadable") from exc
         if not isinstance(snapshot, Mapping):
             raise FTRHandoffError("last-good snapshot must be a JSON object")
         validate_snapshot(snapshot)
