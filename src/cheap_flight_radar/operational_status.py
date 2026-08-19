@@ -42,17 +42,33 @@ def _explicit_empty_schema(execution: Mapping[str, Any]) -> bool:
     )
 
 
-def technical_failure_count(coverage: Mapping[str, Any]) -> int:
+def _counter_failure_requirements(coverage: Mapping[str, Any]) -> tuple[tuple[str, int], ...]:
+    """Return technical failure evidence that execution counters require.
+
+    The counter surface and failure-evidence surface differ for conventional
+    exact completion and flexible-date exact completion, so normalize those
+    names here. Legacy execution rows are excluded because their ``failures``
+    field also counted complete-but-empty responses.
+    """
+
     execution = _execution(coverage)
     if not _explicit_empty_schema(execution):
-        return 0
-    total = 0
-    for details in execution.values():
-        if not isinstance(details, Mapping):
-            continue
-        total += _as_int(details.get("failures"))
-        total += _as_int(details.get("exact_failures"))
-    return total
+        return ()
+    required: list[tuple[str, int]] = []
+    for counter_surface, raw in execution.items():
+        details = _mapping(raw)
+        failure_count = _as_int(details.get("failures"))
+        if failure_count:
+            evidence_surface = "exact" if counter_surface == "conventional_exact" else str(counter_surface)
+            required.append((evidence_surface, failure_count))
+        exact_failure_count = _as_int(details.get("exact_failures"))
+        if exact_failure_count:
+            required.append(("flexible_exact", exact_failure_count))
+    return tuple(required)
+
+
+def technical_failure_count(coverage: Mapping[str, Any]) -> int:
+    return sum(count for _, count in _counter_failure_requirements(coverage))
 
 
 def _origin_gaps(coverage: Mapping[str, Any]) -> tuple[list[str], list[str]]:
@@ -123,17 +139,22 @@ def reconcile_provider_failures(
     coverage: Mapping[str, Any],
     provider_failures: Sequence[Mapping[str, str]],
 ) -> tuple[Mapping[str, str], ...]:
-    """Keep explicit failures and add fail-safe evidence for impossible gaps."""
+    """Keep explicit failures and fill any counter-to-evidence gaps fail-safely."""
 
     failures: list[Mapping[str, str]] = list(provider_failures)
-    technical_failures = technical_failure_count(coverage)
-    if technical_failures and not failures:
-        failures.append({
-            "origin": "run",
-            "surface": "execution_counters",
-            "kind": "counter_reconciliation",
-            "error": f"execution counters recorded {technical_failures} technical provider failure(s)",
-        })
+    for surface, expected_count in _counter_failure_requirements(coverage):
+        observed_count = sum(1 for item in failures if str(item.get("surface") or "") == surface)
+        missing_count = max(0, expected_count - observed_count)
+        if missing_count:
+            failures.append({
+                "origin": "run",
+                "surface": surface,
+                "kind": "counter_reconciliation",
+                "error": (
+                    f"execution counters recorded {expected_count} technical failure(s) on {surface}; "
+                    f"{missing_count} lacked explicit per-call failure evidence"
+                ),
+            })
     if _discovery_collapse(coverage) and not any(item.get("kind") == "coverage_collapse" for item in failures):
         failures.append({
             "origin": "all",
