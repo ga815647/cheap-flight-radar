@@ -76,6 +76,8 @@ class RadarRunResult:
     signals: tuple[RadarItem, ...]
     coverage: Mapping[str, Any]
     provider_failures: tuple[Mapping[str, str], ...]
+    exact_non_deal_candidates: tuple[RadarItem, ...] = ()
+    ftr_absolute_low_non_deals: tuple[RadarItem, ...] = ()
 
 
 def load_policy(path: Path) -> Mapping[str, Any]:
@@ -928,7 +930,19 @@ class ProductionRadar:
         }
         provider_failures = list(reconcile_provider_failures(coverage, provider_failures))
         coverage["provider_health"] = derive_provider_health(coverage, provider_failures)
-        return RadarRunResult(run_id, local_run_at.isoformat(), tuple(deals), tuple(signal_by_key.values()), coverage, tuple(provider_failures))
+        return RadarRunResult(
+            run_id,
+            local_run_at.isoformat(),
+            tuple(deals),
+            tuple(signal_by_key.values()),
+            coverage,
+            tuple(provider_failures),
+            exact_non_deal_candidates=tuple(
+                item
+                for item in exact_signals
+                if item.state == "exact_revalidated_candidate" and item.exact is not None
+            ),
+        )
 
     async def revalidate_open_jaw(self, *, legs: Sequence[tuple[str, str, str]]) -> ProviderResult:
         if len(legs) < 2:
@@ -994,7 +1008,9 @@ def write_run_artifacts(result: RadarRunResult, *, policy: Mapping[str, Any], ou
                 "run_at": result.run_at,
                 "deal_count": len(result.deals),
                 "signal_count": len(result.signals),
+                "ftr_absolute_low_non_deal_count": len(result.ftr_absolute_low_non_deals),
                 "deals": [_item_json(item) for item in result.deals],
+                "ftr_absolute_low_non_deals": [_item_json(item) for item in result.ftr_absolute_low_non_deals],
                 "coverage": result.coverage,
                 "provider_health": result.coverage.get("provider_health", {}),
                 "provider_failures": list(result.provider_failures),

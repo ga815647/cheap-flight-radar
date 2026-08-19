@@ -114,7 +114,10 @@ def _return_date(record: Mapping[str, Any]) -> str:
 def _candidate_kind(item: Mapping[str, Any]) -> str | None:
     if str(item.get("classification") or "") == "Deal" and str(item.get("state") or "") == "deal":
         return "deal"
-    if str(item.get("state") or "") == "ftr_absolute_low_non_deal":
+    if (
+        str(item.get("classification") or "") == "Signal"
+        and str(item.get("state") or "") == "ftr_absolute_low_non_deal"
+    ):
         return "absolute_low_non_deal"
     return None
 
@@ -405,12 +408,20 @@ def build_snapshot(
     freshness_state = "fresh" if coverage_state == "complete" else "degraded"
 
     items: list[Mapping[str, Any]] = []
-    for raw in [*(run_result.get("deals") or []), *(run_result.get("signals") or [])]:
+    for raw in run_result.get("deals") or []:
         if not isinstance(raw, Mapping):
-            raise FTRHandoffError("run_result deals/signals must contain JSON objects")
+            raise FTRHandoffError("run_result deals must contain JSON objects")
         variant = _variant_from_item(raw)
-        if variant is not None:
-            items.append(variant)
+        if variant is None or variant["candidate_kind"] != "deal":
+            raise FTRHandoffError("run_result deals must retain formal Deal identity")
+        items.append(variant)
+    for raw in run_result.get("ftr_absolute_low_non_deals") or []:
+        if not isinstance(raw, Mapping):
+            raise FTRHandoffError("run_result ftr_absolute_low_non_deals must contain JSON objects")
+        variant = _variant_from_item(raw)
+        if variant is None or variant["candidate_kind"] != "absolute_low_non_deal":
+            raise FTRHandoffError("dedicated absolute-low collection contains a non-selected item")
+        items.append(variant)
 
     by_variant: dict[str, Mapping[str, Any]] = {}
     for variant in items:
