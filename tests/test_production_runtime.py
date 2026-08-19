@@ -14,6 +14,7 @@ from cheap_flight_radar.production_runtime import ProductionExecutionAdapter, ru
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_AT = datetime.fromisoformat("2026-08-13T02:00:00+08:00")
+STICKY_ERROR = "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
 
 
 def discovery(record_id: str, destination: str, price: int, typical: int, discount: float) -> AirfareRecord:
@@ -108,6 +109,35 @@ class FakeAdapter:
         return ProviderResult("gflights", "open_jaw", "complete", (record,))
 
 
+class CircuitDelegate:
+    def __init__(self):
+        self.calls = []
+        self.responses = {}
+
+    def _result(self, surface):
+        return self.responses.get(surface, ProviderResult("gflights", surface, "complete", ()))
+
+    async def flight_deals(self, **kwargs):
+        self.calls.append("flight_deals")
+        return self._result("flight_deals")
+
+    async def explore(self, **kwargs):
+        self.calls.append("explore")
+        return self._result("explore")
+
+    async def exact(self, **kwargs):
+        self.calls.append("exact")
+        return self._result("exact")
+
+    async def cheapest_dates(self, **kwargs):
+        self.calls.append("cheapest_dates")
+        return self._result("cheapest_dates")
+
+    async def open_jaw(self, **kwargs):
+        self.calls.append("open_jaw")
+        return self._result("open_jaw")
+
+
 class ProductionExecutionAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_multi_city_uses_reserved_adapter_not_primary_client(self):
         multi_city = FakeAdapter()
@@ -132,11 +162,79 @@ class ProductionExecutionAdapterTests(unittest.IsolatedAsyncioTestCase):
             [("TPE", "NRT", "2026-09-10", "2026-09-14")],
         )
 
+    async def test_sticky_429_opens_primary_circuit_and_suppresses_later_client_calls(self):
+        primary = CircuitDelegate()
+        primary.responses["flight_deals"] = ProviderResult("gflights", "flight_deals", "failed", error=STICKY_ERROR)
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=CircuitDelegate())
+        first = await adapter.flight_deals(origin="TPE", anchor_departure="2026-09-01", anchor_return="2026-09-04")
+        second = await adapter.explore(origin="TPE")
+        self.assertTrue(first.request_sent)
+        self.assertFalse(second.request_sent)
+        self.assertIn("circuit_open", second.error)
+        self.assertEqual(primary.calls, ["flight_deals"])
+
+    async def test_generic_429_without_sticky_marker_does_not_open_circuit(self):
+        primary = CircuitDelegate()
+        primary.responses["flight_deals"] = ProviderResult("gflights", "flight_deals", "failed", error="HTTP 429 Too Many Requests")
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=CircuitDelegate())
+        await adapter.flight_deals(origin="TPE", anchor_departure="2026-09-01", anchor_return="2026-09-04")
+        second = await adapter.explore(origin="TPE")
+        self.assertTrue(second.request_sent)
+        self.assertEqual(primary.calls, ["flight_deals", "explore"])
+
+    async def test_complete_empty_does_not_open_circuit(self):
+        primary = CircuitDelegate()
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=CircuitDelegate())
+        await adapter.flight_deals(origin="TPE", anchor_departure="2026-09-01", anchor_return="2026-09-04")
+        second = await adapter.explore(origin="TPE")
+        self.assertTrue(second.request_sent)
+        self.assertEqual(primary.calls, ["flight_deals", "explore"])
+
+    async def test_primary_and_multi_city_circuits_are_independent(self):
+        primary = CircuitDelegate()
+        multi = CircuitDelegate()
+        primary.responses["flight_deals"] = ProviderResult("gflights", "flight_deals", "failed", error=STICKY_ERROR)
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=multi)
+        await adapter.flight_deals(origin="TPE", anchor_departure="2026-09-01", anchor_return="2026-09-04")
+        result = await adapter.open_jaw(legs=[("TPE", "NRT", "2026-09-01"), ("KIX", "TPE", "2026-09-04")])
+        self.assertTrue(result.request_sent)
+        self.assertEqual(multi.calls, ["open_jaw"])
+
+    async def test_multi_city_sticky_circuit_does_not_block_primary(self):
+        primary = CircuitDelegate()
+        multi = CircuitDelegate()
+        multi.responses["open_jaw"] = ProviderResult("gflights", "open_jaw", "failed", error=STICKY_ERROR)
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=multi)
+        first = await adapter.open_jaw(legs=[("TPE", "NRT", "2026-09-01"), ("KIX", "TPE", "2026-09-04")])
+        second = await adapter.open_jaw(legs=[("TPE", "KIX", "2026-09-01"), ("NRT", "TPE", "2026-09-04")])
+        exact = await adapter.exact(origin="TPE", destination="NRT", departure_date="2026-09-01", return_date="2026-09-04")
+        self.assertTrue(first.request_sent)
+        self.assertFalse(second.request_sent)
+        self.assertTrue(exact.request_sent)
+        self.assertEqual(multi.calls, ["open_jaw"])
+        self.assertEqual(primary.calls, ["exact"])
+
 
 class ProductionRuntimeRetentionTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
+
+    async def test_sticky_discovery_circuit_counts_one_provider_failure_and_suppresses_followons(self):
+        primary = CircuitDelegate()
+        primary.responses["flight_deals"] = ProviderResult("gflights", "flight_deals", "failed", error=STICKY_ERROR)
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=CircuitDelegate())
+        result = await run_once(policy=deepcopy(self.policy), adapter=adapter, run_at=RUN_AT)
+        flight = result.coverage["execution"]["flight_deals"]
+        explore = result.coverage["execution"]["explore"]
+        self.assertEqual((flight["attempts"], flight["provider_calls"], flight["failures"], flight["suppressed"]), (12, 1, 1, 11))
+        self.assertEqual((explore["attempts"], explore["provider_calls"], explore["failures"], explore["suppressed"]), (4, 0, 0, 4))
+        self.assertEqual(result.coverage["provider_health"]["status"], "provider_failed")
+        self.assertEqual(result.coverage["provider_health"]["technical_failure_count"], 1)
+        self.assertEqual(result.coverage["provider_health"]["suppressed_request_count"], 15)
+        actual = [item for item in result.provider_failures if item.get("surface") == "flight_deals"]
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(primary.calls, ["flight_deals"])
 
     async def test_unselected_qualified_anomaly_is_retained_as_pending_signal(self):
         policy = deepcopy(self.policy)

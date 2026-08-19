@@ -304,13 +304,27 @@ def _coverage_html(manifest: Mapping[str, Any]) -> str:
         details = execution.get(surface)
         if not isinstance(details, Mapping):
             continue
-        execution_rows.append(
-            '<li><span>' + escape(surface.replace("_", " ")) + '</span><span class="status-badge neutral">'
-            + escape(
+        if "provider_calls" in details or "suppressed" in details:
+            summary = (
+                f"{details.get('attempts', 0)} logical attempts · {details.get('provider_calls', 0)} client calls · "
+                f"{details.get('suppressed', 0)} circuit-suppressed · {details.get('successes', 0)} success · "
+                f"{details.get('records', 0)} records · {details.get('empty', 0)} empty · "
+                f"{details.get('failures', 0)} technical failed · {details.get('unsupported', 0)} unsupported"
+            )
+            if details.get("exact_attempts") is not None:
+                summary += (
+                    f" · exact {details.get('exact_attempts', 0)} logical / {details.get('exact_provider_calls', 0)} client / "
+                    f"{details.get('exact_suppressed', 0)} circuit-suppressed / {details.get('exact_failures', 0)} technical failed"
+                )
+        else:
+            summary = (
                 f"{details.get('attempts', 0)} attempts · {details.get('successes', 0)} success · "
                 f"{details.get('records', 0)} records · {details.get('empty', 0)} empty · "
                 f"{details.get('failures', 0)} technical failed · {details.get('unsupported', 0)} unsupported"
-            ) + '</span></li>'
+            )
+        execution_rows.append(
+            '<li><span>' + escape(surface.replace("_", " ")) + '</span><span class="status-badge neutral">'
+            + escape(summary) + '</span></li>'
         )
     if coverage.get("deep_search_candidate_limit") is not None:
         execution_rows.append(

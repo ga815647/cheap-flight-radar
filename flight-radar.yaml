@@ -627,6 +627,25 @@ operational_health:
     all_required_discovery_surfaces_zero_usable_records: provider_failed
     partial_degradation_preserves_exact_revalidated_deals: true
     provider_failed_must_not_render_as_normal_zero_deal: true
+    sticky_rate_limit_circuit:
+      enabled: true
+      provider: gflights
+      fixed_client_lanes:
+      - primary
+      - multi_city
+      open_only_when_error_contains_all:
+      - HTTP 429 Too Many Requests
+      - all further requests on this client are blocked
+      first_sticky_failure_counts_as_technical_failure: true
+      later_same_lane_logical_calls:
+        invoke_provider_client: false
+        execution_class: circuit_suppressed
+        count_as_new_technical_failure: false
+      complete_empty_opens_circuit: false
+      generic_non_sticky_failure_opens_circuit: false
+      generic_429_without_sticky_marker_opens_circuit: false
+      reset_rate_limit: forbidden
+      automatic_retry: false
 publication:
   enabled: true
   platform: github_pages
