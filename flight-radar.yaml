@@ -1077,3 +1077,106 @@ return_windows_policy:
   role: search_hints_only
   formal_deal_minimum_away_hours: 24
   trip_length_does_not_affect_deal_status_or_ranking: true
+ftr_handoff:
+  status: pending_activation
+  canonical_activation:
+    enabled: false
+    enable_only_in_package: RP-04
+    rp01_changes_runtime_behavior: false
+  schema_version: "2.0"
+  schema_versioning:
+    format: MAJOR.MINOR
+    unsupported_major_action: fail_closed
+    optional_compatible_field_may_increment_minor: true
+    required_structure_or_field_meaning_change_requires_major: true
+  modes:
+  - canonical_daily
+  - scoped_search
+  - same_day_recovery
+  identity_separation:
+    operator_reacquisition: cfr_acquisition_identity_not_ftr_snapshot_mode
+    scoped_search_cannot_advance_canonical_latest: true
+    scoped_or_operator_cannot_clear_repair_required: true
+    same_day_recovery_is_only_current_repair_clear_identity: true
+  persistence:
+    durable_store: github_repository
+    repository: self
+    ref: history/price-observations
+    immutable_snapshot_path_template: data/ftr-feed/YYYY/MM/DD/{run_id}.json
+    canonical_latest_path: data/ftr-feed/latest.json
+    scoped_manifest_path_template: data/ftr-feed/scoped/{run_id}.json
+    immutable_snapshot_reuse_requires_identical_bytes: true
+    manifest_write_last: true
+    sha256_required: true
+  coverage:
+    preferred_evidence: existing_normalized_execution_and_coverage_evidence
+    required_dimensions:
+    - provider
+    - surface
+    - origin
+    - market
+    slice_states:
+    - succeeded
+    - failed
+    - not_attempted
+    partial_or_degraded_slice_cannot_be_hidden_by_overall_success: true
+    provider_success_cannot_be_inferred_from_not_provider_failed: true
+    unknown_or_inconsistent_action: fail_closed
+    deal_count_is_coverage_or_provider_health_truth: false
+    candidate_count_is_coverage_or_provider_health_truth: false
+    complete_empty_provider_response_may_be_execution_success: true
+    multiple_providers_require_explicit_per_provider_execution_evidence: true
+    market_candidate_metrics_are_not_market_execution_truth: true
+  freshness:
+    immutable_snapshot_states:
+    - fresh
+    - degraded
+    mutable_current_states:
+    - fresh
+    - degraded
+    - stale_reference
+    - unavailable
+    stale_reference_belongs_to_current_status_only: true
+    later_failure_never_mutates_old_snapshot_bytes: true
+    immutable_snapshot_freshness_is_generation_time_truth: true
+    broad_collapse_does_not_publish_new_fresh_snapshot: true
+    preserved_last_good_may_be_exposed_only_as_stale_reference_current_fallback: true
+  current_status:
+    durable_store: github_repository
+    repository: self
+    ref: history/price-observations
+    path: data/ftr-feed/current-status.json
+    mutable_current_usability_not_historical_fare_truth: true
+    required_fields:
+    - current_producer_status
+    - producer_health_status
+    - repair_required
+    - current_freshness_state
+    - preserved_last_good_reference
+    - failed_attempt_identity_and_evidence_reference
+    - incident_set_time
+    - clearing_contract
+    failed_attempt_preserves_last_good_latest: true
+    failed_attempt_preserves_last_good_snapshot_bytes: true
+    failed_or_invalid_canonical_attempt_sets_repair_required: true
+    scoped_or_operator_attempt_cannot_replace_canonical_incident: true
+    repair_required_clear:
+      required_mode: same_day_recovery
+      requires_terminal_success: true
+      requires_supported_schema: true
+      requires_valid_snapshot: true
+      requires_complete_coverage: true
+      requires_fresh_snapshot: true
+      requires_healthy_provider_status: true
+      requires_manifest_snapshot_run_identity_match: true
+      requires_manifest_snapshot_checksum_match: true
+      workflow_green_is_insufficient: true
+      operator_reacquisition_cannot_clear: true
+      scoped_search_cannot_clear: true
+      publication_recovery_cannot_clear: true
+      stale_snapshot_existence_cannot_clear: true
+  activation_dependencies:
+  - RP-02_bounded_absolute_low_non_deal_producer
+  - RP-03_scoped_search_acquisition_workflow
+  - RP-04_canonical_ftr_runtime_activation
+  - RP-05_live_same_day_recovery_orchestration
