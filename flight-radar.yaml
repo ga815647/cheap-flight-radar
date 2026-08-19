@@ -1107,12 +1107,16 @@ ftr_handoff:
       require_complete_outbound_return_airfare: true
       require_positive_complete_airfare_twd: true
       require_exact_outbound_and_return_dates: true
+      require_minimum_destination_stay: true
+      minimum_away_hours_reference: return_windows_policy.formal_deal_minimum_away_hours
+      minimum_away_comparison: strict_greater_than
       require_concrete_itinerary_identity: true
       require_reproducible_search_identity: true
       require_source_evidence_provenance: true
       require_existing_cfr_revalidation_trust: true
       require_current_observation: true
       max_observation_age_hours: 24
+      future_observed_at_action: exclude_fail_closed
       trusted_evidence_any_of:
       - booking_url
       - evidence_url
@@ -1126,6 +1130,7 @@ ftr_handoff:
     - non_exact_or_non_revalidated
     - failed_or_non_converged_exact
     - stale_only_evidence
+    - destination_stay_at_or_below_minimum_away_hours
     - formal_deal
     budget:
       max_selected_count: 5

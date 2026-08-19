@@ -34,7 +34,7 @@ def exact_record(
     return_gateway: str | None = None,
     outbound_date: str = "2026-10-05",
     return_date: str = "2026-10-09",
-    observed_at: str = "2026-08-19T08:05:00+08:00",
+    observed_at: str = "2026-08-19T07:55:00+08:00",
     verification_state: str = "revalidated",
     evidence_class: str = "exact_revalidated_candidate",
     complete_airfare: bool = True,
@@ -76,6 +76,39 @@ def exact_record(
         complete_airfare=complete_airfare,
         booking_token=booking_token,
         reproducible_search=reproducible,
+    )
+
+
+def timed_exact_record(
+    record_id: str,
+    *,
+    return_departure_time: str,
+    observed_at: str = "2026-08-19T07:55:00+08:00",
+) -> AirfareRecord:
+    base = exact_record(
+        record_id,
+        outbound_date="2026-10-05",
+        return_date="2026-10-06",
+        observed_at=observed_at,
+    )
+    return replace(
+        base,
+        legs=(
+            AirfareLeg(
+                "TPE",
+                "KIX",
+                "2026-10-05",
+                "2026-10-05T08:00:00+08:00",
+                "2026-10-05T12:00:00+09:00",
+            ),
+            AirfareLeg(
+                "KIX",
+                "TPE",
+                "2026-10-06",
+                return_departure_time,
+                "2026-10-06T16:00:00+08:00",
+            ),
+        ),
     )
 
 
@@ -180,6 +213,37 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
         b = select_absolute_low_non_deals(run_result(pool=(third, first, second)), policy=deepcopy(self.policy))
         self.assertEqual([item.exact.record_id for item in a], [item.exact.record_id for item in b])
 
+    def test_minimum_away_reuses_cfr_strict_greater_than_semantics(self):
+        at_boundary = radar_item(
+            timed_exact_record(
+                "stay-24h",
+                return_departure_time="2026-10-06T12:00:00+09:00",
+            )
+        )
+        over_boundary = radar_item(
+            timed_exact_record(
+                "stay-25h",
+                return_departure_time="2026-10-06T13:00:00+09:00",
+            )
+        )
+        selected = select_absolute_low_non_deals(
+            run_result(pool=(at_boundary, over_boundary)),
+            policy=deepcopy(self.policy),
+        )
+        self.assertEqual([item.exact.record_id for item in selected], ["stay-25h"])
+
+    def test_future_observed_at_fails_closed(self):
+        future = radar_item(
+            exact_record(
+                "future-observation",
+                observed_at="2026-08-19T08:00:01+08:00",
+            )
+        )
+        self.assertEqual(
+            select_absolute_low_non_deals(run_result(pool=(future,)), policy=deepcopy(self.policy)),
+            (),
+        )
+
     def test_existing_open_jaw_identity_is_preserved_without_new_search_behavior(self):
         source = radar_item(exact_record("open-jaw", price=4100, surface="open_jaw", return_gateway="KHH"))
         selected = select_absolute_low_non_deals(run_result(pool=(source,)), policy=deepcopy(self.policy))
@@ -206,6 +270,16 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
                 drifted["ftr_handoff"]["absolute_low_non_deal_producer"][field] = value
                 with self.assertRaisesRegex(FTRAbsoluteLowPolicyError, message):
                     validate_absolute_low_policy(drifted)
+
+        drifted_reference = deepcopy(self.policy)
+        drifted_reference["ftr_handoff"]["absolute_low_non_deal_producer"]["eligibility"]["minimum_away_hours_reference"] = "other.policy"
+        with self.assertRaisesRegex(FTRAbsoluteLowPolicyError, "minimum-away reference drifted"):
+            validate_absolute_low_policy(drifted_reference)
+
+        drifted_threshold = deepcopy(self.policy)
+        drifted_threshold["return_windows_policy"]["formal_deal_minimum_away_hours"] = 25
+        with self.assertRaisesRegex(FTRAbsoluteLowPolicyError, "minimum-away SSOT drifted"):
+            validate_absolute_low_policy(drifted_threshold)
 
 
 class NonAnomalyRuntimeAdapter:
@@ -239,7 +313,7 @@ class NonAnomalyRuntimeAdapter:
             destination=destination,
             outbound_date=departure_date,
             return_date=return_date or "2026-10-09",
-            observed_at="2026-08-19T08:05:00+08:00",
+            observed_at="2026-08-19T07:55:00+08:00",
         )
         return ProviderResult("gflights", "exact", "complete", (record,))
 
@@ -250,6 +324,25 @@ class NonAnomalyRuntimeAdapter:
         return ProviderResult("gflights", "open_jaw", "empty", ())
 
 
+class ShortStayRuntimeAdapter(NonAnomalyRuntimeAdapter):
+    def __init__(self):
+        super().__init__()
+        self.seed = replace(
+            self.seed,
+            legs=(
+                AirfareLeg("TPE", "KIX", "2026-10-05"),
+                AirfareLeg("KIX", "TPE", "2026-10-06"),
+            ),
+        )
+
+    async def exact(self, *, origin, destination, departure_date, return_date=None, **kwargs):
+        record = timed_exact_record(
+            "runtime-short-stay",
+            return_departure_time="2026-10-06T11:00:00+09:00",
+        )
+        return ProviderResult("gflights", "exact", "complete", (record,))
+
+
 class AbsoluteLowRuntimeIntegrationTest(unittest.IsolatedAsyncioTestCase):
     async def test_run_once_uses_existing_exact_non_deal_pool_without_rewriting_signal_truth(self):
         policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
@@ -257,6 +350,22 @@ class AbsoluteLowRuntimeIntegrationTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([item.exact.record_id for item in result.ftr_absolute_low_non_deals], ["runtime-exact-non-deal"])
         self.assertTrue(any(item.state == "exact_revalidated_candidate" for item in result.signals))
         self.assertFalse(any(item.state == OUTPUT_STATE for item in result.signals))
+
+    async def test_production_minimum_away_downgrade_is_not_repromoted(self):
+        policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
+        result = await run_once(policy=policy, adapter=ShortStayRuntimeAdapter(), run_at=RUN_AT)
+        self.assertTrue(
+            any(
+                item.exact is not None and item.exact.record_id == "runtime-short-stay"
+                for item in result.exact_non_deal_candidates
+            )
+        )
+        self.assertFalse(
+            any(
+                item.exact is not None and item.exact.record_id == "runtime-short-stay"
+                for item in result.ftr_absolute_low_non_deals
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from typing import Any, Mapping, Sequence
 
 from .airfare import AirfareRecord, is_international_asia_oceania
 from .models import TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
-from .production_radar import RadarItem, RadarRunResult
+from .production_radar import FORMAL_DEAL_MINIMUM_AWAY_HOURS, RadarItem, RadarRunResult, _minimum_away_satisfied
 
 
 OUTPUT_STATE = "ftr_absolute_low_non_deal"
@@ -76,12 +76,27 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
         raise FTRAbsoluteLowPolicyError("absolute-low evidence_class must remain exact_revalidated_candidate")
     if tuple(str(value) for value in (eligibility.get("allowed_surfaces") or ())) != ("exact", "open_jaw"):
         raise FTRAbsoluteLowPolicyError("absolute-low allowed_surfaces drifted")
+    if str(eligibility.get("minimum_away_hours_reference") or "") != "return_windows_policy.formal_deal_minimum_away_hours":
+        raise FTRAbsoluteLowPolicyError("absolute-low minimum-away reference drifted")
+    if str(eligibility.get("minimum_away_comparison") or "") != "strict_greater_than":
+        raise FTRAbsoluteLowPolicyError("absolute-low minimum-away comparison drifted")
+    return_windows_policy = _mapping(policy.get("return_windows_policy"))
+    minimum_away_hours = return_windows_policy.get("formal_deal_minimum_away_hours")
+    if (
+        isinstance(minimum_away_hours, bool)
+        or not isinstance(minimum_away_hours, (int, float))
+        or float(minimum_away_hours) != float(FORMAL_DEAL_MINIMUM_AWAY_HOURS)
+    ):
+        raise FTRAbsoluteLowPolicyError("absolute-low minimum-away SSOT drifted from CFR runtime semantics")
+    if str(eligibility.get("future_observed_at_action") or "") != "exclude_fail_closed":
+        raise FTRAbsoluteLowPolicyError("absolute-low future observed_at action drifted")
     required_eligibility_flags = (
         "require_non_deal",
         "require_exact_record",
         "require_complete_outbound_return_airfare",
         "require_positive_complete_airfare_twd",
         "require_exact_outbound_and_return_dates",
+        "require_minimum_destination_stay",
         "require_concrete_itinerary_identity",
         "require_reproducible_search_identity",
         "require_source_evidence_provenance",
@@ -260,6 +275,12 @@ def _eligible(
         return False
     if _exact_dates(exact) is None or not exact.record_id or not exact.legs:
         return False
+    root_policy = _mapping(policy.get("_root_policy"))
+    minimum_away_hours = _mapping(root_policy.get("return_windows_policy")).get("formal_deal_minimum_away_hours")
+    if isinstance(minimum_away_hours, bool) or not isinstance(minimum_away_hours, (int, float)):
+        return False
+    if not _minimum_away_satisfied(exact, int(minimum_away_hours)):
+        return False
     if exact.origin.iata not in {str(value) for value in policy_root_search(policy).get("origin_airports", ())}:
         return False
     if _taiwan_return_gateway(exact) not in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS:
@@ -274,7 +295,10 @@ def _eligible(
     if observed_at is None:
         return False
     max_age = int(eligibility["max_observation_age_hours"])
-    delta_hours = abs((run_at - observed_at).total_seconds()) / 3600.0
+    delta_seconds = (run_at - observed_at).total_seconds()
+    if delta_seconds < 0:
+        return False
+    delta_hours = delta_seconds / 3600.0
     if delta_hours > max_age:
         return False
     return True
