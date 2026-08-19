@@ -314,6 +314,7 @@ async def _async_main(args: argparse.Namespace) -> int:
         "signal_count": summary["signal_count"],
         "signal_states": summary["signal_states"],
         "coverage": summary["coverage"],
+        "provider_health": summary["provider_health"],
         "provider_failures": summary["provider_failures"],
         "paths": paths,
     }, ensure_ascii=False, sort_keys=True, indent=2))

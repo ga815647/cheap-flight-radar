@@ -612,6 +612,21 @@ price_history:
     - google_flight_deals
     - google_flights_exact_price_insight
     - own_price_history
+operational_health:
+  provider_acquisition:
+    states:
+    - healthy
+    - degraded
+    - provider_failed
+    derive_from:
+    - technical_execution_counters
+    - surface_failure_evidence
+    - required_origin_discovery_coverage
+    deal_count_is_health_signal: false
+    complete_empty_provider_response_is_not_technical_failure: true
+    all_required_discovery_surfaces_zero_usable_records: provider_failed
+    partial_degradation_preserves_exact_revalidated_deals: true
+    provider_failed_must_not_render_as_normal_zero_deal: true
 publication:
   enabled: true
   platform: github_pages
@@ -684,6 +699,17 @@ publication:
     github_token_manifest_push_recursively_triggers_pages: false
     github_token_pages_trigger: explicit_radar_pages_workflow_dispatch_after_manifest_push
     publication_recovery: immutable_run_evidence_without_reacquisition
+    completion_evidence:
+      control_request_submission_is_not_completion: true
+      wait_for_workflow_terminal_state: true
+      read_final_immutable_run_evidence_before_notification_decision: true
+      required_final_evidence:
+      - pre_acquisition_claim
+      - immutable_price_history_snapshot
+      - immutable_run_result
+      - immutable_recovery_manifest
+      - active_publication_manifest
+      terminal_or_final_evidence_unavailable_action: notify_operational_failure
     github_actions_role: disposable_static_build_gate_and_deploy_backend
     independent_github_cron: false
     github_actions_is_not_scheduler: true
@@ -693,10 +719,12 @@ publication:
   legacy_views_status: diagnostic_or_transition_only
 notifications:
   enabled_when_automation_exists: true
+  ui_notification_toggle_is_delivery_mechanism_not_product_policy: true
+  decision_requires_final_immutable_evidence: true
   notify_on:
-  - new_top_ranked_deal
-  - meaningful_new_route_low
-  - unusually_cheap_long_haul
+  - meaningful_new_deal
+  - operational_workflow_failure
+  - provider_or_coverage_degradation
   suppress_routine_no_change_runs: true
 verification:
   discovery_price_is_not_bookable_price: true

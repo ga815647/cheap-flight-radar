@@ -128,6 +128,8 @@ Do not force one opaque "Best Value" score to replace the underlying price/anoma
 
 - Routine automation should run the Radar about **once per day** for now; no immediate-alert requirement. This is a scheduling preference, not a prohibition on an explicit same-day operator-requested reacquisition when the user wants refreshed evidence, diagnosis, or a provider-health comparison.
 - An operator-requested same-day reacquisition must be explicitly identified and append immutable evidence. It must not weaken duplicate protection for the routine daily trigger, silently retry a failed automatic run, or overwrite the canonical daily observation.
+- Provider/acquisition health is determined from technical execution and coverage evidence, **never from Deal count**. A partially degraded run may still publish already exact-revalidated valid Deals, but a broad provider/coverage collapse must be visibly distinct from a healthy zero-Deal market result.
+- Scheduled notification decisions happen only after the workflow reaches a terminal state and ChatGPT reads the final immutable run evidence. Meaningful new Deals and operational/provider/coverage failures notify; a healthy routine run with no meaningful change may stay silent. A UI notification toggle is only a delivery mechanism, not product policy.
 - Production should be sustainable at **ongoing TWD 0**: free public Web, free/open-source tooling, or APIs whose recurring free quota is actually sufficient for normal daily Radar use.
 - Paid APIs, expiring trial credits, or unknown/inadequate free quotas are not production-core dependencies.
 - Search should favor recall when free/stable resources permit: finding more legitimate possibilities is better than artificially optimizing for a very short runtime.

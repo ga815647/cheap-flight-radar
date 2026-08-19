@@ -160,3 +160,12 @@ The once-per-day rule is a routine automation rule, not a prohibition on a user-
 - successful operator runs persist the same immutable snapshot + recovery bundle, may publish as the newest Radar run, smoke-build, and explicitly dispatch Radar Pages.
 
 This path is for explicit refreshed evidence, diagnosis, or provider-health comparison. It must never be scheduled automatically and does not relax the routine canonical one-attempt guard.
+
+## Provider acquisition health and notification completion
+
+A workflow finishing with a syntactically valid snapshot/manifest is not enough to call the market result healthy. Every new run derives `provider_health.status` from technical execution counters, provider/surface failure evidence, and required-origin discovery coverage. The states are `healthy`, `degraded`, and `provider_failed`; Deal count is never an input to that classification. Complete-but-empty provider responses are recorded separately from technical failures. A whole-run Flight Deals + Explore discovery collapse is `provider_failed`, while partial origin/provider degradation is `degraded`. Already exact-revalidated Deals are retained under degradation rather than discarded.
+
+Publication must make degraded/provider-failed state visible. In particular, `provider_failed` with zero Deals must not render as the same normal-empty message as a healthy zero-Deal run. Historical schema-v2 manifests can be reclassified at render time from their stored coverage evidence, so the 2026-08-17 all-zero discovery collapse is not silently preserved as a normal market-zero presentation.
+
+For the ChatGPT daily scheduler, writing `requests/daily.json` is only the control request, not completion. The scheduler must identify the triggered canonical workflow, wait until it reaches a terminal state, then read the final immutable claim/snapshot/run-result/recovery manifest and active publication evidence before deciding whether to notify. If terminal state or final evidence cannot be obtained, that is an operational completion-verification failure and must not be reported as routine no-change. Meaningful new Deals and operational/provider/coverage failures notify; a healthy run with no meaningful change may stay silent. The ChatGPT UI notification switch is a delivery setting, not a substitute for these product semantics.
+

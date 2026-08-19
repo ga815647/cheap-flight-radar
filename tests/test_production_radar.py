@@ -234,6 +234,29 @@ class ProductionRadarTests(unittest.IsolatedAsyncioTestCase):
         failed = [item for item in result.signals if item.discovery.destination.iata == "NRT"]
         self.assertTrue(failed)
         self.assertTrue(any("failed" in item.reason for item in failed))
+        self.assertEqual(result.coverage["provider_health"]["status"], "degraded")
+        self.assertTrue(result.provider_failures)
+
+    async def test_partial_discovery_degradation_keeps_exact_revalidated_deal(self):
+        adapter = FakeAdapter({
+            "TPE": [deal("TPE", "NRT", "Japan", 6500, 10000, 35)],
+            "TSA": [], "RMQ": [], "KHH": [],
+        })
+        adapter.explore_records["TSA"] = [weak_explore("TSA", "ICN", "South Korea")]
+        adapter.explore_records["RMQ"] = [weak_explore("RMQ", "KIX", "Japan")]
+        adapter.explore_records["KHH"] = [weak_explore("KHH", "MNL", "Philippines")]
+        result = await ProductionRadar(policy=self.policy, adapter=adapter).run(run_at=RUN_AT)
+        self.assertEqual(result.coverage["provider_health"]["status"], "degraded")
+        self.assertTrue(any(item.discovery.destination.iata == "NRT" for item in result.deals))
+
+    async def test_all_discovery_surfaces_empty_is_provider_failed_not_normal_zero_deal(self):
+        adapter = FakeAdapter({origin: [] for origin in ("TPE", "TSA", "RMQ", "KHH")})
+        result = await ProductionRadar(policy=self.policy, adapter=adapter).run(run_at=RUN_AT)
+        self.assertEqual(result.deals, ())
+        self.assertEqual(result.coverage["provider_health"]["status"], "provider_failed")
+        self.assertEqual(result.coverage["execution"]["flight_deals"]["failures"], 0)
+        self.assertEqual(result.coverage["execution"]["flight_deals"]["empty"], 12)
+        self.assertTrue(any(item.get("kind") == "coverage_collapse" for item in result.provider_failures))
 
     async def test_weak_explore_seed_can_only_become_deal_via_lower_priority_history_truth(self):
         adapter = FakeAdapter({origin: [] for origin in ("TPE", "TSA", "RMQ", "KHH")})
@@ -302,6 +325,7 @@ class ProductionRadarTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(manifest["deals"]), 4)
         self.assertTrue(snapshot.observations)
         self.assertGreater(manifest["coverage"]["execution"]["flexible_dates"]["attempts"], 0)
+        self.assertIn(manifest["provider_health"]["status"], {"healthy", "degraded", "provider_failed"})
         self.assertTrue(any(item["state"] == "mixed_taiwan_return_alternative" for item in manifest["signals"]))
         self.assertTrue(any(item["state"] == "open_jaw_airfare_alternative" for item in manifest["signals"]))
         with tempfile.TemporaryDirectory() as tmp:

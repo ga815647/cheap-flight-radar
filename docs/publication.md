@@ -20,6 +20,8 @@ The primary user-facing classes are:
 
 - **Deal** — qualified anomaly truth plus a current exact complete airfare;
 - **Signal** — useful evidence that has not satisfied the full Deal contract, including weak seeds, qualified anomalies pending exact completion, exact candidates without usable anomaly truth, stale anomalies, and fail-closed provider outcomes.
+- **Provider health** — independent of Deal count. Schema-v2 run-result/manifest evidence carries `provider_health`; Pages shows a visible warning for `degraded` or `provider_failed`. Partial degradation does not remove already exact-revalidated Deals, while a provider-failed zero-Deal run must never look like a healthy zero-Deal run.
+
 
 Formal Deals are ordered only by:
 
