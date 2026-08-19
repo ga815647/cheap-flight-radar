@@ -1,0 +1,11 @@
+{
+  "claimed_at": "2026-08-19T14:48:18+08:00",
+  "mode": "operator_reacquisition",
+  "request_id": "op-20260819-1445-e2e-health",
+  "requested_date": "2026-08-19",
+  "schema_version": 1,
+  "semantics": "explicit_operator_requested_live_reacquisition",
+  "trigger_sha": "283c120469db61c480df29732aa5b9081a8ac059",
+  "workflow_run_id": "32224942582",
+  "workflow_run_url": "https://github.com/ga815647/cheap-flight-radar/actions/runs/32224942582"
+}
