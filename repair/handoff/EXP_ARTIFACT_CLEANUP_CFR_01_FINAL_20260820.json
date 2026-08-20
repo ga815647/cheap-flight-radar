@@ -1,0 +1,74 @@
+{
+  "package": "EXP-ARTIFACT-CLEANUP-CFR-01",
+  "state": "PASS",
+  "repo": "ga815647/cheap-flight-radar",
+  "main_sha": "a4147c4e3a76d2707ecb31d48e7e37c95de23128",
+  "before": {
+    "artifact_count": 99,
+    "total_bytes": 89417224,
+    "total_mib": 85.27490997314453
+  },
+  "cleanup": {
+    "deleted_count": 49,
+    "deleted_bytes": 84943529,
+    "deleted_mib": 81.00846195220947,
+    "pass1": {
+      "deleted_count": 40,
+      "deleted_bytes": 2720155,
+      "evidence": "repair/handoff/EXP_ARTIFACT_CLEANUP_CFR_01_20260820.json"
+    },
+    "pass2": {
+      "deleted_count": 9,
+      "deleted_bytes": 82223374,
+      "evidence": "repair/handoff/EXP_ARTIFACT_CLEANUP_CFR_01_PASS2_20260820.json"
+    }
+  },
+  "after": {
+    "artifact_count": 50,
+    "total_bytes": 4473695,
+    "total_mib": 4.266448020935059,
+    "active_runtime_dependency_bytes": 0,
+    "unique_durable_evidence_bytes": 0,
+    "unknown_bytes": 4473695
+  },
+  "top_deleted": [
+    {"artifact_id": 9396095570, "name": "rp05-local-gate-bundle-df65e0fb82a5ccfaab822610af6e04a1f9c8a493", "size_bytes": 31491695, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397543754, "name": "rp06-offline-wheelhouse", "size_bytes": 15654736, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397576390, "name": "rp06-offline-wheelhouse", "size_bytes": 15654736, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397493498, "name": "rp06-offline-wheelhouse", "size_bytes": 15389456, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397574705, "name": "rp06-exact-source", "size_bytes": 916703, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397542145, "name": "rp06-exact-source", "size_bytes": 916537, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397491882, "name": "rp06-exact-source", "size_bytes": 916402, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9397435069, "name": "rp06-exact-source", "size_bytes": 916306, "classification": "DISPOSABLE_TEST_DEBUG"},
+    {"artifact_id": 9396045756, "name": "rp05-local-gate-source-99aef8aa6c122cbc7912bf17449b2f7d7fc78454", "size_bytes": 366803, "classification": "DISPOSABLE_TEST_DEBUG"}
+  ],
+  "top_remaining": [
+    {"artifact_id": 9127917437, "name": "mandarin-knh-probe", "size_bytes": 626851, "classification": "UNKNOWN", "expired": true},
+    {"artifact_id": 9127991416, "name": "mandarin-knh-probe", "size_bytes": 605208, "classification": "UNKNOWN", "expired": true},
+    {"artifact_id": 9128088176, "name": "mandarin-knh-probe", "size_bytes": 605203, "classification": "UNKNOWN", "expired": true},
+    {"artifact_id": 9406639316, "name": "chat-workspace-c006e9c8acf4b948a4a0ca73c61a137393283225", "size_bytes": 410698, "classification": "UNKNOWN", "expired": false},
+    {"artifact_id": 9127838298, "name": "mandarin-knh-probe", "size_bytes": 255900, "classification": "UNKNOWN", "expired": true}
+  ],
+  "truth_basis": {
+    "canonical_operator_recovery": "Git-backed durable evidence; Actions artifacts are debug/transport only",
+    "ftr": "Actions artifacts are not correctness/persistence truth",
+    "pages": "Pages artifact retained only while workflow run is nonterminal; terminal deployment build artifacts are expired transport",
+    "fixed_watch": "Current fixed-watch artifact can be runtime freshness cache; none remained active under current 24-hour cadence at final inventory",
+    "rp05_gate_transport": "historical workflow explicitly uploaded 1-day source/dependency bundle; merged Git source and exact-head Gate are durable",
+    "rp06_gate_transport": "historical CI explicitly uploaded 1-day exact-source local Gate bridge and offline wheelhouse; merged Git source and exact-head Gate are durable"
+  },
+  "safety": {
+    "pre_delete_identity_validation": "artifact_id + name + size_bytes + created_at",
+    "pre_delete_reclassification": true,
+    "unknown_delete_policy": "KEEP",
+    "in_flight_workflow_delete_policy": "KEEP",
+    "live_acquisition_performed": false,
+    "publication_mutation_performed": false,
+    "product_change_performed": false,
+    "merge_performed": false,
+    "notion_write_performed": false,
+    "cleanup_workflows_removed_from_experiment_branch_head": true,
+    "concurrent_new_artifacts_during_cleanup": 0
+  },
+  "blockers": []
+}
