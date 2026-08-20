@@ -22,10 +22,14 @@ search:
     - TSA
     - RMQ
     - KHH
+    primary_return_search_airports_are_bounded_pool_not_exhaustive_claim: true
+    automatic_return_gateway_search_exhaustive: false
     opportunistic_main_island_return_airports_allowed: true
     live_route_evidence_required_for_non_primary_return_airport: true
+    no_live_route_evidence_non_primary_semantics: not_searched_not_eligible_as_opportunistic_extra
     different_return_airport_allowed: true
     final_main_island_arrival_counts_as_trip_complete: true
+    completion_validity_is_not_search_coverage: true
     post_arrival_main_island_ground_access_is_not_required_component: true
     coverage_gate_applies_to_outbound_origins_not_every_possible_return_airport: true
   destination_scope: asia_oceania
@@ -1079,6 +1083,32 @@ return_windows_policy:
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
   status: canonical_runtime_active_not_launch_ready
+  route_shape_return_gateway_convergence:
+    enabled: true
+    package: RP-06
+    capability_state: implemented_active
+    runtime_module: cheap_flight_radar.production_runtime
+    exact_variant_source: already_acquired_canonical_open_jaw_provider_results
+    exact_non_deal_pool: current_run_exact_non_deal_candidates
+    generic_signal_journal_is_admission_authority: false
+    rp02_absolute_low_selector_remains_admission_authority: true
+    deal_truth_and_ranking_unchanged: true
+    provider_calls_added_by_rp06: 0
+    mixed_return_provider_attempts_per_expansion_seed_max: 1
+    existing_destination_open_jaw_attempt_shape_unchanged: true
+    route_identity_source: exact_normalized_itinerary_legs
+    destination_route_shape_defines_opportunity: true
+    taiwan_gateways_are_variants: true
+    gateway_coverage:
+      completion_validity_is_not_search_coverage: true
+      primary_return_airports_semantics: bounded_search_pool_not_exhaustive_claim
+      automatic_search_exhaustive: false
+      current_runtime_proactively_exhausts_extra_main_island_airports: false
+      attempted_and_not_attempted_persisted: true
+      run_result_coverage_key: return_gateway_expansion
+      opportunistic_non_primary_requires_live_route_evidence: true
+      exact_revalidated_itinerary_is_live_route_evidence: true
+      no_live_evidence_semantics: not_searched_not_eligible_as_opportunistic_extra
   same_day_recovery_orchestration:
     enabled: true
     package: RP-05
@@ -1196,6 +1226,8 @@ ftr_handoff:
       explore_surface: not_attempted_until_full_arbitrary_window_constraint_exists
       flexible_dates_surface: not_attempted_until_full_arbitrary_window_constraint_exists
       rp06_open_jaw_expansion: out_of_scope
+      rp06_open_jaw_expansion_resolution: resolved_intentional_exclusion_from_bounded_scoped_coverage
+      canonical_route_variant_capability_implies_scoped_coverage: false
     bounded_execution:
       max_windows: 4
       max_discovery_calls: 16
@@ -1218,6 +1250,9 @@ ftr_handoff:
       absolute_low_selector: ftr_handoff.absolute_low_non_deal_producer
       preserve_existing_gateway_and_route_shape_identity: true
       rp06_eligibility_expansion: out_of_scope
+      rp06_eligibility_expansion_resolution: resolved_intentional_exclusion_from_bounded_scoped_coverage
+      route_variant_absence_without_provider_call: not_attempted
+      consumer_may_infer_canonical_route_variant_coverage: false
     coverage:
       reuse_ftr_handoff_slice_contract: true
       zero_candidates_is_failure: false
@@ -1248,6 +1283,15 @@ ftr_handoff:
     contract_state: implemented_pre_activation
     output_state: ftr_absolute_low_non_deal
     source_collection: current_run_exact_non_deal_candidates
+    route_variant_candidate_admission:
+      package: RP-06
+      source: already_acquired_canonical_exact_multi_city_results
+      state: exact_revalidated_candidate
+      dedicated_pool_membership_required: true
+      generic_signal_membership_is_not_authority: true
+      rp02_eligibility_probe_required_before_pool_admission: true
+      final_rp02_bounded_selection_required: true
+      provider_calls: 0
     input_states:
     - exact_revalidated_candidate
     generic_signal_isolation:
@@ -1313,6 +1357,7 @@ ftr_handoff:
     normal_cfr_deal_ranking_unchanged: true
     preserve_existing_route_identity: true
     rp06_new_open_jaw_or_return_gateway_acquisition: out_of_scope
+    rp06_marker_resolution: no_new_acquisition_added_existing_bounded_canonical_route_variant_calls_may_feed_pool_only_after_rp02_truth
     canonical_ftr_activation: active_via_RP-04
   canonical_activation:
     enabled: true
@@ -1361,9 +1406,9 @@ ftr_handoff:
       canonical_producer_active: true
       recovery_capability_active: true
       recovery_live_proof_complete: false
+      route_shape_return_gateway_convergence_complete: true
       final_ftr_readiness: false
       pending_packages:
-      - RP-06
       - RP-07
       - RP-08
   schema_version: "2.0"
@@ -1398,6 +1443,11 @@ ftr_handoff:
     - surface
     - origin
     - market
+    optional_dimensions:
+      return_gateway_expansion:
+        mandatory_health_dimension: false
+        can_imply_exhaustive_gateway_search: false
+        exact_attempted_not_attempted_truth_required_when_present: true
     slice_states:
     - succeeded
     - failed
@@ -1481,3 +1531,4 @@ ftr_handoff:
   - RP-03_scoped_search_acquisition_workflow
   - RP-04_canonical_ftr_runtime_activation
   - RP-05_live_same_day_recovery_orchestration
+  - RP-06_route_shape_return_gateway_convergence

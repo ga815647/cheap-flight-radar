@@ -13,6 +13,13 @@ retain the same explicit CheapFlightRadar User-Agent, direct connection
 surface budget isolation, not UA/proxy/session rotation, retry, or rate-limit
 resetting. Provider failures still fail closed through the underlying adapter.
 
+RP-06 additionally retains already-acquired multi-city exact results as a
+*dedicated* exact non-Deal candidate input. This never scans the Signal journal:
+route variants are admitted only from the adapter result that the canonical
+runtime actually acquired, and the existing RP-02 eligibility/ordering selector
+is reused as the admission truth. The same capture records bounded return-gateway
+attempt/not-attempted evidence without adding provider calls.
+
 The wrapper does not alter Deal qualification, Deal ordering, or provider-call
 latency semantics. ChatGPT remains the scheduler/orchestrator; this module is
 only short-lived execution.
@@ -28,6 +35,8 @@ import re
 from typing import Any, Mapping, Sequence
 
 from .airfare import AirfareRecord, ProviderResult, is_international_asia_oceania
+from .ftr_absolute_low import apply_absolute_low_selection, select_absolute_low_non_deals
+from .models import TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
 from .production_radar import (
     ProductionRadar,
     RadarItem,
@@ -37,11 +46,11 @@ from .production_radar import (
     _item_json,
     _load_prior_history,
     _minimum_away_satisfied,
+    _to_observation,
     load_policy,
     write_run_artifacts as _write_run_artifacts,
 )
 from .providers.gflights import GFlightsAdapter
-from .ftr_absolute_low import apply_absolute_low_selection
 
 
 STICKY_RATE_LIMIT_MARKERS = (
@@ -113,16 +122,40 @@ class ProductionExecutionAdapter:
 
 
 class RecordingFlightDealsAdapter:
-    """Transparent adapter decorator retaining already-fetched discovery rows."""
+    """Transparent adapter decorator retaining already-fetched provider rows.
+
+    Flight Deals rows support the pre-existing pending-qualified-candidate
+    behavior. RP-06 also records all discovery provenance plus the exact
+    multi-city request/result pairs that :class:`ProductionRadar` already
+    performs. Merely recording those results adds no provider request and does
+    not change sticky-429 lane behavior.
+    """
 
     def __init__(self, delegate: Any) -> None:
         self._delegate = delegate
         self.flight_deal_records: list[AirfareRecord] = []
+        self.discovery_records: list[AirfareRecord] = []
+        self.open_jaw_results: list[
+            tuple[tuple[tuple[str, str, str], ...], ProviderResult]
+        ] = []
 
     async def flight_deals(self, **kwargs: Any) -> ProviderResult:
         result = await self._delegate.flight_deals(**kwargs)
         if result.coverage_state != "failed":
             self.flight_deal_records.extend(result.records)
+            self.discovery_records.extend(result.records)
+        return result
+
+    async def explore(self, **kwargs: Any) -> ProviderResult:
+        result = await self._delegate.explore(**kwargs)
+        if result.coverage_state != "failed":
+            self.discovery_records.extend(result.records)
+        return result
+
+    async def open_jaw(self, **kwargs: Any) -> ProviderResult:
+        legs = tuple(tuple(str(value) for value in leg) for leg in (kwargs.get("legs") or ()))
+        result = await self._delegate.open_jaw(**kwargs)
+        self.open_jaw_results.append((legs, result))
         return result
 
     def __getattr__(self, name: str) -> Any:
@@ -201,6 +234,253 @@ def retain_pending_qualified_candidates(
     )
 
 
+def _route_variant_kind(legs: Sequence[Sequence[str]]) -> str | None:
+    """Classify the two RP-06 route variants from the exact requested legs."""
+
+    if len(legs) < 2 or len(legs[0]) != 3 or len(legs[-1]) != 3:
+        return None
+    first = legs[0]
+    last = legs[-1]
+    if last[0] == first[1] and last[1] != first[0]:
+        return "mixed_taiwan_return"
+    if last[0] != first[1]:
+        return "destination_open_jaw"
+    return None
+
+
+def _variant_discovery(
+    result: RadarRunResult,
+    *,
+    origin: str,
+    destination: str,
+    outbound_date: str,
+    additional_records: Sequence[AirfareRecord] = (),
+) -> AirfareRecord | None:
+    """Resolve provenance from retained CFR truth, never from a city guess."""
+
+    candidates = [
+        item.discovery
+        for item in (*result.deals, *result.signals, *result.exact_non_deal_candidates)
+        if item.discovery.origin.iata == origin
+        and item.discovery.destination.iata == destination
+    ]
+    candidates.extend(
+        record
+        for record in additional_records
+        if record.origin.iata == origin and record.destination.iata == destination
+    )
+    exact_date = [record for record in candidates if record.outbound_date == outbound_date]
+    if exact_date:
+        return min(exact_date, key=lambda record: record.record_id)
+    if candidates:
+        return min(candidates, key=lambda record: record.record_id)
+    return None
+
+
+def _rp02_admits_candidate(
+    result: RadarRunResult,
+    *,
+    candidate: RadarItem,
+    policy: Mapping[str, Any],
+) -> bool:
+    """Reuse RP-02 eligibility without copying a second truth engine.
+
+    The one-candidate probe is *not* the final bounded selection. It only asks
+    RP-02 whether this exact candidate satisfies its existing current,
+    reproducible, complete-fare, >24h, provenance, main-island and Deal-duplicate
+    gates. Final price-first/max-count selection still runs once over the merged
+    dedicated pool after RP-06 convergence.
+    """
+
+    probe = RadarRunResult(
+        radar_run_id=result.radar_run_id,
+        run_at=result.run_at,
+        deals=result.deals,
+        signals=(),
+        coverage=result.coverage,
+        provider_failures=result.provider_failures,
+        exact_non_deal_candidates=(candidate,),
+        ftr_absolute_low_non_deals=(),
+    )
+    return bool(select_absolute_low_non_deals(probe, policy=policy))
+
+
+def converge_rp06_route_variants(
+    result: RadarRunResult,
+    *,
+    open_jaw_results: Sequence[
+        tuple[tuple[tuple[str, str, str], ...], ProviderResult]
+    ],
+    policy: Mapping[str, Any],
+    discovery_records: Sequence[AirfareRecord] = (),
+) -> RadarRunResult:
+    """Admit already-acquired exact route variants and persist gateway truth.
+
+    Authority is the captured provider request/result pair, not generic Signal
+    membership or naming. RP-02 remains the only non-Deal FTR admission engine.
+    This function performs zero provider calls.
+    """
+
+    return_policy = (policy.get("search") or {}).get("return_to_taiwan") or {}
+    primary_gateways = tuple(str(value) for value in return_policy.get("primary_return_search_airports") or ())
+    opportunistic_allowed = bool(return_policy.get("opportunistic_main_island_return_airports_allowed", False))
+    opportunistic_requires_live = bool(
+        return_policy.get("live_route_evidence_required_for_non_primary_return_airport", True)
+    )
+    completion_scope = str(return_policy.get("completion_scope") or "")
+    route_candidates: list[RadarItem] = []
+    gateway_rows: list[dict[str, Any]] = []
+    mixed_seed_keys: set[str] = set()
+
+    for requested_legs, provider_result in open_jaw_results:
+        kind = _route_variant_kind(requested_legs)
+        if kind is None or len(requested_legs) < 2:
+            continue
+        first = requested_legs[0]
+        last = requested_legs[-1]
+
+        if kind == "mixed_taiwan_return":
+            seed_key = f"{first[0]}:{first[1]}:{first[2]}:{last[2]}"
+            if seed_key in mixed_seed_keys:
+                raise RuntimeError(
+                    "RP-06 mixed-return provider-call budget drifted above one attempt per expansion seed"
+                )
+            mixed_seed_keys.add(seed_key)
+            selected_gateway = last[1]
+            request_sent = bool(provider_result.request_sent)
+            is_primary = selected_gateway in primary_gateways
+            is_main_island = selected_gateway in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
+            live_route_evidence = bool(
+                provider_result.records
+                and is_main_island
+                and any(
+                    record.surface == "open_jaw"
+                    and record.verification_state == "revalidated"
+                    and record.complete_airfare
+                    and record.legs
+                    and record.legs[-1].destination == selected_gateway
+                    for record in provider_result.records
+                )
+            )
+            if (
+                request_sent
+                and is_main_island
+                and not is_primary
+                and (not opportunistic_allowed or (opportunistic_requires_live and not live_route_evidence))
+            ):
+                raise RuntimeError(
+                    "RP-06 opportunistic non-primary main-island gateway cannot be attempted without live route evidence"
+                )
+            attempted = [selected_gateway] if request_sent else []
+            if is_primary:
+                selected_gateway_source = "configured_primary"
+            elif is_main_island and live_route_evidence:
+                selected_gateway_source = "opportunistic_non_primary_live_route_evidence"
+            elif is_main_island:
+                selected_gateway_source = "opportunistic_non_primary_not_attempted"
+            else:
+                selected_gateway_source = "non_main_island_request"
+            gateway_rows.append(
+                {
+                    "seed_key": seed_key,
+                    "taiwan_origin_gateway": first[0],
+                    "destination_arrival_airport": first[1],
+                    "selected_mixed_return_gateway": selected_gateway,
+                    "selected_gateway_source": selected_gateway_source,
+                    "attempted_mixed_return_gateways": attempted,
+                    "configured_primary_gateways_not_attempted": [
+                        gateway for gateway in primary_gateways if gateway not in attempted
+                    ],
+                    "provider_request_sent": request_sent,
+                    "result_coverage_state": provider_result.coverage_state,
+                    "live_route_evidence_observed": live_route_evidence,
+                }
+            )
+
+        if provider_result.coverage_state == "failed":
+            continue
+        for exact in provider_result.records:
+            actual_return_gateway = exact.legs[-1].destination if exact.legs else ""
+            if (
+                actual_return_gateway in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
+                and actual_return_gateway not in primary_gateways
+                and not opportunistic_allowed
+            ):
+                continue
+            discovery = _variant_discovery(
+                result,
+                origin=first[0],
+                destination=first[1],
+                outbound_date=first[2],
+                additional_records=discovery_records,
+            )
+            if discovery is None:
+                continue
+            observation_id = _to_observation(result.radar_run_id, exact).observation_id
+            candidate = RadarItem(
+                classification="Signal",
+                state="exact_revalidated_candidate",
+                discovery=discovery,
+                exact=exact,
+                anomaly_source=None,
+                anomaly_strength_percent=None,
+                reason=(
+                    "RP-06 already-acquired exact route variant retained in the dedicated exact non-Deal pool; "
+                    "no anomaly authority invented and final admission remains RP-02"
+                ),
+                observation_id=observation_id,
+            )
+            if _rp02_admits_candidate(result, candidate=candidate, policy=policy):
+                route_candidates.append(candidate)
+
+    existing_keys = {
+        (
+            item.exact.record_id,
+            tuple((leg.origin, leg.destination, leg.date) for leg in item.exact.legs),
+        )
+        for item in result.exact_non_deal_candidates
+        if item.exact is not None
+    }
+    merged_pool = list(result.exact_non_deal_candidates)
+    for candidate in route_candidates:
+        assert candidate.exact is not None
+        key = (
+            candidate.exact.record_id,
+            tuple((leg.origin, leg.destination, leg.date) for leg in candidate.exact.legs),
+        )
+        if key not in existing_keys:
+            merged_pool.append(candidate)
+            existing_keys.add(key)
+
+    coverage = dict(result.coverage)
+    coverage["return_gateway_expansion"] = {
+        "completion_scope": completion_scope,
+        "configured_primary_return_gateways": list(primary_gateways),
+        "primary_pool_semantics": "bounded_search_pool_not_exhaustive_claim",
+        "search_exhaustive": False,
+        "mixed_return_provider_attempts_per_expansion_seed_max": 1,
+        "provider_call_budget_changed_by_rp06": False,
+        "opportunistic_non_primary": {
+            "allowed": opportunistic_allowed,
+            "requires_live_route_evidence": opportunistic_requires_live,
+            "proactively_exhaustive": False,
+            "no_live_evidence_semantics": "not_searched_not_eligible_as_opportunistic_extra",
+        },
+        "seed_attempts": gateway_rows,
+    }
+
+    return RadarRunResult(
+        radar_run_id=result.radar_run_id,
+        run_at=result.run_at,
+        deals=result.deals,
+        signals=result.signals,
+        coverage=coverage,
+        provider_failures=result.provider_failures,
+        exact_non_deal_candidates=tuple(merged_pool),
+        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,
+    )
+
+
 async def run_once(
     *,
     policy: Mapping[str, Any],
@@ -219,7 +499,13 @@ async def run_once(
         flight_deal_records=recorder.flight_deal_records,
         policy=policy,
     )
-    return apply_absolute_low_selection(retained, policy=policy)
+    converged = converge_rp06_route_variants(
+        retained,
+        open_jaw_results=recorder.open_jaw_results,
+        policy=policy,
+        discovery_records=recorder.discovery_records,
+    )
+    return apply_absolute_low_selection(converged, policy=policy)
 
 
 def write_run_artifacts(
