@@ -81,9 +81,11 @@ def build_source_plan(
 
     RP-07 makes ``RoutePlan.entries`` an execution contract, not a research
     shortlist. External Web recall surfaces and researched-but-not-integrated
-    providers remain in SSOT metadata, but cannot enter a plan unless a future
-    bounded package explicitly marks them executable by this backend. Legacy
-    ``fallback_provider`` drift fails closed instead of reviving a fake fallback.
+    providers remain in SSOT metadata. The current canonical runtime has no
+    fallback dispatcher, so metadata alone can never create a second executable
+    plan entry; a future bounded executor package must add that capability first.
+    Legacy ``fallback_provider`` drift fails closed instead of reviving a fake
+    fallback.
     """
 
     routing = policy.get("source_routing") or {}
@@ -188,21 +190,8 @@ def _plan_stage(
     if fallback is None:
         return RoutePlan(entries=tuple(entries), coverage_state="planned")
 
-    fallback_provider = str(fallback or "")
-    if not fallback_provider or fallback_provider == provider:
-        return _unavailable(
-            "automatic_executable_fallback must name a distinct provider or be null",
-            state="invalid_contract",
-        )
-    if not _canonical_backend_executable(fallback_provider, provider_registry):
-        return _unavailable(
-            f"automatic fallback {fallback_provider} is not integrated/executable by the canonical backend",
-            state="invalid_contract",
-        )
-    entries.append(
-        ProviderPlanEntry(
-            provider=fallback_provider,
-            reason="ordered automatic fallback after selected primary cannot satisfy the request",
-        )
+    return _unavailable(
+        "automatic_executable_fallback is invalid while the current canonical runtime fallback executor is absent; "
+        "provider metadata alone cannot create a second executable RoutePlan entry",
+        state="invalid_contract",
     )
-    return RoutePlan(entries=tuple(entries), coverage_state="planned")
