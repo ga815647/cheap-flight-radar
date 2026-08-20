@@ -1079,6 +1079,76 @@ return_windows_policy:
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
   status: pending_activation
+  scoped_search_acquisition:
+    enabled: true
+    contract_version: "1.0"
+    contract_state: implemented_pre_activation
+    mode: scoped_search
+    request:
+      required_fields:
+      - request_id
+      - availability_windows
+      - execution_policy
+      duration_optional: true
+      absent_duration_applies_no_fixed_ftr_duration: true
+      max_budget_optional_query_hard_filter_only: true
+    windows:
+      complete_trip_must_fit_one_window: true
+      cross_window_trip: forbidden
+      multiple_windows_merge_one_request: true
+    acquisition:
+      reuse_source_router: true
+      reuse_existing_provider_adapter: true
+      reuse_exact_revalidation: true
+      destination_discovery_surface: gflights_google_flight_deals
+      destination_discovery_constraint: anchor_departure_and_return_within_supplied_window
+      broad_horizon_then_post_filter: forbidden
+      search_horizon_days_reuse: forbidden
+      brute_force_city_date_city_matrix: forbidden
+      unconstrainable_surface_action: not_attempted
+      explore_surface: not_attempted_until_full_arbitrary_window_constraint_exists
+      flexible_dates_surface: not_attempted_until_full_arbitrary_window_constraint_exists
+      rp06_open_jaw_expansion: out_of_scope
+    bounded_execution:
+      max_windows: 4
+      max_discovery_calls: 16
+      max_exact_revalidations: 12
+      request_may_lower_limits_only: true
+      deterministic_ordering: true
+      deterministic_truncation: true
+      search_horizon_days_is_scoped_budget: false
+    identity:
+      run_id_template: ftr-scoped-{request_id}-{request_fingerprint_12}
+      acquisition_identity: scoped_search
+      canonical_claim_consumption: forbidden
+      operator_reacquisition_identity_reuse: forbidden
+      same_day_recovery_masquerade: forbidden
+      duplicate_request_semantics: replay_identical_fingerprint_reject_request_id_reuse
+    semantics:
+      formal_deal_truth: existing_cfr_anomaly_plus_exact_complete_airfare
+      generic_signal_promotion: forbidden
+      absolute_low_selector: ftr_handoff.absolute_low_non_deal_producer
+      preserve_existing_gateway_and_route_shape_identity: true
+      rp06_eligibility_expansion: out_of_scope
+    coverage:
+      reuse_ftr_handoff_slice_contract: true
+      zero_candidates_is_failure: false
+      unqueried_slice_success: forbidden
+      unsupported_surface_success: forbidden
+    persistence:
+      immutable_snapshot: ftr_handoff.persistence.immutable_snapshot_path_template
+      scoped_manifest: ftr_handoff.persistence.scoped_manifest_path_template
+      checksum_required: true
+      manifest_write_last: true
+    canonical_isolation:
+      never_advance_canonical_latest: true
+      never_mutate_current_status: true
+      never_clear_repair_required: true
+      never_replace_repair_incident: true
+      never_consume_canonical_claim: true
+    activation:
+      canonical_runtime: pending_disabled_until_RP-04
+      production_launch: out_of_scope
   absolute_low_non_deal_producer:
     enabled: true
     contract_version: "1.0"
