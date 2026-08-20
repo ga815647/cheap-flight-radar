@@ -22,11 +22,68 @@ concurrency:
 jobs:
   recover:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
+      - name: Validate Asia Taipei same-day request
+        shell: bash
+        env:
+          REQUEST_DATE: ${{ inputs.request_date }}
+        run: |
+          TODAY="$(TZ=Asia/Taipei date +%F)"
+          test "$REQUEST_DATE" = "$TODAY"
+
       - name: Checkout current application
         uses: actions/checkout@v6
         with:
           ref: main
           path: _app
-      - name: RP-05 workflow implementation guard
-        run: echo "Same-day recovery implementation is supplied by the RP-05 application command path."
+
+      - name: Resolve actual current-main application SHA
+        shell: bash
+        run: |
+          APP_SHA="$(git -C _app rev-parse HEAD)"
+          test "${#APP_SHA}" -eq 40
+          echo "Recovery application SHA: $APP_SHA"
+
+      - name: Checkout durable fare and FTR evidence
+        uses: actions/checkout@v6
+        with:
+          ref: history/price-observations
+          path: _history
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install current application
+        run: python -m pip install -e _app
+
+      - name: Preflight claim acquisition CFR durable FTR transaction
+        id: recovery
+        shell: bash
+        env:
+          REQUEST_DATE: ${{ inputs.request_date }}
+          REQUEST_ID: ${{ inputs.recovery_request_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python -m cheap_flight_radar.ftr_recovery_workflow \
+            --app-dir _app \
+            --history-dir _history \
+            --output-dir _out \
+            --request-date "$REQUEST_DATE" \
+            --request-id "$REQUEST_ID" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "$RUN_URL" \
+            --trigger-sha "${{ github.sha }}" \
+            --debug-dir _recovery_debug
+
+      - name: Upload recovery failure debug evidence best effort
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-same-day-recovery-failure-${{ inputs.recovery_request_id }}-${{ github.run_id }}
+          path: _recovery_debug
+          if-no-files-found: ignore
+          retention-days: 2
