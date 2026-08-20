@@ -1,5 +1,10 @@
 # Airfare search substrate bake-off — 2026-08-13
 
+
+## RP-07 current execution-truth note (2026-08-20)
+
+This document preserves the 2026-08-13 live bake-off evidence; it does not by itself prove current backend integration. Current canonical execution uses the integrated `gflights==0.3.0` adapter only. Expedia remains an external ChatGPT-Web/direct recall candidate and is not anomaly authority or automatic backend recovery. `fli` / `flights==0.9.0` remains a researched exact/flexible comparator/fallback candidate, but the current project has no fli adapter or dependency. Therefore both affected canonical stages currently have no automatic executable second provider and fail closed on primary failure. FlyAI is a distinct provider contract and is not fli.
+
 Status: durable evidence for `flight-radar.yaml` source-routing convergence in PR #22.
 
 ## Decision

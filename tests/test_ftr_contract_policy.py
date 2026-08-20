@@ -22,10 +22,12 @@ class FTRContractPolicyTest(unittest.TestCase):
         self.assertTrue(activation["readiness"]["recovery_capability_active"])
         self.assertFalse(activation["readiness"]["recovery_live_proof_complete"])
         self.assertTrue(activation["readiness"]["route_shape_return_gateway_convergence_complete"])
+        self.assertTrue(activation["readiness"]["provider_fallback_execution_truth_convergence_complete"])
         self.assertFalse(activation["readiness"]["final_ftr_readiness"])
         self.assertNotIn("RP-05", activation["readiness"]["pending_packages"])
         self.assertNotIn("RP-06", activation["readiness"]["pending_packages"])
-        self.assertEqual(set(activation["readiness"]["pending_packages"]), {"RP-07", "RP-08"})
+        self.assertNotIn("RP-07", activation["readiness"]["pending_packages"])
+        self.assertEqual(set(activation["readiness"]["pending_packages"]), {"RP-08"})
 
     def test_rp06_route_shape_return_gateway_machine_contract(self):
         contract = self.ftr["route_shape_return_gateway_convergence"]
