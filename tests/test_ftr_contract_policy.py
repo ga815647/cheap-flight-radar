@@ -10,14 +10,68 @@ class FTRContractPolicyTest(unittest.TestCase):
         cls.policy = yaml.safe_load(Path("flight-radar.yaml").read_text(encoding="utf-8"))
         cls.ftr = cls.policy["ftr_handoff"]
 
-    def test_contract_is_machine_ssot_and_activation_remains_disabled(self):
+    def test_contract_is_machine_ssot_and_canonical_runtime_is_activated_by_rp04(self):
         self.assertEqual(self.ftr["schema_version"], "2.0")
-        self.assertEqual(self.ftr["status"], "pending_activation")
-        self.assertFalse(self.ftr["canonical_activation"]["enabled"])
+        self.assertEqual(self.ftr["status"], "canonical_runtime_active_not_launch_ready")
+        activation = self.ftr["canonical_activation"]
+        self.assertTrue(activation["enabled"])
+        self.assertEqual(activation["activated_by_package"], "RP-04")
+        self.assertEqual(activation["runtime_module"], "cheap_flight_radar.canonical_ftr_runtime")
+        self.assertEqual(activation["evidence_ref"], "history/price-observations")
+        self.assertTrue(activation["readiness"]["canonical_producer_active"])
+        self.assertFalse(activation["readiness"]["final_ftr_readiness"])
+        self.assertIn("RP-05", activation["readiness"]["pending_packages"])
+
+    def test_canonical_application_sha_comes_from_actual_main_checkout(self):
+        checkout = self.ftr["canonical_activation"]["application_checkout"]
+        self.assertEqual(checkout["ref"], "main")
+        self.assertEqual(checkout["producer_commit_sha_source"], "actual_checkout_head")
+        self.assertEqual(checkout["resolve_command"], "git_-C__app_rev-parse_HEAD")
+        self.assertTrue(checkout["request_trigger_sha_forbidden_as_producer_commit_sha"])
+
+    def test_canonical_write_order_is_snapshot_checksum_manifest_reload_status(self):
+        order = self.ftr["canonical_activation"]["write_order"]
         self.assertEqual(
-            self.ftr["canonical_activation"]["enable_only_in_package"],
-            "RP-04",
+            order,
+            [
+                "durable_cfr_evidence_already_persisted",
+                "build_and_validate_snapshot",
+                "write_immutable_snapshot",
+                "sha256_exact_persisted_snapshot_bytes",
+                "write_canonical_latest_manifest",
+                "reload_manifest_snapshot_checksum_and_run_identity",
+                "write_current_status_from_exact_latest_snapshot",
+            ],
         )
+        persistence = self.ftr["persistence"]
+        self.assertEqual(persistence["ref"], "history/price-observations")
+        self.assertEqual(persistence["immutable_snapshot_path_template"], "data/ftr-feed/YYYY/MM/DD/{run_id}.json")
+        self.assertEqual(persistence["canonical_latest_path"], "data/ftr-feed/latest.json")
+        self.assertTrue(persistence["sha256_required"])
+        self.assertTrue(persistence["manifest_write_last"])
+
+    def test_canonical_failure_is_durable_repair_and_preserves_last_good(self):
+        failure = self.ftr["canonical_activation"]["failure"]
+        self.assertTrue(failure["set_repair_required"])
+        self.assertTrue(failure["preserve_previous_latest_bytes"])
+        self.assertTrue(failure["preserve_previous_immutable_snapshot_bytes"])
+        self.assertEqual(
+            failure["compact_failed_attempt_evidence_path_template"],
+            "data/run-evidence/YYYY/MM/DD/{attempt_run_id}/ftr-failed-attempt.json",
+        )
+        self.assertEqual(failure["no_last_good_freshness"], "unavailable")
+        self.assertEqual(failure["existing_last_good_freshness"], "stale_reference")
+        self.assertFalse(failure["actions_artifact_correctness_dependency"])
+        self.assertTrue(failure["cfr_evidence_survives_ftr_failure"])
+
+    def test_active_repair_stays_rp05_boundary(self):
+        repair = self.ftr["canonical_activation"]["active_repair"]
+        self.assertTrue(repair["ordinary_canonical_daily_cannot_clear"])
+        self.assertTrue(repair["ordinary_canonical_daily_cannot_advance_latest"])
+        self.assertTrue(repair["ordinary_canonical_daily_cannot_masquerade_as_recovery"])
+        self.assertEqual(repair["required_clear_mode"], "same_day_recovery")
+        self.assertEqual(repair["recovery_orchestration_package"], "RP-05")
+        self.assertEqual(repair["recovery_orchestration_status"], "pending")
 
     def test_modes_and_identity_separation_are_explicit(self):
         self.assertEqual(
