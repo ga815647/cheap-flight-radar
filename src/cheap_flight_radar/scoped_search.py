@@ -724,11 +724,13 @@ async def acquire_scoped(
         window = _window_for_id(plan, task.window_id)
         execution["flight_deals"]["attempts"] += 1
         window_attempts[task.window_id]["attempts"] += 1
+        scoped_horizon_days = (window.dates()[1] - window.dates()[0]).days + 1
         route_plan = build_source_plan(
             OriginSweepRequest(
                 origin=origin,
                 horizon_start=window.start_date,
-                horizon_days=(window.dates()[1] - window.dates()[0]).days + 1,
+                horizon_days=scoped_horizon_days,
+                near_term_days=min(30, scoped_horizon_days),
                 destination_scope="asia_oceania",
                 currency="TWD",
             ),
