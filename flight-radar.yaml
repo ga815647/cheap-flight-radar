@@ -1078,7 +1078,7 @@ return_windows_policy:
   formal_deal_minimum_away_hours: 24
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
-  status: pending_activation
+  status: canonical_runtime_active_not_launch_ready
   scoped_search_acquisition:
     enabled: true
     contract_version: "1.0"
@@ -1155,7 +1155,7 @@ ftr_handoff:
       never_replace_repair_incident: true
       never_consume_canonical_claim: true
     activation:
-      canonical_runtime: pending_disabled_until_RP-04
+      canonical_runtime: active_via_RP-04
       production_launch: out_of_scope
   absolute_low_non_deal_producer:
     enabled: true
@@ -1228,11 +1228,55 @@ ftr_handoff:
     normal_cfr_deal_ranking_unchanged: true
     preserve_existing_route_identity: true
     rp06_new_open_jaw_or_return_gateway_acquisition: out_of_scope
-    canonical_ftr_activation: pending_disabled_until_RP-04
+    canonical_ftr_activation: active_via_RP-04
   canonical_activation:
-    enabled: false
-    enable_only_in_package: RP-04
-    rp01_changes_runtime_behavior: false
+    enabled: true
+    activated_by_package: RP-04
+    runtime_module: cheap_flight_radar.canonical_ftr_runtime
+    canonical_workflow: .github/workflows/canonical-production-radar.yml
+    isolated_workflow: .github/workflows/canonical-production-radar-test.yml
+    evidence_ref: history/price-observations
+    application_checkout:
+      ref: main
+      producer_commit_sha_source: actual_checkout_head
+      resolve_command: git_-C__app_rev-parse_HEAD
+      request_trigger_sha_forbidden_as_producer_commit_sha: true
+    run_truth:
+      durable_run_result_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}/run-result.json
+      terminal_success_gate: acquisition_process_success_and_cfr_stage_success
+      actions_artifact_is_terminal_truth: false
+    write_order:
+    - durable_cfr_evidence_already_persisted
+    - build_and_validate_snapshot
+    - write_immutable_snapshot
+    - sha256_exact_persisted_snapshot_bytes
+    - write_canonical_latest_manifest
+    - reload_manifest_snapshot_checksum_and_run_identity
+    - write_current_status_from_exact_latest_snapshot
+    failure:
+      set_repair_required: true
+      compact_failed_attempt_evidence_path_template: data/run-evidence/YYYY/MM/DD/{attempt_run_id}/ftr-failed-attempt.json
+      preserve_previous_latest_bytes: true
+      preserve_previous_immutable_snapshot_bytes: true
+      no_last_good_freshness: unavailable
+      existing_last_good_freshness: stale_reference
+      actions_artifact_correctness_dependency: false
+      cfr_evidence_survives_ftr_failure: true
+    active_repair:
+      ordinary_canonical_daily_cannot_clear: true
+      ordinary_canonical_daily_cannot_advance_latest: true
+      ordinary_canonical_daily_cannot_masquerade_as_recovery: true
+      required_clear_mode: same_day_recovery
+      recovery_orchestration_package: RP-05
+      recovery_orchestration_status: pending
+    readiness:
+      canonical_producer_active: true
+      final_ftr_readiness: false
+      pending_packages:
+      - RP-05
+      - RP-06
+      - RP-07
+      - RP-08
   schema_version: "2.0"
   schema_versioning:
     format: MAJOR.MINOR
