@@ -271,4 +271,4 @@ Production correctness depends on Git-backed evidence, not Actions artifact stor
 
 RP-01 established the contract/repair primitives, RP-02 added the bounded absolute-low non-Deal producer, RP-03 added isolated scoped-search acquisition, RP-04 activated canonical FTR producer staging, and **RP-05 implements persistent same-day recovery orchestration** on the same production acquisition substrate/concurrency and Git-backed evidence ref.
 
-This is still not final FTR launch readiness. RP-05 has capability implementation only and no live acquisition/proof in this package. RP-06 route-shape/return-gateway convergence, RP-07 consumer integration, and RP-08 live end-to-end proof remain pending as tracked under parent #37.
+This is still not final FTR launch readiness. RP-05 has capability implementation only and no live acquisition/proof in this package. RP-06 route-shape/return-gateway convergence, RP-07 provider fallback execution correctness, and RP-08 live end-to-end proof remain pending as tracked under parent #37.
