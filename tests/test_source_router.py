@@ -110,7 +110,26 @@ class SourceRouterTests(unittest.TestCase):
         )
         self.assertEqual(plan.coverage_state, "invalid_contract")
         self.assertEqual(plan.entries, ())
-        self.assertIn("not integrated/executable", plan.fallback_reason)
+        self.assertIn("fallback executor is absent", plan.fallback_reason)
+
+    def test_integrated_fallback_metadata_alone_cannot_create_second_entry(self):
+        policy = deepcopy(self.policy)
+        routing = policy["source_routing"]
+        routing["providers"]["fake_provider_b"] = {
+            "execution_plane": "canonical_backend",
+            "current_integration_state": "integrated",
+            "automatic_execution_supported": True,
+        }
+        routing["selected_routes"]["shared"]["broad_discovery"]["automatic_executable_fallback"] = "fake_provider_b"
+        plan = build_source_plan(
+            self.request(profile="world", search_stage="outbound_probe", origin="TPE", destination="ICN", return_date=None),
+            policy,
+            {},
+        )
+        self.assertEqual(plan.coverage_state, "invalid_contract")
+        self.assertEqual(plan.entries, ())
+        self.assertIn("fallback executor is absent", plan.fallback_reason)
+        self.assertIn("metadata alone", plan.fallback_reason)
 
     def test_preselected_destination_cannot_claim_destination_free_coverage(self):
         plan = build_source_plan(
