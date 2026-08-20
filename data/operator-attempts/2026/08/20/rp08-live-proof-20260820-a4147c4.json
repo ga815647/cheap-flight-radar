@@ -1,0 +1,11 @@
+{
+  "claimed_at": "2026-08-20T18:57:11+08:00",
+  "mode": "operator_reacquisition",
+  "request_id": "rp08-live-proof-20260820-a4147c4",
+  "requested_date": "2026-08-20",
+  "schema_version": 1,
+  "semantics": "explicit_operator_requested_live_reacquisition",
+  "trigger_sha": "202657e6bee594ea55247fb1d6442a964e11b430",
+  "workflow_run_id": "32361399640",
+  "workflow_run_url": "https://github.com/ga815647/cheap-flight-radar/actions/runs/32361399640"
+}
