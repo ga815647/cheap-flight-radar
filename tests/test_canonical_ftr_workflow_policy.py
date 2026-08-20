@@ -35,12 +35,19 @@ class CanonicalFTRWorkflowPolicyTest(unittest.TestCase):
         self.assertIn("git add data/ftr-feed data/run-evidence", text)
         self.assertIn("git push origin HEAD:history/price-observations", text)
 
-    def test_acquisition_and_cfr_stage_failure_get_durable_ftr_failure_state(self):
+    def test_acquisition_cfr_stage_and_ftr_process_failure_get_durable_ftr_failure_state(self):
         text = self.production
         self.assertIn("Persist canonical FTR acquisition/staging failure", text)
         self.assertIn("cheap_flight_radar.canonical_ftr_runtime stage-failure", text)
         self.assertIn("steps.acquisition.outcome == 'failure'", text)
         self.assertIn("steps.success.outcome == 'failure'", text)
+        self.assertIn("steps.ftr.outcome == 'failure'", text)
+        ftr_stage = text[text.index("Stage canonical FTR handoff from durable CFR evidence"):text.index("Persist canonical FTR acquisition/staging failure")]
+        self.assertIn("continue-on-error: true", ftr_stage)
+        failure_stage = text[text.index("Persist canonical FTR acquisition/staging failure"):text.index("Restore publication manifest from durable evidence")]
+        self.assertIn("git -C _history fetch origin history/price-observations", failure_stage)
+        self.assertIn("git -C _history reset --hard origin/history/price-observations", failure_stage)
+        self.assertIn("git -C _history clean -fd -- data/ftr-feed data/run-evidence data/price-history", failure_stage)
         self.assertIn("data/ftr-feed data/run-evidence", text)
         self.assertIn("Fail after durable canonical FTR failure persistence", text)
 
@@ -64,12 +71,21 @@ class CanonicalFTRWorkflowPolicyTest(unittest.TestCase):
         self.assertNotIn("git push origin HEAD:publication/radar-reports", text)
         self.assertIn("radar-pages-isolated-test.yml/dispatches", text)
         self.assertNotIn("actions/workflows/radar-pages.yml/dispatches", text)
+        failure_stage = self.isolated[
+            self.isolated.index("Persist isolated canonical FTR acquisition/staging failure"):
+            self.isolated.index("Restore isolated publication manifest from durable evidence")
+        ]
+        self.assertIn('git -C _history fetch origin "$EVIDENCE_REF"', failure_stage)
+        self.assertIn('git -C _history reset --hard "origin/$EVIDENCE_REF"', failure_stage)
+        self.assertIn("steps.ftr.outcome == 'failure'", failure_stage)
 
     def test_isolated_ftr_uses_actual_app_sha_and_artifact_is_optional(self):
         text = self.isolated
         self.assertIn('APP_SHA="$(git -C _app rev-parse HEAD)"', text)
         self.assertIn('--producer-commit-sha "$APP_SHA"', text)
         self.assertIn("Upload isolated failure debug evidence (best effort)", text)
+        ftr_stage = text[text.index("Stage isolated canonical FTR handoff from durable CFR evidence"):text.index("Persist isolated canonical FTR acquisition/staging failure")]
+        self.assertIn("continue-on-error: true", ftr_stage)
         tail = text[text.index("Upload isolated failure debug evidence (best effort)"):]
         self.assertIn("continue-on-error: true", tail)
         self.assertIn("retention-days: 2", tail)
