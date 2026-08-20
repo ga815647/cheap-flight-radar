@@ -315,10 +315,17 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
             raise ScopedSearchError(f"scoped-search isolation flag drifted: {field}")
 
     activation = _mapping(contract.get("activation"))
-    if activation.get("canonical_runtime") != "pending_disabled_until_RP-04" or activation.get("production_launch") != "out_of_scope":
+    if activation.get("canonical_runtime") != "active_via_RP-04" or activation.get("production_launch") != "out_of_scope":
         raise ScopedSearchError("scoped-search activation boundary drifted")
-    if _mapping(_mapping(policy.get("ftr_handoff")).get("canonical_activation")).get("enabled") is not False:
-        raise ScopedSearchError("RP-03 must not activate canonical FTR runtime")
+    canonical = _mapping(_mapping(policy.get("ftr_handoff")).get("canonical_activation"))
+    readiness = _mapping(canonical.get("readiness"))
+    active_repair = _mapping(canonical.get("active_repair"))
+    if canonical.get("enabled") is not True or canonical.get("activated_by_package") != "RP-04":
+        raise ScopedSearchError("RP-04 canonical FTR activation contract drifted")
+    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not False:
+        raise ScopedSearchError("RP-04 readiness boundary drifted")
+    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "pending":
+        raise ScopedSearchError("RP-05 recovery boundary drifted")
     return contract
 
 
