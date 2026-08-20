@@ -1,0 +1,301 @@
+name: EXP artifact cleanup CFR
+
+on:
+  push:
+    branches:
+      - exp/artifact-cleanup-cfr-20260820
+    paths:
+      - ".github/workflows/exp-artifact-cleanup-cfr.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout experiment branch
+        uses: actions/checkout@v6
+        with:
+          ref: exp/artifact-cleanup-cfr-20260820
+          fetch-depth: 0
+
+      - name: Enumerate classify and safely delete retained artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVIDENCE_PATH: repair/handoff/EXP_ARTIFACT_CLEANUP_CFR_01_20260820.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          repo = os.environ["REPO"]
+          evidence_path = Path(os.environ["EVIDENCE_PATH"])
+          now = dt.datetime.now(dt.timezone.utc)
+
+          def run_cmd(args, *, check=True):
+              return subprocess.run(args, text=True, capture_output=True, check=check)
+
+          def gh_json(endpoint):
+              result = run_cmd(["gh", "api", endpoint])
+              return json.loads(result.stdout)
+
+          def list_artifacts():
+              artifacts = []
+              page = 1
+              reported_total = None
+              while True:
+                  payload = gh_json(f"repos/{repo}/actions/artifacts?per_page=100&page={page}")
+                  if reported_total is None:
+                      reported_total = int(payload.get("total_count", 0))
+                  batch = payload.get("artifacts", [])
+                  artifacts.extend(batch)
+                  if len(batch) < 100:
+                      break
+                  page += 1
+              return artifacts, reported_total, page
+
+          def run_meta(run_id):
+              if not run_id:
+                  return None
+              try:
+                  payload = gh_json(f"repos/{repo}/actions/runs/{run_id}")
+              except subprocess.CalledProcessError:
+                  return None
+              return {
+                  "id": payload.get("id"),
+                  "name": payload.get("name"),
+                  "event": payload.get("event"),
+                  "status": payload.get("status"),
+                  "conclusion": payload.get("conclusion"),
+                  "head_branch": payload.get("head_branch"),
+                  "head_sha": payload.get("head_sha"),
+                  "created_at": payload.get("created_at"),
+                  "updated_at": payload.get("updated_at"),
+                  "html_url": payload.get("html_url"),
+              }
+
+          def parse_ts(value):
+              if not value:
+                  return None
+              return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+          def classify(artifact, run):
+              name = str(artifact.get("name") or "")
+              status = (run or {}).get("status")
+              created = parse_ts(artifact.get("created_at"))
+              age_hours = None if created is None else (now - created).total_seconds() / 3600.0
+
+              if status and status != "completed":
+                  return "ACTIVE_RUNTIME_DEPENDENCY", f"workflow run status={status}"
+
+              if name.startswith("fixed-watch-run-"):
+                  if age_hours is None:
+                      return "UNKNOWN", "fixed-watch age unavailable"
+                  if age_hours < 24.0:
+                      return "ACTIVE_RUNTIME_DEPENDENCY", f"fixed-watch freshness cache age_hours={age_hours:.3f}<24"
+                  return "EXPIRED_HANDOFF_TRANSPORT", f"fixed-watch freshness cache age_hours={age_hours:.3f}>=24"
+
+              if name.startswith("radar-pages-isolated-test-"):
+                  return "DISPOSABLE_TEST_DEBUG", "completed isolated Pages test build"
+              if name.startswith("isolated-canonical-production-radar-"):
+                  return "DISPOSABLE_TEST_DEBUG", "completed isolated canonical test/debug bundle"
+              if name.startswith("canonical-production-radar-"):
+                  return "DUPLICATE_OF_GIT_DURABLE_TRUTH", "canonical correctness/recovery truth is Git-backed; artifact is debug/transport only"
+              if name.startswith("operator-production-radar-"):
+                  return "DUPLICATE_OF_GIT_DURABLE_TRUTH", "operator correctness/recovery truth is Git-backed; artifact is debug/transport only"
+              if name.startswith("ftr-same-day-recovery-"):
+                  return "DUPLICATE_OF_GIT_DURABLE_TRUTH", "FTR recovery correctness truth is Git-backed; artifact is best-effort debug only"
+              if name == "github-pages" or name.startswith("github-pages-"):
+                  if status == "completed":
+                      return "EXPIRED_HANDOFF_TRANSPORT", "Pages deployment run is terminal; build artifact no longer has an in-flight deploy consumer"
+                  return "UNKNOWN", "Pages artifact without terminal workflow status"
+
+              return "UNKNOWN", "no positive redundancy/disposability proof in current CFR contract"
+
+          def normalize(artifact):
+              run_id = ((artifact.get("workflow_run") or {}).get("id"))
+              run = run_meta(run_id)
+              cls, reason = classify(artifact, run)
+              return {
+                  "artifact_id": int(artifact["id"]),
+                  "name": artifact.get("name"),
+                  "size_bytes": int(artifact.get("size_in_bytes") or 0),
+                  "created_at": artifact.get("created_at"),
+                  "updated_at": artifact.get("updated_at"),
+                  "expires_at": artifact.get("expires_at"),
+                  "expired": bool(artifact.get("expired")),
+                  "archive_download_url": artifact.get("archive_download_url"),
+                  "workflow_run": run,
+                  "classification": cls,
+                  "classification_reason": reason,
+              }
+
+          main_sha = gh_json(f"repos/{repo}/commits/main").get("sha")
+          before_raw, before_reported_total, before_pages = list_artifacts()
+          before = [normalize(a) for a in before_raw]
+          before_by_id = {a["artifact_id"]: a for a in before}
+
+          delete_classes = {
+              "DUPLICATE_OF_GIT_DURABLE_TRUTH",
+              "DISPOSABLE_TEST_DEBUG",
+              "EXPIRED_HANDOFF_TRANSPORT",
+          }
+          candidates = [a for a in before if a["classification"] in delete_classes]
+          deleted = []
+          skipped = []
+          blockers = []
+
+          for expected in sorted(candidates, key=lambda x: x["artifact_id"]):
+              artifact_id = expected["artifact_id"]
+              try:
+                  current = gh_json(f"repos/{repo}/actions/artifacts/{artifact_id}")
+              except subprocess.CalledProcessError as exc:
+                  blockers.append(f"pre-delete GET failed for artifact {artifact_id}: {exc}")
+                  skipped.append({**expected, "skip_reason": "pre-delete GET failed"})
+                  continue
+
+              current_identity = {
+                  "artifact_id": int(current["id"]),
+                  "name": current.get("name"),
+                  "size_bytes": int(current.get("size_in_bytes") or 0),
+                  "created_at": current.get("created_at"),
+              }
+              expected_identity = {
+                  "artifact_id": expected["artifact_id"],
+                  "name": expected["name"],
+                  "size_bytes": expected["size_bytes"],
+                  "created_at": expected["created_at"],
+              }
+              if current_identity != expected_identity:
+                  blockers.append(f"identity mismatch before delete for artifact {artifact_id}")
+                  skipped.append({**expected, "skip_reason": "identity mismatch", "current_identity": current_identity})
+                  continue
+
+              current_run_id = ((current.get("workflow_run") or {}).get("id"))
+              current_run = run_meta(current_run_id)
+              reclassified, rereason = classify(current, current_run)
+              if reclassified != expected["classification"] or reclassified not in delete_classes:
+                  blockers.append(f"classification changed before delete for artifact {artifact_id}: {expected['classification']} -> {reclassified}")
+                  skipped.append({**expected, "skip_reason": "classification changed", "current_classification": reclassified, "current_reason": rereason})
+                  continue
+
+              delete_result = run_cmd(["gh", "api", "--method", "DELETE", f"repos/{repo}/actions/artifacts/{artifact_id}"], check=False)
+              if delete_result.returncode != 0:
+                  blockers.append(f"DELETE failed for artifact {artifact_id}: {delete_result.stderr.strip()}")
+                  skipped.append({**expected, "skip_reason": "DELETE failed"})
+                  continue
+              deleted.append(expected)
+
+          after_raw, after_reported_total, after_pages = list_artifacts()
+          after = [normalize(a) for a in after_raw]
+          after_ids = {a["artifact_id"] for a in after}
+          deleted_ids = {a["artifact_id"] for a in deleted}
+          undeleted_ids = deleted_ids & after_ids
+          if undeleted_ids:
+              blockers.append(f"deleted artifact ids still present after cleanup: {sorted(undeleted_ids)}")
+
+          new_after_ids = after_ids - set(before_by_id)
+          concurrent_new = [a for a in after if a["artifact_id"] in new_after_ids]
+
+          def total_bytes(items):
+              return sum(int(x["size_bytes"]) for x in items)
+
+          def class_bytes(items, cls):
+              return sum(int(x["size_bytes"]) for x in items if x["classification"] == cls)
+
+          before_bytes = total_bytes(before)
+          after_bytes = total_bytes(after)
+          deleted_bytes = total_bytes(deleted)
+          expected_after_without_concurrency = before_bytes - deleted_bytes
+          state = "PASS"
+          if blockers:
+              state = "INCONCLUSIVE"
+
+          evidence = {
+              "package": "EXP-ARTIFACT-CLEANUP-CFR-01",
+              "repo": repo,
+              "main_sha": main_sha,
+              "generated_at": now.isoformat(),
+              "truth_contract": {
+                  "canonical_operator_recovery_correctness": "git_durable",
+                  "ftr_actions_artifacts": "optional_debug_only",
+                  "fixed_watch_artifact_freshness_cache_hours": 24,
+                  "unknown_delete_policy": "keep",
+                  "in_flight_workflow_delete_policy": "keep",
+              },
+              "before": {
+                  "api_reported_total_count": before_reported_total,
+                  "enumerated_count": len(before),
+                  "pagination_pages": before_pages,
+                  "total_bytes": before_bytes,
+                  "total_mib": before_bytes / 1048576,
+                  "artifacts": sorted(before, key=lambda x: (-x["size_bytes"], x["artifact_id"])),
+              },
+              "cleanup": {
+                  "candidate_count": len(candidates),
+                  "deleted_count": len(deleted),
+                  "deleted_bytes": deleted_bytes,
+                  "deleted_mib": deleted_bytes / 1048576,
+                  "deleted": sorted(deleted, key=lambda x: (-x["size_bytes"], x["artifact_id"])),
+                  "skipped": skipped,
+              },
+              "after": {
+                  "api_reported_total_count": after_reported_total,
+                  "enumerated_count": len(after),
+                  "pagination_pages": after_pages,
+                  "total_bytes": after_bytes,
+                  "total_mib": after_bytes / 1048576,
+                  "active_dependency_bytes": class_bytes(after, "ACTIVE_RUNTIME_DEPENDENCY"),
+                  "unique_evidence_bytes": class_bytes(after, "UNIQUE_DURABLE_EVIDENCE"),
+                  "unknown_bytes": class_bytes(after, "UNKNOWN"),
+                  "artifacts": sorted(after, key=lambda x: (-x["size_bytes"], x["artifact_id"])),
+              },
+              "accounting": {
+                  "expected_after_bytes_without_concurrent_creation": expected_after_without_concurrency,
+                  "observed_after_bytes": after_bytes,
+                  "concurrent_new_artifact_count": len(concurrent_new),
+                  "concurrent_new_artifacts": concurrent_new,
+                  "exact_reclaimed_bytes_from_verified_deletes": deleted_bytes,
+              },
+              "state": state,
+              "blockers": blockers,
+          }
+
+          evidence_path.parent.mkdir(parents=True, exist_ok=True)
+          evidence_path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps({
+              "state": state,
+              "main_sha": main_sha,
+              "before_count": len(before),
+              "before_bytes": before_bytes,
+              "deleted_count": len(deleted),
+              "deleted_bytes": deleted_bytes,
+              "after_count": len(after),
+              "after_bytes": after_bytes,
+              "active_dependency_bytes": evidence["after"]["active_dependency_bytes"],
+              "unique_evidence_bytes": evidence["after"]["unique_evidence_bytes"],
+              "unknown_bytes": evidence["after"]["unknown_bytes"],
+              "blockers": blockers,
+          }, indent=2))
+          PY
+
+      - name: Persist cleanup evidence to experiment branch
+        env:
+          EVIDENCE_PATH: repair/handoff/EXP_ARTIFACT_CLEANUP_CFR_01_20260820.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$EVIDENCE_PATH"
+          git commit -m "EXP: record CFR artifact cleanup evidence"
+          git push origin HEAD:exp/artifact-cleanup-cfr-20260820
