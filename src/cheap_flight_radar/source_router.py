@@ -10,6 +10,8 @@ from .models import OriginSweepRequest, ProviderPlanEntry, ProviderState, RouteP
 
 KNOWN_ROUTE_WEB_STAGES = {"outbound_probe", "return_expansion", "round_trip_benchmark"}
 KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client"}
+CANONICAL_BACKEND_EXECUTION_PLANE = "canonical_backend"
+INTEGRATED_PROVIDER_STATE = "integrated"
 
 
 def _unavailable(reason: str, state: str = "unavailable") -> RoutePlan:
@@ -55,22 +57,38 @@ def _selected_stage_config(
     return None
 
 
+def _canonical_backend_executable(provider: str, provider_registry: Mapping[str, Any]) -> bool:
+    provider_config = provider_registry.get(provider) or {}
+    return bool(
+        provider_config.get("execution_plane") == CANONICAL_BACKEND_EXECUTION_PLANE
+        and provider_config.get("current_integration_state") == INTEGRATED_PROVIDER_STATE
+        and provider_config.get("automatic_execution_supported") is True
+    )
+
+
 def build_source_plan(
     request: SearchRequest | OriginSweepRequest,
     policy: Mapping[str, Any],
     provider_states: Mapping[str, ProviderState],
 ) -> RoutePlan:
-    """Return the ordered provider plan without silently degrading query fidelity.
+    """Return only providers executable by the current caller/execution plane.
 
-    Destination-free discovery is represented by ``OriginSweepRequest``.  It may
+    Destination-free discovery is represented by ``OriginSweepRequest``. It may
     yield qualified round-trip Deals directly, or weaker round-trip/one-way/
     destination seeds that are completed only for competitive endpoints.
     A destination-bearing ``SearchRequest(search_stage="broad_discovery")`` is
     therefore not valid evidence of destination-free origin coverage.
+
+    RP-07 makes ``RoutePlan.entries`` an execution contract, not a research
+    shortlist. External Web recall surfaces and researched-but-not-integrated
+    providers remain in SSOT metadata, but cannot enter a plan unless a future
+    bounded package explicitly marks them executable by this backend. Legacy
+    ``fallback_provider`` drift fails closed instead of reviving a fake fallback.
     """
 
     routing = policy.get("source_routing") or {}
     selected = routing.get("selected_routes") or {}
+    provider_registry = routing.get("providers") or {}
 
     if isinstance(request, OriginSweepRequest):
         stage_config = _shared_origin_wide_config(request.profiles, selected)
@@ -81,9 +99,9 @@ def build_source_plan(
             )
         return _plan_stage(
             stage_config=stage_config,
+            provider_registry=provider_registry,
             provider_states=provider_states,
             reason=f"selected by SSOT for destination-free {request.origin} origin sweep",
-            include_fallback=True,
         )
 
     if request.search_stage == "broad_discovery":
@@ -121,49 +139,70 @@ def build_source_plan(
 
     return _plan_stage(
         stage_config=stage_config,
+        provider_registry=provider_registry,
         provider_states=provider_states,
         reason=(
             f"selected by SSOT for shared known-route {request.search_stage}"
             if request.search_stage in KNOWN_ROUTE_WEB_STAGES
             else f"selected by SSOT for {request.profile}/{request.search_stage}"
         ),
-        include_fallback=True,
     )
 
 
 def _plan_stage(
     *,
     stage_config: Mapping[str, Any],
+    provider_registry: Mapping[str, Any],
     provider_states: Mapping[str, ProviderState],
     reason: str,
-    include_fallback: bool = False,
 ) -> RoutePlan:
-    provider = stage_config.get("primary_provider")
+    if stage_config.get("fallback_provider"):
+        return _unavailable(
+            "legacy fallback_provider is not an executable-provider contract; use automatic_executable_fallback",
+            state="invalid_contract",
+        )
+
+    provider = str(stage_config.get("primary_provider") or "")
     if not provider:
         return _unavailable("selected route has no primary provider", state="unconfigured")
+    if not _canonical_backend_executable(provider, provider_registry):
+        return _unavailable(
+            f"{provider} is not marked as an integrated executable provider for the canonical backend",
+            state="unconfigured",
+        )
 
     execution_mode = str(stage_config.get("execution_mode") or "")
     credential_required = bool(stage_config.get("credential_required", execution_mode not in KEYLESS_EXECUTION_MODES))
 
     if not credential_required and execution_mode in KEYLESS_EXECUTION_MODES:
-        entries = [ProviderPlanEntry(provider=str(provider), reason=reason)]
-        fallback = stage_config.get("fallback_provider") if include_fallback else None
-        if fallback and fallback != provider:
-            entries.append(
-                ProviderPlanEntry(
-                    provider=str(fallback),
-                    reason="ordered fallback after selected primary substrate cannot satisfy the request",
-                )
-            )
+        entries = [ProviderPlanEntry(provider=provider, reason=reason)]
+    else:
+        state = provider_states.get(provider)
+        if state is None or not state.credential_available:
+            return _unavailable(f"{provider} credential unavailable; no silent fallback selected")
+        if not state.healthy:
+            return _unavailable(f"{provider} unhealthy; no silent lower-fidelity fallback selected")
+        entries = [ProviderPlanEntry(provider=provider, reason=reason)]
+
+    fallback = stage_config.get("automatic_executable_fallback")
+    if fallback is None:
         return RoutePlan(entries=tuple(entries), coverage_state="planned")
 
-    state = provider_states.get(str(provider))
-    if state is None or not state.credential_available:
-        return _unavailable(f"{provider} credential unavailable; no silent fallback selected")
-    if not state.healthy:
-        return _unavailable(f"{provider} unhealthy; no silent lower-fidelity fallback selected")
-
-    return RoutePlan(
-        entries=(ProviderPlanEntry(provider=str(provider), reason=reason),),
-        coverage_state="planned",
+    fallback_provider = str(fallback or "")
+    if not fallback_provider or fallback_provider == provider:
+        return _unavailable(
+            "automatic_executable_fallback must name a distinct provider or be null",
+            state="invalid_contract",
+        )
+    if not _canonical_backend_executable(fallback_provider, provider_registry):
+        return _unavailable(
+            f"automatic fallback {fallback_provider} is not integrated/executable by the canonical backend",
+            state="invalid_contract",
+        )
+    entries.append(
+        ProviderPlanEntry(
+            provider=fallback_provider,
+            reason="ordered automatic fallback after selected primary cannot satisfy the request",
+        )
     )
+    return RoutePlan(entries=tuple(entries), coverage_state="planned")

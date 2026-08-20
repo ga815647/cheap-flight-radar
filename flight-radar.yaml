@@ -915,14 +915,22 @@ public_intelligence:
     - fare_family
     unknown_components_remain_unknown: true
 source_routing:
-  status: bakeoff_selected_v2
+  status: provider_execution_truth_converged_v3
   strict_no_silent_degradation: true
+  route_plan_execution_contract:
+    entry_means_current_execution_plane_can_invoke_provider: true
+    research_or_external_candidate_metadata_is_not_executable_plan: true
+    legacy_fallback_provider_field: forbidden
+    unintegrated_automatic_fallback_action: fail_closed_invalid_contract
   unconfigured_market_stage_action: mark_source_unavailable_and_do_not_claim_coverage
   selected_routes:
     shared:
       origin_wide_discovery:
         primary_provider: gflights_google_flight_deals
-        fallback_provider: expedia_tw_airport_origin_surface
+        automatic_executable_fallback: null
+        primary_failure_action: fail_closed
+        external_web_recall_candidates:
+        - expedia_tw_airport_origin_surface
         secondary_seed_providers:
         - gflights_google_explore
         - kiwi_anywhere_web
@@ -947,7 +955,10 @@ source_routing:
         full_market_coverage_claim: false
       broad_discovery:
         primary_provider: gflights_google_exact
-        fallback_provider: fli_google_exact
+        automatic_executable_fallback: null
+        primary_failure_action: fail_closed
+        researched_not_integrated_candidates:
+        - fli_google_exact
         execution_mode: keyless_http_client
         credential_required: false
         query_scope: known_route_exact_or_flexible_completion
@@ -963,6 +974,8 @@ source_routing:
     china:
       deep_search:
         primary_provider: gflights_google_exact
+        automatic_executable_fallback: null
+        primary_failure_action: fail_closed
         execution_mode: keyless_http_client
         credential_required: false
         query_scope: known_route_exact_or_flexible_completion
@@ -970,6 +983,11 @@ source_routing:
         specialist_pipeline_required: false
   providers:
     expedia_tw_airport_origin_surface:
+      execution_plane: external_chatgpt_web_direct
+      current_integration_state: external_not_backend_integrated
+      automatic_execution_supported: false
+      canonical_backend_coverage_without_own_query: forbidden
+      anomaly_authority: false
       selected_roles:
       - stage_a_origin_wide_destination_seed
       execution: chatgpt_web_direct
@@ -1012,6 +1030,9 @@ source_routing:
       - best_effort_web_recall_does_not_claim_exhaustive_market_matrix
       - serious_candidates_require_separate_revalidation
     gflights_google_flight_deals:
+      execution_plane: canonical_backend
+      current_integration_state: integrated
+      automatic_execution_supported: true
       truth_source: google_flight_deals
       library: gflights==0.3.0
       license: MIT
@@ -1024,6 +1045,9 @@ source_routing:
       - primary_external_anomaly_truth_acquisition
       qualification: production_candidate_live_proven_2026_08_13
     gflights_google_explore:
+      execution_plane: canonical_backend
+      current_integration_state: integrated
+      automatic_execution_supported: true
       truth_source: google_flights_explore
       library: gflights==0.3.0
       credential_required: false
@@ -1031,6 +1055,9 @@ source_routing:
       - secondary_destination_free_seed_discovery
       verification_state: seed_only_until_exact_completion
     gflights_google_exact:
+      execution_plane: canonical_backend
+      current_integration_state: integrated
+      automatic_execution_supported: true
       truth_source: google_flights_exact_search
       library: gflights==0.3.0
       credential_required: false
@@ -1041,11 +1068,18 @@ source_routing:
       - booking_offer_revalidation
       verification_state: current_search_evidence_revalidate_before_publish
     fli_google_exact:
+      execution_plane: researched_not_integrated_backend_candidate
+      current_integration_state: absent
+      current_production_adapter: absent
+      current_project_dependency: absent
+      automatic_execution_supported: false
+      historical_qualification_evidence: docs/substrate-bakeoff-2026-08-13.md
+      distinct_from_provider: flyai
       library: flights==0.9.0
       credential_required: false
       selected_roles:
-      - exact_and_flexible_fallback_comparator
-      production_note: install_click_explicitly_due_current_wheel_metadata_defect
+      - exact_and_flexible_fallback_comparator_candidate
+      historical_note: prior_live_bakeoff_required_explicit_click_due_wheel_metadata_defect
     kiwi_anywhere_web:
       selected_roles:
       - secondary_seed_discovery
@@ -1407,9 +1441,9 @@ ftr_handoff:
       recovery_capability_active: true
       recovery_live_proof_complete: false
       route_shape_return_gateway_convergence_complete: true
+      provider_fallback_execution_truth_convergence_complete: true
       final_ftr_readiness: false
       pending_packages:
-      - RP-07
       - RP-08
   schema_version: "2.0"
   schema_versioning:
@@ -1532,3 +1566,4 @@ ftr_handoff:
   - RP-04_canonical_ftr_runtime_activation
   - RP-05_live_same_day_recovery_orchestration
   - RP-06_route_shape_return_gateway_convergence
+  - RP-07_provider_fallback_execution_truth_convergence

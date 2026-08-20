@@ -1,5 +1,18 @@
 # Current search policy — 2026-08-13 substrate convergence
 
+
+## Current executable provider contract (RP-07, 2026-08-20)
+
+The short-lived canonical backend currently executes only the integrated `gflights==0.3.0` substrate. `RoutePlan.entries` is an execution contract: every listed provider must be invokable by that backend for the represented request shape.
+
+- Destination-free canonical discovery: `gflights_google_flight_deals` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.
+- Known-route exact/flexible/open-jaw completion: `gflights_google_exact` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed.
+- Expedia airport-origin public Web remains an external ChatGPT-Web/direct destination-recall/fallback **candidate**. It is seed/recall evidence only, is not anomaly authority, is not canonical backend execution coverage, and cannot silently repair a gflights failure.
+- `fli` / `flights==0.9.0` remains historical bake-off evidence for an exact/flexible comparator/fallback candidate. The current repo has no fli production adapter and no `flights`/`click` dependency, so fli is not a current executable RoutePlan entry.
+- FlyAI is a different legacy adapter/provider contract (`flyai`), not fli and not a substitute for the researched fli candidate.
+
+The historical routing and bake-off material below is retained as research history. Older uses of “fallback” describe candidate/external surfaces unless a section explicitly states current canonical-backend integration; they do not override this current execution contract.
+
 This section supersedes any older mandatory outbound-one-way-first, global-scope, market-specific deep-pipeline, ferry-gateway, or fixed 120-day product semantics below. The older material remains in this file as design history. `PRODUCT_INTENT.md` and `flight-radar.yaml` are authoritative; see `docs/substrate-bakeoff-2026-08-13.md` for live evidence.
 
 Current search architecture:
