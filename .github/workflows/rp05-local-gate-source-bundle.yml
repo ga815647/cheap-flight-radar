@@ -1,0 +1,36 @@
+name: RP-05 local Gate source bundle
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Record bundled SHA
+        run: git rev-parse HEAD > RP05_BUNDLED_SHA.txt
+      - name: Upload source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: rp05-local-gate-source-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .github
+            docs
+            src
+            tests
+            AGENTS.md
+            PRODUCT_INTENT.md
+            flight-radar.yaml
+            pyproject.toml
+            RP05_BUNDLED_SHA.txt
+          if-no-files-found: error
+          retention-days: 1
