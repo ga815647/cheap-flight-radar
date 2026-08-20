@@ -71,14 +71,37 @@ def discovery_record(
     )
 
 
-def exact_record(seed, *, price=None, verification_state="revalidated", returned=None):
+def exact_record(
+    seed,
+    *,
+    price=None,
+    verification_state="revalidated",
+    returned=None,
+    return_departure_time="13:30:00",
+):
+    return_date = returned or seed.return_date
     return AirfareRecord(
         record_id="exact-" + seed.record_id,
         provider="gflights",
         surface="exact",
         origin=seed.origin,
         destination=seed.destination,
-        legs=(AirfareLeg(seed.origin.iata, seed.destination.iata, seed.outbound_date),),
+        legs=(
+            AirfareLeg(
+                seed.origin.iata,
+                seed.destination.iata,
+                seed.outbound_date,
+                departure_time=f"{seed.outbound_date}T09:00:00",
+                arrival_time=f"{seed.outbound_date}T12:00:00",
+            ),
+            AirfareLeg(
+                seed.destination.iata,
+                seed.origin.iata,
+                return_date,
+                departure_time=f"{return_date}T{return_departure_time}",
+                arrival_time=f"{return_date}T16:00:00",
+            ),
+        ),
         current_price_twd=price if price is not None else seed.current_price_twd,
         observed_at=RUN_AT.isoformat(),
         verification_state=verification_state,
@@ -90,7 +113,7 @@ def exact_record(seed, *, price=None, verification_state="revalidated", returned
             "origin": seed.origin.iata,
             "destination": seed.destination.iata,
             "date": seed.outbound_date,
-            "return_date": returned or seed.return_date,
+            "return_date": return_date,
         },
     )
 
@@ -186,41 +209,41 @@ class ScopedPlanningTest(unittest.TestCase):
             self.assertLessEqual(task.anchor_return, window.end_date)
 
     def test_duration_supplied_constrains_and_absent_is_not_fixed(self):
-        constrained = build_scoped_plan(
-            request(
-                windows=(("2026-10-01", "2026-10-08"),),
-                discovery_calls=16,
-                duration=DurationConstraint(min_nights=4, max_nights=4),
-            ),
-            policy=load_policy(),
-        )
-        self.assertTrue(constrained.discovery_tasks)
-        self.assertEqual(
-            {
-                (
-                    datetime.fromisoformat(task.anchor_return)
-                    - datetime.fromisoformat(task.anchor_departure)
-                ).days
-                for task in constrained.discovery_tasks
-            },
-            {4},
-        )
-
         unconstrained = build_scoped_plan(
             request(
                 windows=(("2026-10-01", "2026-10-04"),),
                 discovery_calls=12,
+                duration=None,
             ),
             policy=load_policy(),
         )
-        durations = {
+        unconstrained_durations = {
             (
                 datetime.fromisoformat(task.anchor_return)
                 - datetime.fromisoformat(task.anchor_departure)
             ).days
             for task in unconstrained.discovery_tasks
         }
-        self.assertEqual(durations, {2, 3})
+        self.assertIn(1, unconstrained_durations)
+
+        constrained = build_scoped_plan(
+            request(
+                windows=(("2026-10-01", "2026-10-04"),),
+                discovery_calls=12,
+                duration=DurationConstraint(min_nights=2),
+            ),
+            policy=load_policy(),
+        )
+        constrained_durations = {
+            (
+                datetime.fromisoformat(task.anchor_return)
+                - datetime.fromisoformat(task.anchor_departure)
+            ).days
+            for task in constrained.discovery_tasks
+        }
+        self.assertTrue(constrained_durations)
+        self.assertNotIn(1, constrained_durations)
+        self.assertTrue(all(value >= 2 for value in constrained_durations))
 
     def test_budget_truncation_and_identity_are_deterministic(self):
         req = request(
@@ -346,6 +369,87 @@ class ScopedAcquisitionSemanticsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.deals[0].classification, "Deal")
         self.assertEqual(result.deals[0].state, "deal")
         self.assertEqual(result.deals[0].anomaly_source, "google_flight_deals")
+        self.assertEqual(result.ftr_absolute_low_non_deals, ())
+
+    async def test_adjacent_date_exact_actual_stay_over_24h_can_pass_minimum_away(self):
+        seeds = {}
+
+        def discovery_factory(origin, anchor_departure, anchor_return):
+            if origin != "TPE":
+                return ()
+            seed = discovery_record(
+                record_id="adjacent-over-24",
+                origin=origin,
+                destination="KIX",
+                country="Japan",
+                outbound=anchor_departure,
+                returned=anchor_return,
+                price=5000,
+                qualified=True,
+            )
+            seeds[(origin, anchor_departure, anchor_return)] = seed
+            return (seed,)
+
+        def exact_factory(origin, destination, departure_date, return_date):
+            self.assertEqual((datetime.fromisoformat(return_date) - datetime.fromisoformat(departure_date)).days, 1)
+            return exact_record(
+                seeds[(origin, departure_date, return_date)],
+                price=4500,
+                return_departure_time="13:30:00",
+            )
+
+        _, result, _ = await acquire_scoped(
+            request=request(
+                windows=(("2026-10-01", "2026-10-02"),),
+                discovery_calls=4,
+                exact_calls=4,
+                duration=None,
+            ),
+            policy=load_policy(),
+            adapter=FakeScopedAdapter(discovery_factory=discovery_factory, exact_factory=exact_factory),
+            run_at=RUN_AT,
+        )
+        self.assertEqual(len(result.deals), 1)
+
+    async def test_adjacent_date_exact_actual_stay_at_or_below_24h_is_excluded(self):
+        seeds = {}
+
+        def discovery_factory(origin, anchor_departure, anchor_return):
+            if origin != "TPE":
+                return ()
+            seed = discovery_record(
+                record_id="adjacent-under-24",
+                origin=origin,
+                destination="KIX",
+                country="Japan",
+                outbound=anchor_departure,
+                returned=anchor_return,
+                price=5000,
+                qualified=True,
+            )
+            seeds[(origin, anchor_departure, anchor_return)] = seed
+            return (seed,)
+
+        def exact_factory(origin, destination, departure_date, return_date):
+            return exact_record(
+                seeds[(origin, departure_date, return_date)],
+                price=4500,
+                return_departure_time="11:00:00",
+            )
+
+        _, result, _ = await acquire_scoped(
+            request=request(
+                windows=(("2026-10-01", "2026-10-02"),),
+                discovery_calls=4,
+                exact_calls=4,
+                duration=None,
+            ),
+            policy=load_policy(),
+            adapter=FakeScopedAdapter(discovery_factory=discovery_factory, exact_factory=exact_factory),
+            run_at=RUN_AT,
+        )
+        self.assertEqual(result.deals, ())
+        self.assertEqual(result.exact_non_deal_candidates, ())
         self.assertEqual(result.ftr_absolute_low_non_deals, ())
 
     async def test_exact_non_deal_reaches_only_rp02_absolute_low_collection(self):
@@ -509,6 +613,10 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status.read_bytes(), status_before)
             self.assertEqual(loaded["candidate_counts"]["deals"], 1)
             self.assertEqual(loaded["candidate_counts"]["absolute_low_non_deals"], 1)
+            self.assertEqual(
+                loaded["coverage"]["windows"],
+                loaded["scoped_search"]["execution"]["window_execution"],
+            )
 
     async def test_duplicate_same_request_replays_without_provider_calls_and_changed_intent_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -612,12 +720,25 @@ class ScopedSSOTDriftTest(unittest.TestCase):
         self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["enabled"])
         self.assertEqual(contract["acquisition"]["broad_horizon_then_post_filter"], "forbidden")
         self.assertFalse(contract["bounded_execution"]["search_horizon_days_is_scoped_budget"])
+        self.assertEqual(
+            contract["windows"]["adjacent_date_pair_without_duration"],
+            "allowed_pending_exact_minimum_away_truth",
+        )
+        self.assertFalse(contract["windows"]["planner_calendar_difference_is_minimum_away_truth"])
+        self.assertTrue(contract["coverage"]["availability_window_is_terminal_dimension"])
+        self.assertEqual(contract["coverage"]["zero_provider_call_status"], "not_attempted")
+        self.assertTrue(contract["bounded_execution"]["truncation_must_not_hide_unattempted_window"])
 
     def test_machine_ssot_drift_fails_closed(self):
         policy = load_policy()
         drifted = copy.deepcopy(policy)
         drifted["ftr_handoff"]["scoped_search_acquisition"]["windows"]["cross_window_trip"] = "allowed"
         with self.assertRaisesRegex(ScopedSearchError, "cross-window"):
+            validate_scoped_search_policy(drifted)
+
+        drifted = copy.deepcopy(policy)
+        drifted["ftr_handoff"]["scoped_search_acquisition"]["coverage"]["zero_provider_call_status"] = "succeeded"
+        with self.assertRaisesRegex(ScopedSearchError, "zero_provider_call_status"):
             validate_scoped_search_policy(drifted)
 
         drifted = copy.deepcopy(policy)
