@@ -1,0 +1,32 @@
+name: FTR same-day recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_date:
+        description: Asia/Taipei local date (YYYY-MM-DD)
+        required: true
+        type: string
+      recovery_request_id:
+        description: Unique explicit same-day recovery request id
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-radar-acquisition
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current application
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: _app
+      - name: RP-05 workflow implementation guard
+        run: echo "Same-day recovery implementation is supplied by the RP-05 application command path."
