@@ -26,25 +26,3 @@ jobs:
 
       - name: Test
         run: python -m unittest discover -s tests -v
-
-      - name: Export exact source for local Gate bridge
-        uses: actions/upload-artifact@v4
-        with:
-          name: rp06-exact-source
-          path: |
-            .
-            !.git
-          include-hidden-files: true
-          retention-days: 1
-
-      - name: Stage offline Gate dependencies
-        run: |
-          python -m pip download --dest /tmp/rp06-wheelhouse scrapy parsel
-          python -m pip download --dest /tmp/rp06-wheelhouse --only-binary=:all: --python-version 3.13 --implementation cp --abi cp313 --platform manylinux2014_x86_64 zope-interface
-
-      - name: Export offline Gate dependencies
-        uses: actions/upload-artifact@v4
-        with:
-          name: rp06-offline-wheelhouse
-          path: /tmp/rp06-wheelhouse
-          retention-days: 1
