@@ -125,14 +125,16 @@ class RecordingFlightDealsAdapter:
     """Transparent adapter decorator retaining already-fetched provider rows.
 
     Flight Deals rows support the pre-existing pending-qualified-candidate
-    behavior. RP-06 also records the exact multi-city request/result pairs that
-    :class:`ProductionRadar` already performs. Merely recording those results
-    adds no provider request and does not change sticky-429 lane behavior.
+    behavior. RP-06 also records all discovery provenance plus the exact
+    multi-city request/result pairs that :class:`ProductionRadar` already
+    performs. Merely recording those results adds no provider request and does
+    not change sticky-429 lane behavior.
     """
 
     def __init__(self, delegate: Any) -> None:
         self._delegate = delegate
         self.flight_deal_records: list[AirfareRecord] = []
+        self.discovery_records: list[AirfareRecord] = []
         self.open_jaw_results: list[
             tuple[tuple[tuple[str, str, str], ...], ProviderResult]
         ] = []
@@ -141,6 +143,13 @@ class RecordingFlightDealsAdapter:
         result = await self._delegate.flight_deals(**kwargs)
         if result.coverage_state != "failed":
             self.flight_deal_records.extend(result.records)
+            self.discovery_records.extend(result.records)
+        return result
+
+    async def explore(self, **kwargs: Any) -> ProviderResult:
+        result = await self._delegate.explore(**kwargs)
+        if result.coverage_state != "failed":
+            self.discovery_records.extend(result.records)
         return result
 
     async def open_jaw(self, **kwargs: Any) -> ProviderResult:
@@ -494,7 +503,7 @@ async def run_once(
         retained,
         open_jaw_results=recorder.open_jaw_results,
         policy=policy,
-        discovery_records=recorder.flight_deal_records,
+        discovery_records=recorder.discovery_records,
     )
     return apply_absolute_low_selection(converged, policy=policy)
 
