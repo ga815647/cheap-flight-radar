@@ -197,6 +197,7 @@ jobs:
       - name: Stage canonical FTR handoff from durable CFR evidence
         if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && steps.success.outcome == 'success'
         id: ftr
+        continue-on-error: true
         shell: bash
         env:
           REQUEST_DATE: ${{ steps.request.outputs.request_date }}
@@ -226,7 +227,7 @@ jobs:
           fi
 
       - name: Persist canonical FTR acquisition/staging failure
-        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure')
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure' || steps.ftr.outcome == 'failure')
         id: ftr_failure
         shell: bash
         env:
@@ -235,10 +236,15 @@ jobs:
         run: |
           ATTEMPT_ID="canonical-attempt-${REQUEST_DATE}-${{ github.run_id }}"
           FAILED_AT="$(TZ=Asia/Taipei date --iso-8601=seconds)"
+          git -C _history fetch origin history/price-observations
+          git -C _history reset --hard origin/history/price-observations
+          git -C _history clean -fd -- data/ftr-feed data/run-evidence data/price-history
           if [ "${{ steps.acquisition.outcome }}" = "failure" ]; then
             REASON="canonical acquisition process failed before terminal CFR run-result"
-          else
+          elif [ "${{ steps.success.outcome }}" = "failure" ]; then
             REASON="canonical CFR durable stage-success rejected or failed before FTR handoff"
+          else
+            REASON="canonical FTR staging process failed before durable FTR commit"
           fi
           python -m cheap_flight_radar.canonical_ftr_runtime stage-failure \
             --history-dir _history \
@@ -305,7 +311,7 @@ jobs:
           -f ref=main
 
       - name: Fail after durable canonical FTR failure persistence
-        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure' || steps.ftr.outputs.status == 'failed')
+        if: steps.request.outputs.active == 'true' && steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure' || steps.ftr.outcome == 'failure' || steps.ftr.outputs.status == 'failed')
         run: |
           echo "Canonical Radar/FTR transaction failed after durable failure state was persisted." >&2
           exit 1
