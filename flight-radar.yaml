@@ -1096,6 +1096,8 @@ ftr_handoff:
       complete_trip_must_fit_one_window: true
       cross_window_trip: forbidden
       multiple_windows_merge_one_request: true
+      adjacent_date_pair_without_duration: allowed_pending_exact_minimum_away_truth
+      planner_calendar_difference_is_minimum_away_truth: false
     acquisition:
       reuse_source_router: true
       reuse_existing_provider_adapter: true
@@ -1117,6 +1119,7 @@ ftr_handoff:
       deterministic_ordering: true
       deterministic_truncation: true
       search_horizon_days_is_scoped_budget: false
+      truncation_must_not_hide_unattempted_window: true
     identity:
       run_id_template: ftr-scoped-{request_id}-{request_fingerprint_12}
       acquisition_identity: scoped_search
@@ -1135,6 +1138,11 @@ ftr_handoff:
       zero_candidates_is_failure: false
       unqueried_slice_success: forbidden
       unsupported_surface_success: forbidden
+      availability_window_is_terminal_dimension: true
+      unqueried_window_success: forbidden
+      zero_provider_call_status: not_attempted
+      missing_window_consumability: fail_closed
+      complete_empty_provider_response_may_succeed_window: true
     persistence:
       immutable_snapshot: ftr_handoff.persistence.immutable_snapshot_path_template
       scoped_manifest: ftr_handoff.persistence.scoped_manifest_path_template
