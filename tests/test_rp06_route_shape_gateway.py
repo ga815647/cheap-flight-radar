@@ -180,20 +180,22 @@ class RP06TypedRouteVariantAdmissionTest(unittest.TestCase):
         self.assertEqual(selected.exact_non_deal_candidates, ())
         self.assertEqual(selected.ftr_absolute_low_non_deals, ())
 
-    def test_weak_incomplete_stale_and_nonreproducible_variants_do_not_enter_pool(self):
+    def test_weak_incomplete_stale_nonreproducible_and_24h_variants_do_not_enter_pool(self):
         legs = (("TPE", "KIX", "2026-10-05"), ("FUK", "TPE", "2026-10-09"))
+        short_legs = (("TPE", "KIX", "2026-10-05"), ("FUK", "TPE", "2026-10-06"))
         cases = [
-            exact_variant(record_id="weak", legs=legs, verification_state="exact_search"),
-            exact_variant(record_id="incomplete", legs=legs, complete_airfare=False),
-            exact_variant(record_id="stale", legs=legs, observed_at=(RUN_AT - timedelta(hours=25)).isoformat()),
-            exact_variant(record_id="nonrepro", legs=legs, booking_token=None),
+            (legs, exact_variant(record_id="weak", legs=legs, verification_state="exact_search")),
+            (legs, exact_variant(record_id="incomplete", legs=legs, complete_airfare=False)),
+            (legs, exact_variant(record_id="stale", legs=legs, observed_at=(RUN_AT - timedelta(hours=25)).isoformat())),
+            (legs, exact_variant(record_id="nonrepro", legs=legs, booking_token=None)),
+            (short_legs, exact_variant(record_id="exactly-24h", legs=short_legs)),
         ]
-        cases[-1] = AirfareRecord(**{**cases[-1].__dict__, "reproducible_search": {}})
-        for record in cases:
+        cases[3] = (legs, AirfareRecord(**{**cases[3][1].__dict__, "reproducible_search": {}}))
+        for requested_legs, record in cases:
             with self.subTest(record=record.record_id):
                 result = converge_rp06_route_variants(
                     base_result(),
-                    open_jaw_results=(capture(legs, record),),
+                    open_jaw_results=(capture(requested_legs, record),),
                     policy=self.policy,
                 )
                 self.assertEqual(result.exact_non_deal_candidates, ())
@@ -208,15 +210,46 @@ class RP06TypedRouteVariantAdmissionTest(unittest.TestCase):
         )
         self.assertEqual(result.exact_non_deal_candidates, ())
 
+    def test_formal_deal_identity_is_not_relabelled_as_absolute_low(self):
+        legs = (("TPE", "KIX", "2026-10-05"), ("FUK", "TPE", "2026-10-09"))
+        exact = exact_variant(record_id="formal-deal-exact", legs=legs, price=3000)
+        deal = RadarItem(
+            classification="Deal",
+            state="deal",
+            discovery=discovery(record_id="deal-seed"),
+            exact=exact,
+            anomaly_source="google_flight_deals",
+            anomaly_strength_percent=40.0,
+            reason="formal deal fixture",
+            observation_id="deal-observation",
+        )
+        result = converge_rp06_route_variants(
+            base_result(deals=(deal,)),
+            open_jaw_results=(capture(legs, exact),),
+            policy=self.policy,
+        )
+        self.assertEqual(result.exact_non_deal_candidates, ())
+        self.assertEqual(apply_absolute_low_selection(result, policy=self.policy).ftr_absolute_low_non_deals, ())
+
     def test_opportunistic_nonprimary_main_island_gateway_requires_live_exact_record(self):
         legs = (("TPE", "KIX", "2026-10-05"), ("KIX", "TNN", "2026-10-09"))
         no_live = converge_rp06_route_variants(
             base_result(),
-            open_jaw_results=(capture(legs, None),),
+            open_jaw_results=(capture(legs, None, request_sent=False, state="failed"),),
             policy=self.policy,
         )
         self.assertEqual(no_live.exact_non_deal_candidates, ())
-        self.assertFalse(no_live.coverage["return_gateway_expansion"]["seed_attempts"][0]["live_route_evidence_observed"])
+        row = no_live.coverage["return_gateway_expansion"]["seed_attempts"][0]
+        self.assertFalse(row["live_route_evidence_observed"])
+        self.assertEqual(row["attempted_mixed_return_gateways"], [])
+        self.assertFalse(row["provider_request_sent"])
+
+        with self.assertRaisesRegex(RuntimeError, "cannot be attempted without live route evidence"):
+            converge_rp06_route_variants(
+                base_result(),
+                open_jaw_results=(capture(legs, None, request_sent=True),),
+                policy=self.policy,
+            )
 
         live = exact_variant(record_id="live-tnn", legs=legs)
         with_live = converge_rp06_route_variants(
@@ -225,7 +258,9 @@ class RP06TypedRouteVariantAdmissionTest(unittest.TestCase):
             policy=self.policy,
         )
         self.assertEqual([item.exact.record_id for item in with_live.exact_non_deal_candidates], ["live-tnn"])
-        self.assertTrue(with_live.coverage["return_gateway_expansion"]["seed_attempts"][0]["live_route_evidence_observed"])
+        live_row = with_live.coverage["return_gateway_expansion"]["seed_attempts"][0]
+        self.assertTrue(live_row["live_route_evidence_observed"])
+        self.assertEqual(live_row["attempted_mixed_return_gateways"], ["TNN"])
 
 
 class RP06RouteIdentityAndGatewayCoverageTest(unittest.TestCase):
@@ -271,6 +306,8 @@ class RP06RouteIdentityAndGatewayCoverageTest(unittest.TestCase):
         coverage = result.coverage["return_gateway_expansion"]
         self.assertFalse(coverage["search_exhaustive"])
         self.assertFalse(coverage["provider_call_budget_changed_by_rp06"])
+        self.assertTrue(coverage["opportunistic_non_primary"]["allowed"])
+        self.assertTrue(coverage["opportunistic_non_primary"]["requires_live_route_evidence"])
         row = coverage["seed_attempts"][0]
         self.assertEqual(row["selected_mixed_return_gateway"], "KHH")
         self.assertEqual(row["attempted_mixed_return_gateways"], ["KHH"])
