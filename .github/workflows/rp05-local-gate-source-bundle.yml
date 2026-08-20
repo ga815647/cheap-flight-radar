@@ -16,21 +16,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Record bundled SHA
-        run: git rev-parse HEAD > RP05_BUNDLED_SHA.txt
-      - name: Upload source bundle
+      - name: Set up Python 3.13 matching local Gate runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Record bundled SHA and source archive
+        shell: bash
+        run: |
+          git rev-parse HEAD > RP05_BUNDLED_SHA.txt
+          tar -czf rp05-source.tar.gz \
+            --exclude=.git \
+            .github docs src tests AGENTS.md PRODUCT_INTENT.md flight-radar.yaml pyproject.toml RP05_BUNDLED_SHA.txt
+      - name: Build local Gate dependency bundle
+        run: python -m pip install . --target _local_deps
+      - name: Upload source and dependency bundle
         uses: actions/upload-artifact@v4
         with:
-          name: rp05-local-gate-source-${{ github.event.pull_request.head.sha || github.sha }}
+          name: rp05-local-gate-bundle-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
-            .github
-            docs
-            src
-            tests
-            AGENTS.md
-            PRODUCT_INTENT.md
-            flight-radar.yaml
-            pyproject.toml
-            RP05_BUNDLED_SHA.txt
+            rp05-source.tar.gz
+            _local_deps
           if-no-files-found: error
           retention-days: 1
