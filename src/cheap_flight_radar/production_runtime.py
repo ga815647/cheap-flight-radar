@@ -35,6 +35,8 @@ import re
 from typing import Any, Mapping, Sequence
 
 from .airfare import AirfareRecord, ProviderResult, is_international_asia_oceania
+from .ftr_absolute_low import apply_absolute_low_selection, select_absolute_low_non_deals
+from .models import TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
 from .production_radar import (
     ProductionRadar,
     RadarItem,
@@ -49,7 +51,6 @@ from .production_radar import (
     write_run_artifacts as _write_run_artifacts,
 )
 from .providers.gflights import GFlightsAdapter
-from .ftr_absolute_low import apply_absolute_low_selection, select_absolute_low_non_deals
 
 
 STICKY_RATE_LIMIT_MARKERS = (
@@ -244,6 +245,7 @@ def _variant_discovery(
     origin: str,
     destination: str,
     outbound_date: str,
+    additional_records: Sequence[AirfareRecord] = (),
 ) -> AirfareRecord | None:
     """Resolve provenance from retained CFR truth, never from a city guess."""
 
@@ -253,6 +255,11 @@ def _variant_discovery(
         if item.discovery.origin.iata == origin
         and item.discovery.destination.iata == destination
     ]
+    candidates.extend(
+        record
+        for record in additional_records
+        if record.origin.iata == origin and record.destination.iata == destination
+    )
     exact_date = [record for record in candidates if record.outbound_date == outbound_date]
     if exact_date:
         return min(exact_date, key=lambda record: record.record_id)
@@ -296,6 +303,7 @@ def converge_rp06_route_variants(
         tuple[tuple[tuple[str, str, str], ...], ProviderResult]
     ],
     policy: Mapping[str, Any],
+    discovery_records: Sequence[AirfareRecord] = (),
 ) -> RadarRunResult:
     """Admit already-acquired exact route variants and persist gateway truth.
 
@@ -306,6 +314,10 @@ def converge_rp06_route_variants(
 
     return_policy = (policy.get("search") or {}).get("return_to_taiwan") or {}
     primary_gateways = tuple(str(value) for value in return_policy.get("primary_return_search_airports") or ())
+    opportunistic_allowed = bool(return_policy.get("opportunistic_main_island_return_airports_allowed", False))
+    opportunistic_requires_live = bool(
+        return_policy.get("live_route_evidence_required_for_non_primary_return_airport", True)
+    )
     completion_scope = str(return_policy.get("completion_scope") or "")
     route_candidates: list[RadarItem] = []
     gateway_rows: list[dict[str, Any]] = []
@@ -327,46 +339,71 @@ def converge_rp06_route_variants(
             mixed_seed_keys.add(seed_key)
             selected_gateway = last[1]
             request_sent = bool(provider_result.request_sent)
+            is_primary = selected_gateway in primary_gateways
+            is_main_island = selected_gateway in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
+            live_route_evidence = bool(
+                provider_result.records
+                and is_main_island
+                and any(
+                    record.surface == "open_jaw"
+                    and record.verification_state == "revalidated"
+                    and record.complete_airfare
+                    and record.legs
+                    and record.legs[-1].destination == selected_gateway
+                    for record in provider_result.records
+                )
+            )
+            if (
+                request_sent
+                and is_main_island
+                and not is_primary
+                and (not opportunistic_allowed or (opportunistic_requires_live and not live_route_evidence))
+            ):
+                raise RuntimeError(
+                    "RP-06 opportunistic non-primary main-island gateway cannot be attempted without live route evidence"
+                )
             attempted = [selected_gateway] if request_sent else []
+            if is_primary:
+                selected_gateway_source = "configured_primary"
+            elif is_main_island and live_route_evidence:
+                selected_gateway_source = "opportunistic_non_primary_live_route_evidence"
+            elif is_main_island:
+                selected_gateway_source = "opportunistic_non_primary_not_attempted"
+            else:
+                selected_gateway_source = "non_main_island_request"
             gateway_rows.append(
                 {
                     "seed_key": seed_key,
                     "taiwan_origin_gateway": first[0],
                     "destination_arrival_airport": first[1],
                     "selected_mixed_return_gateway": selected_gateway,
-                    "selected_gateway_source": (
-                        "configured_primary"
-                        if selected_gateway in primary_gateways
-                        else "opportunistic_non_primary_request"
-                    ),
+                    "selected_gateway_source": selected_gateway_source,
                     "attempted_mixed_return_gateways": attempted,
                     "configured_primary_gateways_not_attempted": [
                         gateway for gateway in primary_gateways if gateway not in attempted
                     ],
                     "provider_request_sent": request_sent,
                     "result_coverage_state": provider_result.coverage_state,
-                    "live_route_evidence_observed": bool(
-                        provider_result.records
-                        and any(
-                            record.surface == "open_jaw"
-                            and record.verification_state == "revalidated"
-                            and record.complete_airfare
-                            and record.legs
-                            and record.legs[-1].destination == selected_gateway
-                            for record in provider_result.records
-                        )
-                    ),
+                    "live_route_evidence_observed": live_route_evidence,
                 }
             )
 
         if provider_result.coverage_state == "failed":
             continue
         for exact in provider_result.records:
+            actual_return_gateway = exact.legs[-1].destination if exact.legs else ""
+            if (
+                actual_return_gateway in TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
+                and actual_return_gateway not in primary_gateways
+                and not opportunistic_allowed
+            ):
+                continue
             discovery = _variant_discovery(
                 result,
                 origin=first[0],
                 destination=first[1],
                 outbound_date=first[2],
+                additional_records=discovery_records,
             )
             if discovery is None:
                 continue
@@ -415,8 +452,8 @@ def converge_rp06_route_variants(
         "mixed_return_provider_attempts_per_expansion_seed_max": 1,
         "provider_call_budget_changed_by_rp06": False,
         "opportunistic_non_primary": {
-            "allowed": bool(return_policy.get("allow_opportunistic_main_island_airports", False)),
-            "requires_live_route_evidence": bool(return_policy.get("opportunistic_airport_requires_live_route_evidence", True)),
+            "allowed": opportunistic_allowed,
+            "requires_live_route_evidence": opportunistic_requires_live,
             "proactively_exhaustive": False,
             "no_live_evidence_semantics": "not_searched_not_eligible_as_opportunistic_extra",
         },
@@ -457,6 +494,7 @@ async def run_once(
         retained,
         open_jaw_results=recorder.open_jaw_results,
         policy=policy,
+        discovery_records=recorder.flight_deal_records,
     )
     return apply_absolute_low_selection(converged, policy=policy)
 
