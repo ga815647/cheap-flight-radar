@@ -125,22 +125,29 @@ The machine policy lives at `ftr_handoff.absolute_low_non_deal_producer` in `fli
 
 The producer is deliberately bounded independently of CFR display/publication limits: it selects at most five variants, ordered by complete airfare ascending and then exact dates, Taiwan origin, destination-side route shape and record ID. This is a downstream handoff candidate set, not a CFR leaderboard and not an anomaly ranking. Existing qualifying route identity, including an already-produced open-jaw shape or different Taiwan return gateway, is retained without adding RP-06 search/eligibility expansion.
 
-## Atomic canonical publication
+## Canonical RP-04 runtime activation
 
-Publication order remains strict:
+RP-04 activates the downstream FTR producer **inside the existing canonical transaction**; it does not create another scheduler or acquisition pipeline. The existing canonical daily claim, `production_runtime`, CFR `stage-success`, immutable `data/price-history`, run-evidence and publication recovery remain authoritative CFR behavior.
 
-1. build normalized snapshot from terminal run evidence;
-2. validate schema and consumability;
-3. write immutable snapshot;
-4. compute SHA-256 of the exact snapshot bytes;
-5. construct manifest containing snapshot pointer + run metadata + checksum;
-6. write/replace manifest last.
+The production workflow checks out the application from current `main` into `_app` and resolves `git -C _app rev-parse HEAD`. That exact 40-hex checkout SHA is the FTR `producer_commit_sha`. The ops request/control-branch trigger SHA remains claim/control provenance only and must never be substituted for the producer application SHA.
 
-If any step before manifest publication fails, the previous canonical `latest.json` remains authoritative.
+FTR staging runs only after legitimate CFR success evidence has already been persisted on the evidence ref. Therefore a later FTR serialization/checksum/current-status failure cannot roll back or delete CFR price-history/run-evidence and does not silently replace CFR publication semantics.
 
-A snapshot path is immutable. Reusing an existing path is allowed only when the bytes are identical.
+Canonical FTR publication order is strict:
 
-During an active `repair_required` incident, future recovery orchestration must not advance canonical latest using an invalid/incomplete recovery. RP-01 provides the deterministic validation/state-transition primitive; live `same_day_recovery` acquisition/orchestration remains out of scope.
+1. canonical acquisition process has completed and durable CFR `run-result.json` exists;
+2. build mode `canonical_daily` snapshot from that durable run truth;
+3. validate schema, terminal semantics, coverage/freshness and candidate contract;
+4. write immutable FTR snapshot first;
+5. calculate SHA-256 from the **exact persisted snapshot bytes** and match it to the manifest checksum;
+6. write/replace canonical `data/ftr-feed/latest.json` only after the snapshot write;
+7. reload through `load_manifest_snapshot`, rechecking checksum and run identity (plus producer SHA at the RP-04 runtime boundary);
+8. only then write `data/ftr-feed/current-status.json` from that exact reloaded latest snapshot;
+9. commit FTR state to the same configured Git evidence ref as CFR evidence.
+
+The RP-01 low-level `stage_snapshot` writes snapshot before manifest. RP-04 wraps the complete snapshot→manifest→reload→current-status sequence with a previous-latest byte guard: if anything after a tentative manifest write fails, the previous latest bytes are restored exactly (or the newly-created latest is removed when there was no last-good) before `repair_required` is recorded. An already-written immutable snapshot is never rewritten or deleted.
+
+Healthy complete coverage yields `fresh`. Truthfully partial but consumable coverage yields `degraded`. A healthy zero-opportunity run is valid; candidate/Deal count never decides health.
 
 ## Durable current status and `repair_required`
 
@@ -157,18 +164,22 @@ During an active `repair_required` incident, future recovery orchestration must 
 On a failed or invalid new canonical producer attempt:
 
 1. do **not** rewrite/delete the last-good immutable snapshot;
-2. do **not** rewrite/delete canonical `latest.json`;
-3. persist/update `current-status.json` with `repair_required=true`;
-4. preserve the last-good pointer/checksum;
-5. expose that preserved feed only as `current_freshness_state=stale_reference` (or `unavailable` if no last-good exists).
+2. do **not** advance/rewrite/delete canonical `latest.json`;
+3. persist a compact immutable `ftr-failed-attempt.json` beneath the existing `data/run-evidence/YYYY/MM/DD/<attempt>/` namespace;
+4. use that Git-backed path as `latest_failed_attempt.evidence_ref`;
+5. persist/update `current-status.json` with `repair_required=true`;
+6. preserve the last-good pointer/checksum;
+7. expose that preserved feed only as `current_freshness_state=stale_reference` (or `unavailable` if no last-good exists).
+
+This covers acquisition-process failure and downstream FTR invalid/staging failure. Actions artifacts/logs are debug-only and never supply the durable failure truth.
 
 The preserved snapshot's own `freshness_state` remains exactly what it was when produced. A later failure never rewrites historical bytes from `fresh` to `stale_reference`.
 
 Scoped-search and operator-reacquisition failures cannot create/replace the canonical FTR repair incident. They remain distinct identities and cannot alter canonical current-state semantics merely by existing.
 
-## Repair clearing contract
+## Repair clearing contract / RP-05 boundary
 
-RP-01 defines and tests the transition contract but does **not** perform live recovery acquisition.
+RP-01 defines and tests the transition contract, but RP-04 deliberately does **not** implement live recovery acquisition/control orchestration.
 
 For the current contract, an active `repair_required` incident clears only when durable canonical evidence proves all of the following:
 
@@ -185,13 +196,14 @@ For the current contract, an active `repair_required` incident clears only when 
 
 The incident does **not** clear merely because:
 
+- an ordinary later `canonical_daily` run succeeds;
 - a workflow is green;
 - an `operator_reacquisition` exists;
 - a `scoped_search` exists;
 - publication recovery succeeded;
 - a stale/last-good snapshot still exists.
 
-An invalid clearing attempt leaves the durable incident unchanged. A successful clear retains a durable cleared transition record identifying the recovery run and checksum.
+While repair is active, ordinary `canonical_daily` staging cannot advance canonical FTR latest and cannot masquerade as `same_day_recovery`. Live same-day recovery orchestration remains RP-05.
 
 ## Consumer fail-closed behavior
 
@@ -222,4 +234,6 @@ Production correctness depends on Git-backed evidence, not Actions artifact stor
 
 ## Activation sequence
 
-The contract primitive and tests may land before runtime activation. **Canonical FTR handoff remains pending/disabled in RP-01.** Normal production handoff activation should occur only after the later repair packages satisfy the SSOT activation gates, including bounded absolute-low production, scoped-search wiring, canonical producer staging and live recovery orchestration.
+RP-01 established the contract/repair primitives, RP-02 added the bounded absolute-low non-Deal producer, RP-03 added isolated scoped-search acquisition, and **RP-04 activates canonical FTR producer staging** on the existing canonical workflow/evidence transaction.
+
+This is not final FTR launch readiness. RP-05 same-day recovery orchestration and later readiness packages (including RP-06/RP-07/RP-08 as tracked under parent #37) remain pending. RP-04 performs no live acquisition or live proof by itself.
