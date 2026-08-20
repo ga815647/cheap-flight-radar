@@ -713,11 +713,13 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
 
 
 class ScopedSSOTDriftTest(unittest.TestCase):
-    def test_machine_ssot_matches_runtime_and_canonical_activation_remains_false(self):
+    def test_machine_ssot_matches_runtime_and_canonical_activation_is_rp04_active(self):
         policy = load_policy()
         contract = validate_scoped_search_policy(policy)
         self.assertEqual(contract["mode"], "scoped_search")
-        self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["enabled"])
+        self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["enabled"])
+        self.assertEqual(policy["ftr_handoff"]["canonical_activation"]["activated_by_package"], "RP-04")
+        self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["readiness"]["final_ftr_readiness"])
         self.assertEqual(contract["acquisition"]["broad_horizon_then_post_filter"], "forbidden")
         self.assertFalse(contract["bounded_execution"]["search_horizon_days_is_scoped_budget"])
         self.assertEqual(
@@ -742,8 +744,13 @@ class ScopedSSOTDriftTest(unittest.TestCase):
             validate_scoped_search_policy(drifted)
 
         drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["enabled"] = True
-        with self.assertRaisesRegex(ScopedSearchError, "must not activate"):
+        drifted["ftr_handoff"]["canonical_activation"]["enabled"] = False
+        with self.assertRaisesRegex(ScopedSearchError, "RP-04 canonical FTR activation contract drifted"):
+            validate_scoped_search_policy(drifted)
+
+        drifted = copy.deepcopy(policy)
+        drifted["ftr_handoff"]["canonical_activation"]["active_repair"]["recovery_orchestration_status"] = "active"
+        with self.assertRaisesRegex(ScopedSearchError, "RP-05 recovery boundary drifted"):
             validate_scoped_search_policy(drifted)
 
 

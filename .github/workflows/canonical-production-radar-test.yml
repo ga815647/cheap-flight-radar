@@ -72,6 +72,15 @@ jobs:
           ref: main
           path: _app
 
+      - name: Resolve current application SHA
+        id: app
+        shell: bash
+        run: |
+          APP_SHA="$(git -C _app rev-parse HEAD)"
+          test "${#APP_SHA}" -eq 40
+          echo "sha=$APP_SHA" >> "$GITHUB_OUTPUT"
+          echo "Isolated canonical FTR producer application SHA: $APP_SHA"
+
       - name: Checkout isolated durable fare evidence
         uses: actions/checkout@v6
         with:
@@ -144,6 +153,7 @@ jobs:
       - name: Run canonical production acquisition in isolated state
         if: steps.state.outputs.status == 'acquire'
         id: acquisition
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -152,9 +162,10 @@ jobs:
             --history-dir _history \
             --output-dir _out 2>&1 | tee _runtime.log
 
-      - name: Stage isolated immutable success and recovery evidence
+      - name: Stage isolated immutable CFR success and recovery evidence
         if: steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
         id: success
+        continue-on-error: true
         shell: bash
         run: |
           python -m cheap_flight_radar.production_operations stage-success \
@@ -169,12 +180,77 @@ jobs:
           git commit -m "TEST: persist isolated Radar evidence ${RUN_ID}"
           git push origin HEAD:"$EVIDENCE_REF"
 
-      - name: Refresh isolated history checkout after acquisition
-        if: steps.state.outputs.status == 'acquire' && steps.acquisition.outcome == 'success'
+      - name: Refresh isolated history checkout after CFR evidence persistence
+        if: steps.state.outputs.status == 'acquire' && steps.success.outcome == 'success'
         run: git -C _history pull --ff-only origin "$EVIDENCE_REF"
 
+      - name: Stage isolated canonical FTR handoff from durable CFR evidence
+        if: steps.state.outputs.status == 'acquire' && steps.success.outcome == 'success'
+        id: ftr
+        continue-on-error: true
+        shell: bash
+        env:
+          APP_SHA: ${{ steps.app.outputs.sha }}
+        run: |
+          RUN_ID="$(python -c 'import json; print(json.load(open("_success.json"))["radar_run_id"])')"
+          RUN_RESULT_REL="$(python -c 'import json; print(json.load(open("_success.json"))["run_result_path"])')"
+          FTR_AT="$(TZ=Asia/Taipei date --iso-8601=seconds)"
+          python -m cheap_flight_radar.canonical_ftr_runtime stage-success \
+            --history-dir _history \
+            --run-result "_history/${RUN_RESULT_REL}" \
+            --producer-commit-sha "$APP_SHA" \
+            --attempt-run-id "$RUN_ID" \
+            --date "$REQUEST_DATE" \
+            --generated-at "$FTR_AT" \
+            --failed-at "$FTR_AT" \
+            --output _ftr.json
+          FTR_STATUS="$(python -c 'import json; print(json.load(open("_ftr.json"))["status"])')"
+          echo "status=$FTR_STATUS" >> "$GITHUB_OUTPUT"
+          cd _history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ftr-feed data/run-evidence
+          if [ -n "$(git status --porcelain -- data/ftr-feed data/run-evidence)" ]; then
+            git commit -m "TEST: stage isolated canonical FTR handoff ${RUN_ID}"
+            git push origin HEAD:"$EVIDENCE_REF"
+          fi
+
+      - name: Persist isolated canonical FTR acquisition/staging failure
+        if: steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure' || steps.ftr.outcome == 'failure')
+        id: ftr_failure
+        shell: bash
+        env:
+          APP_SHA: ${{ steps.app.outputs.sha }}
+        run: |
+          ATTEMPT_ID="canonical-attempt-${REQUEST_DATE}-${{ github.run_id }}"
+          FAILED_AT="$(TZ=Asia/Taipei date --iso-8601=seconds)"
+          git -C _history fetch origin "$EVIDENCE_REF"
+          git -C _history reset --hard "origin/$EVIDENCE_REF"
+          git -C _history clean -fd -- data/ftr-feed data/run-evidence data/price-history
+          if [ "${{ steps.acquisition.outcome }}" = "failure" ]; then
+            REASON="isolated canonical acquisition process failed before terminal CFR run-result"
+          elif [ "${{ steps.success.outcome }}" = "failure" ]; then
+            REASON="isolated canonical CFR durable stage-success rejected or failed before FTR handoff"
+          else
+            REASON="isolated canonical FTR staging process failed before durable FTR commit"
+          fi
+          python -m cheap_flight_radar.canonical_ftr_runtime stage-failure \
+            --history-dir _history \
+            --date "$REQUEST_DATE" \
+            --attempt-run-id "$ATTEMPT_ID" \
+            --producer-commit-sha "$APP_SHA" \
+            --failed-at "$FAILED_AT" \
+            --reason "$REASON" \
+            --output _ftr-failure.json
+          cd _history
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ftr-feed data/run-evidence
+          git commit -m "TEST: record isolated canonical FTR failure ${ATTEMPT_ID}"
+          git push origin HEAD:"$EVIDENCE_REF"
+
       - name: Restore isolated publication manifest from durable evidence
-        if: steps.state.outputs.status == 'recover_publication' || steps.state.outputs.status == 'published' || steps.acquisition.outcome == 'success'
+        if: steps.state.outputs.status == 'recover_publication' || steps.state.outputs.status == 'published' || steps.success.outcome == 'success'
         id: restore
         shell: bash
         run: |
@@ -226,8 +302,15 @@ jobs:
                 repos/${{ github.repository }}/actions/workflows/radar-pages-isolated-test.yml/dispatches \
                 --input -
 
-      - name: Upload isolated operational evidence
-        if: always()
+      - name: Fail after durable isolated canonical FTR failure persistence
+        if: steps.state.outputs.status == 'acquire' && (steps.acquisition.outcome == 'failure' || steps.success.outcome == 'failure' || steps.ftr.outcome == 'failure' || steps.ftr.outputs.status == 'failed')
+        run: |
+          echo "Isolated canonical Radar/FTR transaction failed after durable failure state was persisted." >&2
+          exit 1
+
+      - name: Upload isolated failure debug evidence (best effort)
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: isolated-canonical-production-radar-${{ steps.request.outputs.request_date }}-${{ github.run_id }}
@@ -235,7 +318,8 @@ jobs:
             _state.json
             _runtime.log
             _success.json
+            _ftr.json
+            _ftr-failure.json
             _restore.json
-            _out/
-          if-no-files-found: warn
-          retention-days: 14
+          if-no-files-found: ignore
+          retention-days: 2

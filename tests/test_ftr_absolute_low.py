@@ -259,7 +259,8 @@ class AbsoluteLowSelectorTest(unittest.TestCase):
         self.assertEqual(tuple(producer["input_states"]), SUPPORTED_INPUT_STATES)
         self.assertEqual(tuple(producer["ordering"]), SUPPORTED_ORDERING)
         self.assertEqual(producer["budget"]["max_selected_count"], 5)
-        self.assertFalse(self.policy["ftr_handoff"]["canonical_activation"]["enabled"])
+        self.assertTrue(self.policy["ftr_handoff"]["canonical_activation"]["enabled"])
+        self.assertEqual(producer["canonical_ftr_activation"], "active_via_RP-04")
         drift_cases = (
             ("source_collection", "generic_signals", "source_collection drifted"),
             ("ordering", ["record_id_asc"], "ordering drifted"),

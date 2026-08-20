@@ -138,11 +138,17 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
         raise FTRAbsoluteLowPolicyError("existing route identity preservation drifted")
     if str(producer.get("rp06_new_open_jaw_or_return_gateway_acquisition") or "") != "out_of_scope":
         raise FTRAbsoluteLowPolicyError("RP-06 acquisition boundary drifted")
-    if str(producer.get("canonical_ftr_activation") or "") != "pending_disabled_until_RP-04":
+    if str(producer.get("canonical_ftr_activation") or "") != "active_via_RP-04":
         raise FTRAbsoluteLowPolicyError("canonical FTR activation boundary drifted")
     canonical = _mapping(ftr.get("canonical_activation"))
-    if canonical.get("enabled") is not False:
-        raise FTRAbsoluteLowPolicyError("RP-02 must not activate canonical FTR runtime")
+    readiness = _mapping(canonical.get("readiness"))
+    active_repair = _mapping(canonical.get("active_repair"))
+    if canonical.get("enabled") is not True or str(canonical.get("activated_by_package") or "") != "RP-04":
+        raise FTRAbsoluteLowPolicyError("RP-04 canonical FTR activation contract drifted")
+    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not False:
+        raise FTRAbsoluteLowPolicyError("RP-04 readiness boundary drifted")
+    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "pending":
+        raise FTRAbsoluteLowPolicyError("RP-05 recovery boundary drifted")
     return producer
 
 
