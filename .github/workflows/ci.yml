@@ -7,9 +7,6 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -18,93 +15,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-
-      - name: Apply one-shot RP-04 activation guard migration
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/rp04-canonical-ftr-runtime'
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          def replace_exact(path, old, new):
-              p = Path(path)
-              text = p.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected exactly one migration target, found {count}")
-              p.write_text(text.replace(old, new), encoding="utf-8")
-
-          replace_exact(
-              "src/cheap_flight_radar/scoped_search.py",
-              '''    activation = _mapping(contract.get("activation"))
-    if activation.get("canonical_runtime") != "pending_disabled_until_RP-04" or activation.get("production_launch") != "out_of_scope":
-        raise ScopedSearchError("scoped-search activation boundary drifted")
-    if _mapping(_mapping(policy.get("ftr_handoff")).get("canonical_activation")).get("enabled") is not False:
-        raise ScopedSearchError("RP-03 must not activate canonical FTR runtime")
-    return contract
-''',
-              '''    activation = _mapping(contract.get("activation"))
-    if activation.get("canonical_runtime") != "active_via_RP-04" or activation.get("production_launch") != "out_of_scope":
-        raise ScopedSearchError("scoped-search activation boundary drifted")
-    canonical = _mapping(_mapping(policy.get("ftr_handoff")).get("canonical_activation"))
-    readiness = _mapping(canonical.get("readiness"))
-    active_repair = _mapping(canonical.get("active_repair"))
-    if canonical.get("enabled") is not True or canonical.get("activated_by_package") != "RP-04":
-        raise ScopedSearchError("RP-04 canonical FTR activation contract drifted")
-    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not False:
-        raise ScopedSearchError("RP-04 readiness boundary drifted")
-    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "pending":
-        raise ScopedSearchError("RP-05 recovery boundary drifted")
-    return contract
-''',
-          )
-
-          replace_exact(
-              "tests/test_scoped_search.py",
-              '''    def test_machine_ssot_matches_runtime_and_canonical_activation_remains_false(self):
-        policy = load_policy()
-        contract = validate_scoped_search_policy(policy)
-        self.assertEqual(contract["mode"], "scoped_search")
-        self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["enabled"])
-''',
-              '''    def test_machine_ssot_matches_runtime_and_canonical_activation_is_rp04_active(self):
-        policy = load_policy()
-        contract = validate_scoped_search_policy(policy)
-        self.assertEqual(contract["mode"], "scoped_search")
-        self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["enabled"])
-        self.assertEqual(policy["ftr_handoff"]["canonical_activation"]["activated_by_package"], "RP-04")
-        self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["readiness"]["final_ftr_readiness"])
-''',
-          )
-          replace_exact(
-              "tests/test_scoped_search.py",
-              '''        drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["enabled"] = True
-        with self.assertRaisesRegex(ScopedSearchError, "must not activate"):
-            validate_scoped_search_policy(drifted)
-''',
-              '''        drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["enabled"] = False
-        with self.assertRaisesRegex(ScopedSearchError, "RP-04 canonical FTR activation contract drifted"):
-            validate_scoped_search_policy(drifted)
-
-        drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["active_repair"]["recovery_orchestration_status"] = "active"
-        with self.assertRaisesRegex(ScopedSearchError, "RP-05 recovery boundary drifted"):
-            validate_scoped_search_policy(drifted)
-''',
-          )
-
-          replace_exact(
-              "tests/test_ftr_absolute_low.py",
-              '''        self.assertFalse(self.policy["ftr_handoff"]["canonical_activation"]["enabled"])
-''',
-              '''        self.assertTrue(self.policy["ftr_handoff"]["canonical_activation"]["enabled"])
-        self.assertEqual(producer["canonical_ftr_activation"], "active_via_RP-04")
-''',
-          )
-          PY
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -116,16 +26,3 @@ jobs:
 
       - name: Test
         run: python -m unittest discover -s tests -v
-
-      - name: Commit successful activation guard migration and restore CI
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/rp04-canonical-ftr-runtime'
-        shell: bash
-        run: |
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/ci.yml
-          rm -f .github/workflows/rp04-dev-patch.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/cheap_flight_radar/scoped_search.py tests/test_scoped_search.py tests/test_ftr_absolute_low.py .github/workflows/ci.yml .github/workflows/rp04-dev-patch.yml
-          git commit -m "RP-04: advance scoped-search activation drift guard"
-          git push origin HEAD:feat/rp04-canonical-ftr-runtime
