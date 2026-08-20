@@ -10,7 +10,9 @@ The runtime is `cheap_flight_radar.scoped_search`. It has no scheduler and this 
 
 ## Request and identity
 
-A request has an explicit `request_id`, one or more availability windows, and an explicit bounded execution policy. Duration is optional. When duration is absent, the planner does not inject an FTR fixed trip duration; only existing CFR complete-trip / minimum-away semantics remain. `max_budget_twd`, when supplied, is a request-local hard filter only.
+A request has an explicit `request_id`, one or more availability windows, and an explicit bounded execution policy. Duration is optional. When duration is absent, the planner injects **no FTR fixed trip duration**. In particular, adjacent-date / one-calendar-night pairs remain queryable. Calendar-date difference is only a planning dimension and is never treated as proof of CFR's minimum destination stay.
+
+CFR eligibility remains authoritative after exact revalidation: `_minimum_away_satisfied(exact)` requires actual arrival-to-departure destination stay to be strictly greater than 24 hours when complete provider segment timing is available, and otherwise follows the existing fail-closed CFR fallback. Therefore a one-calendar-night exact itinerary may qualify when its observed destination stay is `>24h`, while an observed stay `<=24h` cannot qualify. An explicit request duration such as `min_nights=2` is still a hard query constraint and excludes adjacent-date pairs. `max_budget_twd`, when supplied, is a request-local hard filter only.
 
 The request is normalized into a SHA-256 fingerprint. The deterministic run identity is:
 
@@ -32,7 +34,7 @@ Provider-returned records are accepted only if outbound and return both fall ins
 
 The machine SSOT in `flight-radar.yaml` defines hard maxima for window count, destination-free discovery calls, and exact revalidations. A request may use only limits at or below those maxima. Discovery ordering is deterministic and round-robins normalized windows at each date-pair depth before later date pairs; truncation takes a stable prefix.
 
-Without a user duration constraint, date-pair planning considers multiple durations where the budget permits. The existing CFR strict `>24h` complete-trip rule is a Deal/eligible-airfare invariant, not an FTR fixed-duration preference.
+Bounded truncation is execution policy, not coverage permission. If that stable prefix leaves any supplied availability window completely unattempted, the missing window is recorded as `not_attempted` with `reason=budget_unattempted`; another window's success cannot hide it and no consumable scoped manifest is written. If an explicit duration leaves a supplied window with zero queryable date pairs, the window is `not_attempted` with `reason=no_queryable_date_pair`, the provider is not called for that window, and the scoped run likewise fails closed before manifest publication.
 
 ## CFR semantics
 
@@ -46,22 +48,24 @@ RP-03 does not add destination-side open-jaw or new Taiwan-return-gateway acquis
 
 ## Coverage truth
 
-The scoped run emits the RP-01 dimensions: provider, surface, origin, and market, each with `succeeded`, `failed`, or `not_attempted` semantics. It also records per-window execution counts in scoped snapshot metadata.
+The scoped run retains the RP-01 provider, surface, origin, and market dimensions and adds availability-window coverage as scoped terminal truth. Each supplied window persists deterministic counters for queryable date pairs, planned tasks, attempts, provider calls, non-empty successes, complete-empty results, failures, suppressions, unsupported routing, and records, plus one of `succeeded`, `failed`, or `not_attempted`.
 
-Zero candidates is not a provider failure. A successful/empty provider request is still attempted coverage. Conversely, an unqueried or unsupported surface is never marked succeeded merely because the overall Python process exits successfully.
+A window is `succeeded` only when it has at least one real provider call and every call has a complete outcome. A complete-empty response is successful acquisition coverage and remains distinct from zero candidates. A provider failure is `failed`. A window with zero calls is never `succeeded`: budget truncation and zero-queryable duration constraints are both explicit `not_attempted` states with different reasons.
+
+The same window truth is persisted in both `snapshot.coverage.windows` and `snapshot.scoped_search.execution.window_execution`; scoped validation requires them to match exactly and reconstruct against the deterministic plan. Any supplied window that is not `succeeded` makes the scoped snapshot non-consumable and prevents the scoped manifest from being written. This is stricter than treating the counters as informational metadata and prevents an overall green workflow from fabricating scoped coverage.
 
 Because current RP-01 handoff treats both Flight Deals and Explore as required discovery surfaces for complete canonical coverage, a healthy RP-03 snapshot can legitimately be `coverage_state=degraded` while remaining a valid scoped snapshot: Flight Deals is real scoped coverage and Explore is truthfully `not_attempted` rather than fabricated.
 
 ## Durable handoff and isolation
 
-A completed run uses the existing RP-01 handoff primitives:
+A completed consumable run uses the existing RP-01 handoff primitives:
 
-1. build and validate a schema-compatible snapshot with `mode=scoped_search`;
-2. attach scoped request/fingerprint/plan/window-execution metadata;
-3. validate every published variant against the supplied windows, optional duration, and optional request budget;
+1. build a schema-compatible `mode=scoped_search` snapshot from real CFR execution evidence;
+2. attach scoped request/fingerprint/plan/window-execution metadata and normalized `coverage.windows`;
+3. validate every supplied window as terminal `succeeded`, then validate every published variant against one supplied window, optional duration, and optional request budget;
 4. write the immutable snapshot first;
 5. write `data/ftr-feed/scoped/{run_id}.json` last with the snapshot checksum;
-6. reload through the checksum-validating consumer primitive and validate the scoped metadata again.
+6. reload through the checksum-validating consumer primitive and validate the scoped metadata/window truth again.
 
 Before execution, the runtime hashes the presence/content of `data/ftr-feed/latest.json` and `data/ftr-feed/current-status.json`. The same deterministic guard is asserted in a `finally` path after success or failure. Scoped execution never calls canonical claim, repair creation, repair clearing, or operator-reacquisition operations.
 
