@@ -24,7 +24,7 @@ Run modes:
 
 - `canonical_daily` — routine canonical feed;
 - `scoped_search` — user/Search-mode date-scoped acquisition; immutable but never advances canonical `latest.json`;
-- `same_day_recovery` — explicit post-repair reacquisition identity; a future producer transition may advance canonical latest only after the recovery satisfies the consumability/recovery contract.
+- `same_day_recovery` — explicit post-repair reacquisition identity. RP-05 implements the persistent control/acquisition transaction that may advance canonical latest only after the exact recovery satisfies the complete/fresh/healthy recovery contract.
 
 `operator_reacquisition` is a separate CFR acquisition identity. It is **not** an FTR snapshot mode and cannot impersonate `same_day_recovery` for repair clearing.
 
@@ -45,6 +45,16 @@ Scoped-search manifest:
 Mutable current-status / repair incident envelope:
 
 `data/ftr-feed/current-status.json`
+
+RP-05 same-day recovery request claim:
+
+`data/ftr-recovery-attempts/YYYY/MM/DD/<request_id>.json`
+
+Recovery CFR/FTR transition evidence continues to use the existing run-evidence substrate:
+
+`data/run-evidence/YYYY/MM/DD/<recovery_run_id>/`
+
+Recovery CFR price observations remain ordinary immutable price-history evidence under `data/price-history/YYYY/MM/DD/`; they are additional recovery observations and do not replace the canonical one-per-day claim/snapshot identity.
 
 These paths live on the Git-backed CFR evidence ref defined by `flight-radar.yaml`. Actions artifacts are not part of correctness or persistence.
 
@@ -177,11 +187,35 @@ The preserved snapshot's own `freshness_state` remains exactly what it was when 
 
 Scoped-search and operator-reacquisition failures cannot create/replace the canonical FTR repair incident. They remain distinct identities and cannot alter canonical current-state semantics merely by existing.
 
-## Repair clearing contract / RP-05 boundary
+## Persistent same-day recovery orchestration (RP-05)
 
-RP-01 defines and tests the transition contract, but RP-04 deliberately does **not** implement live recovery acquisition/control orchestration.
+RP-05 implements the control/acquisition capability required by the clearing contract. It is **unscheduled** and explicitly isolated from `canonical_daily`, `operator_reacquisition`, and `scoped_search`.
 
-For the current contract, an active `repair_required` incident clears only when durable canonical evidence proves all of the following:
+A recovery request supplies an Asia/Taipei local `request_date` plus a unique path-safe `recovery_request_id`. The claim namespace is `data/ftr-recovery-attempts/YYYY/MM/DD/<request_id>.json`; recovery CFR run IDs use `ftr-recovery-<request_id>-...`. The claim records the actual application `main` checkout SHA, workflow/control provenance, original active repair trigger and prior last-good state. It does not create or consume `data/production-attempts/.../canonical.json`, operator claims, or scoped-search state.
+
+Preflight is fail closed and occurs before claim/provider work. It requires a valid `current-status.json`, an active valid `repair_required` incident, readable original trigger/latest-failed durable evidence, same-day request date, a path-safe unclaimed request ID, collision-free recovery namespace, and a byte/checksum-consistent canonical latest/last-good guard. No active repair and duplicate request IDs therefore make zero provider calls. A second intentional recovery acquisition requires a **new explicit request ID**; no hidden retry exists.
+
+The dedicated `.github/workflows/ftr-same-day-recovery.yml` has no cron and shares `production-radar-acquisition` concurrency with canonical/operator acquisition. It checks out the application from current `main`, separately checks out `history/price-observations`, installs that current application, and invokes `cheap_flight_radar.ftr_recovery_workflow`. The driver invokes the existing `production_runtime` exactly once with `execution_mode=same_day_recovery` and a recovery-specific run prefix. It does not add a provider, loosen sticky-429 behavior, rotate proxy/UA/session identity, or create a second airfare engine.
+
+Persistent truth order is strict:
+
+1. validate active repair / request identity / prior last-good guard;
+2. write the immutable recovery claim and commit/push it to the durable evidence ref;
+3. invoke the existing CFR production acquisition once;
+4. validate terminal recovery CFR run-result/manifest/price-history identity;
+5. persist legitimate immutable CFR price-history plus run-result/recovery metadata and commit/push them;
+6. reload the durable evidence ref;
+7. build a `same_day_recovery` FTR snapshot from that durable CFR run result;
+8. require supported schema, terminal success, slice-faithful complete coverage, `fresh`, healthy provider state, exact recovery/run identity, and the actual application checkout SHA;
+9. guard exact prior canonical `latest.json` bytes/absence, write immutable recovery snapshot, hash the exact persisted bytes, advance canonical latest, reload, and revalidate checksum/run/mode/application SHA;
+10. **only then** invoke the existing `clear_repair_required()` contract;
+11. persist transition/current-status evidence retaining original incident chronology and exact clearing run/snapshot/checksum.
+
+Any failure after the recovery claim fails closed. The driver resets local state to the latest durable evidence ref before recording an unexpected process failure. If legitimate CFR recovery evidence was already pushed it survives. The FTR transaction itself restores prior canonical latest/current-status bytes before recording failure when a post-stage checksum/reload/clear validation fails. `repair_required` stays true, the original trigger remains unchanged, and only `latest_failed_attempt` may advance to the failed recovery. An immutable recovery snapshot already safely written may remain as non-authoritative evidence; it cannot remain canonical latest after failure.
+
+Actions artifacts remain optional best-effort short-retention debug only. RP-05 does **not** dispatch Radar Pages or normal CFR publication and this package performs no live recovery proof; live end-to-end proof remains later readiness work.
+
+For the clearing contract, an active `repair_required` incident clears only when durable canonical evidence proves all of the following:
 
 - transition identity is `same_day_recovery`;
 - canonical latest points to that exact recovery run;
@@ -192,7 +226,8 @@ For the current contract, an active `repair_required` incident clears only when 
 - snapshot freshness is `fresh`;
 - producer health is healthy;
 - manifest/snapshot run identity matches;
-- SHA-256 of immutable snapshot bytes matches the manifest.
+- SHA-256 of immutable snapshot bytes matches the manifest;
+- producer/application SHA matches the actual current-main application checkout.
 
 The incident does **not** clear merely because:
 
@@ -203,7 +238,7 @@ The incident does **not** clear merely because:
 - publication recovery succeeded;
 - a stale/last-good snapshot still exists.
 
-While repair is active, ordinary `canonical_daily` staging cannot advance canonical FTR latest and cannot masquerade as `same_day_recovery`. Live same-day recovery orchestration remains RP-05.
+While repair is active, ordinary `canonical_daily` staging cannot advance canonical FTR latest and cannot masquerade as `same_day_recovery`.
 
 ## Consumer fail-closed behavior
 
@@ -234,6 +269,6 @@ Production correctness depends on Git-backed evidence, not Actions artifact stor
 
 ## Activation sequence
 
-RP-01 established the contract/repair primitives, RP-02 added the bounded absolute-low non-Deal producer, RP-03 added isolated scoped-search acquisition, and **RP-04 activates canonical FTR producer staging** on the existing canonical workflow/evidence transaction.
+RP-01 established the contract/repair primitives, RP-02 added the bounded absolute-low non-Deal producer, RP-03 added isolated scoped-search acquisition, RP-04 activated canonical FTR producer staging, and **RP-05 implements persistent same-day recovery orchestration** on the same production acquisition substrate/concurrency and Git-backed evidence ref.
 
-This is not final FTR launch readiness. RP-05 same-day recovery orchestration and later readiness packages (including RP-06/RP-07/RP-08 as tracked under parent #37) remain pending. RP-04 performs no live acquisition or live proof by itself.
+This is still not final FTR launch readiness. RP-05 has capability implementation only and no live acquisition/proof in this package. RP-06 route-shape/return-gateway convergence, RP-07 consumer integration, and RP-08 live end-to-end proof remain pending as tracked under parent #37.
