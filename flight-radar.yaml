@@ -1079,6 +1079,91 @@ return_windows_policy:
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
   status: canonical_runtime_active_not_launch_ready
+  same_day_recovery_orchestration:
+    enabled: true
+    package: RP-05
+    contract_version: "1.0"
+    capability_state: implemented_active
+    live_proof_status: pending
+    workflow: .github/workflows/ftr-same-day-recovery.yml
+    driver_module: cheap_flight_radar.ftr_recovery_workflow
+    transaction_module: cheap_flight_radar.ftr_recovery
+    scheduled: false
+    request:
+      required_fields:
+      - request_date
+      - recovery_request_id
+      local_day_timezone: Asia/Taipei
+      request_date_must_equal_current_local_day: true
+      request_id_path_safe: true
+      new_explicit_id_required_for_each_additional_acquisition: true
+      duplicate_request_provider_calls: 0
+    identity:
+      claim_path_template: data/ftr-recovery-attempts/YYYY/MM/DD/{request_id}.json
+      run_id_prefix_template: ftr-recovery-{request_id}-
+      mode: same_day_recovery
+      application_sha_source: actual_current_main_checkout_head
+      original_repair_incident_identity_required: true
+      canonical_daily_claim_consumption: forbidden
+      canonical_daily_snapshot_rewrite: forbidden
+      operator_claim_reuse: forbidden
+      scoped_search_identity_reuse: forbidden
+    preflight:
+      current_status_required_and_valid: true
+      active_repair_required: true
+      repair_trigger_and_latest_failed_evidence_readable: true
+      prior_last_good_and_latest_guard_required: true
+      recovery_namespace_collision_action: fail_closed
+      claim_created_only_after_preflight: true
+      no_active_repair_provider_calls: 0
+      duplicate_request_provider_calls: 0
+    acquisition:
+      reuse_production_runtime: true
+      reuse_existing_provider_adapter: true
+      reuse_source_router_and_exact_revalidation: true
+      execution_mode: same_day_recovery
+      shared_concurrency_group: production-radar-acquisition
+      provider_invocations_per_claimed_request: 1
+      hidden_retry: forbidden
+      new_provider: forbidden
+      sticky_429_semantics_unchanged: true
+      proxy_ua_session_rotation: forbidden
+    persistence:
+      durable_ref: history/price-observations
+      cfr_price_history_path_template: data/price-history/YYYY/MM/DD/{radar_run_id}.json
+      run_evidence_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}
+      ftr_snapshot_path_template: data/ftr-feed/YYYY/MM/DD/{run_id}.json
+      canonical_latest_path: data/ftr-feed/latest.json
+      current_status_path: data/ftr-feed/current-status.json
+      claim_must_commit_before_acquisition: true
+      legitimate_cfr_evidence_must_commit_before_ftr_transaction: true
+      cfr_evidence_survives_later_ftr_failure: true
+      actions_artifact_correctness_dependency: false
+    success_order:
+    - reload_and_validate_active_repair_and_exact_claim
+    - validate_terminal_successful_recovery_run_result
+    - build_same_day_recovery_snapshot
+    - validate_supported_schema_candidate_contract_complete_fresh_healthy_identity_and_application_sha
+    - guard_exact_prior_canonical_latest_bytes_or_absence
+    - write_immutable_recovery_snapshot
+    - sha256_exact_persisted_snapshot_bytes
+    - write_canonical_latest_to_exact_recovery_snapshot
+    - reload_and_revalidate_checksum_run_id_mode_and_application_sha
+    - clear_repair_required_only_after_reload_validation
+    - retain_original_incident_chronology_and_exact_clearing_evidence
+    failure:
+      restore_prior_canonical_latest_exact_bytes_or_absence: true
+      preserve_prior_last_good_snapshot_exact_bytes: true
+      preserve_original_repair_trigger: true
+      repair_required_remains_true: true
+      latest_failed_attempt_may_advance_to_recovery: true
+      safely_persisted_recovery_snapshot_may_remain_non_authoritative: true
+      automatic_second_provider_attempt: false
+    publication_dispatch: forbidden_in_RP-05
+    artifacts:
+      role: best_effort_debug_only
+      continue_on_error: true
+      short_retention: true
   scoped_search_acquisition:
     enabled: true
     contract_version: "1.0"
@@ -1269,11 +1354,15 @@ ftr_handoff:
       required_clear_mode: same_day_recovery
       recovery_orchestration_package: RP-05
       recovery_orchestration_status: pending
+      recovery_orchestration_status_semantics: live_proof_pending_not_capability_implementation
+      recovery_capability_state: implemented_active
+      live_recovery_proof_status: pending
     readiness:
       canonical_producer_active: true
+      recovery_capability_active: true
+      recovery_live_proof_complete: false
       final_ftr_readiness: false
       pending_packages:
-      - RP-05
       - RP-06
       - RP-07
       - RP-08
