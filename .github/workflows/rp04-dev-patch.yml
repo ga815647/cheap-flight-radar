@@ -1,17 +1,16 @@
 name: RP-04 activation guard migration
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/rp04-canonical-ftr-runtime
-    paths:
-      - ".github/workflows/rp04-dev-patch.yml"
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.head_ref == 'feat/rp04-canonical-ftr-runtime'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
