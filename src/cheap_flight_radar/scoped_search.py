@@ -49,6 +49,7 @@ SCOPED_SURFACES = (
     "mixed_taiwan_return",
     "open_jaw",
 )
+WINDOW_SLICE_STATES = frozenset({"succeeded", "failed", "not_attempted"})
 
 
 class ScopedSearchError(ValueError):
@@ -172,6 +173,10 @@ def _normalized_windows(windows: Sequence[AvailabilityWindow]) -> tuple[Availabi
     return tuple(sorted(set(windows)))
 
 
+def _window_id(window: AvailabilityWindow) -> str:
+    return f"w-{window.start_date}-{window.end_date}"
+
+
 def _request_payload(request: ScopedSearchRequest) -> Mapping[str, Any]:
     return {
         "contract_version": CONTRACT_VERSION,
@@ -217,6 +222,10 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
         raise ScopedSearchError("scoped-search cross-window trip invariant drifted")
     if windows.get("multiple_windows_merge_one_request") is not True:
         raise ScopedSearchError("scoped-search multi-window merge semantics drifted")
+    if windows.get("adjacent_date_pair_without_duration") != "allowed_pending_exact_minimum_away_truth":
+        raise ScopedSearchError("scoped-search absent-duration adjacent-date semantics drifted")
+    if windows.get("planner_calendar_difference_is_minimum_away_truth") is not False:
+        raise ScopedSearchError("scoped-search planner must not invent minimum-away truth")
 
     acquisition = _mapping(contract.get("acquisition"))
     required_acquisition = {
@@ -245,6 +254,8 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
         raise ScopedSearchError("scoped-search deterministic planning policy drifted")
     if bounded.get("search_horizon_days_is_scoped_budget") is not False:
         raise ScopedSearchError("search.horizon_days must not become scoped budget")
+    if bounded.get("truncation_must_not_hide_unattempted_window") is not True:
+        raise ScopedSearchError("scoped-search truncation/window coverage semantics drifted")
 
     identity = _mapping(contract.get("identity"))
     if identity.get("acquisition_identity") != "scoped_search":
@@ -273,8 +284,20 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
         raise ScopedSearchError("scoped-search coverage contract drifted")
     if coverage.get("zero_candidates_is_failure") is not False:
         raise ScopedSearchError("zero candidates must not imply scoped failure")
-    if coverage.get("unqueried_slice_success") != "forbidden" or coverage.get("unsupported_surface_success") != "forbidden":
-        raise ScopedSearchError("scoped-search coverage truth drifted")
+    required_coverage = {
+        "unqueried_slice_success": "forbidden",
+        "unsupported_surface_success": "forbidden",
+        "unqueried_window_success": "forbidden",
+        "zero_provider_call_status": "not_attempted",
+        "missing_window_consumability": "fail_closed",
+    }
+    for field, expected in required_coverage.items():
+        if coverage.get(field) != expected:
+            raise ScopedSearchError(f"scoped-search coverage policy drifted: {field}")
+    if coverage.get("availability_window_is_terminal_dimension") is not True:
+        raise ScopedSearchError("scoped-search window terminal dimension drifted")
+    if coverage.get("complete_empty_provider_response_may_succeed_window") is not True:
+        raise ScopedSearchError("scoped-search complete-empty coverage semantics drifted")
 
     persistence = _mapping(contract.get("persistence"))
     if persistence.get("checksum_required") is not True or persistence.get("manifest_write_last") is not True:
@@ -300,10 +323,11 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
 
 
 def _pair_allowed(nights: int, duration: DurationConstraint | None) -> bool:
+    # Calendar-night difference is only a query-planning dimension. When the
+    # user did not supply duration, adjacent dates remain eligible for exact
+    # acquisition because actual arrival->departure time may still exceed 24h.
     if duration is None:
-        # Existing CFR formal eligibility is strict >24h; this is not an FTR
-        # fixed-duration preference.
-        return nights >= 2
+        return True
     if duration.min_nights is not None and nights < duration.min_nights:
         return False
     if duration.max_nights is not None and nights > duration.max_nights:
@@ -358,7 +382,7 @@ def build_scoped_plan(request: ScopedSearchRequest, *, policy: Mapping[str, Any]
     tasks: list[ScopedDiscoveryTask] = []
     for _, window_index, origin, departure, returned in selected:
         window = windows[window_index]
-        window_id = f"w-{window.start_date}-{window.end_date}"
+        window_id = _window_id(window)
         tasks.append(
             ScopedDiscoveryTask(
                 task_id="scoped-discovery-" + _hash([fingerprint, window_id, origin, departure, returned])[:16],
@@ -388,7 +412,7 @@ def build_scoped_plan(request: ScopedSearchRequest, *, policy: Mapping[str, Any]
 
 def _window_for_id(plan: ScopedSearchPlan, window_id: str) -> AvailabilityWindow:
     for window in plan.windows:
-        if window_id == f"w-{window.start_date}-{window.end_date}":
+        if window_id == _window_id(window):
             return window
     raise ScopedSearchError(f"unknown plan window_id: {window_id}")
 
@@ -451,6 +475,132 @@ def _count(execution: dict[str, dict[str, int]], surface: str, result: ProviderR
         row["empty"] += 1
 
 
+def _window_execution_rows(plan: ScopedSearchPlan) -> dict[str, dict[str, Any]]:
+    planned_counts: dict[str, int] = {_window_id(window): 0 for window in plan.windows}
+    for task in plan.discovery_tasks:
+        planned_counts[task.window_id] += 1
+    return {
+        _window_id(window): {
+            "status": "not_attempted",
+            "reason": None,
+            "queryable_date_pairs": len(_date_pairs(window, plan.duration)),
+            "planned_tasks": planned_counts[_window_id(window)],
+            "attempts": 0,
+            "provider_calls": 0,
+            "records": 0,
+            "successes": 0,
+            "empty": 0,
+            "failures": 0,
+            "suppressed": 0,
+            "unsupported": 0,
+        }
+        for window in plan.windows
+    }
+
+
+def _count_window_result(row: dict[str, Any], result: ProviderResult) -> None:
+    row["records"] += len(result.records)
+    if not result.request_sent:
+        row["suppressed"] += 1
+        return
+    row["provider_calls"] += 1
+    if result.coverage_state == "complete" and result.records:
+        row["successes"] += 1
+    elif result.coverage_state == "failed":
+        row["failures"] += 1
+    elif result.coverage_state == "unsupported":
+        row["unsupported"] += 1
+    else:
+        row["empty"] += 1
+
+
+def _finalize_window_execution(rows: Mapping[str, dict[str, Any]]) -> None:
+    for row in rows.values():
+        if int(row["attempts"]) == 0:
+            row["status"] = "not_attempted"
+            row["reason"] = "no_queryable_date_pair" if int(row["queryable_date_pairs"]) == 0 else "budget_unattempted"
+            continue
+        if int(row["failures"]) or int(row["unsupported"]) or int(row["suppressed"]):
+            row["status"] = "failed"
+            row["reason"] = "provider_or_routing_failure"
+            continue
+        provider_calls = int(row["provider_calls"])
+        completed_calls = int(row["successes"]) + int(row["empty"])
+        if provider_calls > 0 and completed_calls == provider_calls:
+            row["status"] = "succeeded"
+            row["reason"] = None
+        else:
+            row["status"] = "failed"
+            row["reason"] = "inconsistent_execution"
+
+
+def _normalized_window_coverage(plan: ScopedSearchPlan, rows: Mapping[str, Any]) -> Mapping[str, Any]:
+    expected_ids = {_window_id(window) for window in plan.windows}
+    if set(str(value) for value in rows) != expected_ids:
+        raise FTRHandoffError("scoped window coverage does not match supplied windows")
+    normalized: dict[str, Mapping[str, Any]] = {}
+    for window in plan.windows:
+        window_id = _window_id(window)
+        raw = _mapping(rows.get(window_id))
+        status = str(raw.get("status") or "")
+        if status not in WINDOW_SLICE_STATES:
+            raise FTRHandoffError(f"scoped window {window_id} has invalid coverage status")
+        integer_fields = (
+            "queryable_date_pairs",
+            "planned_tasks",
+            "attempts",
+            "provider_calls",
+            "records",
+            "successes",
+            "empty",
+            "failures",
+            "suppressed",
+            "unsupported",
+        )
+        counters: dict[str, int] = {}
+        for field in integer_fields:
+            value = raw.get(field)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise FTRHandoffError(f"scoped window {window_id}.{field} must be a nonnegative integer")
+            counters[field] = value
+        expected_pairs = len(_date_pairs(window, plan.duration))
+        expected_planned = sum(task.window_id == window_id for task in plan.discovery_tasks)
+        if counters["queryable_date_pairs"] != expected_pairs:
+            raise FTRHandoffError(f"scoped window {window_id} queryable pair count mismatches request")
+        if counters["planned_tasks"] != expected_planned or counters["attempts"] != expected_planned:
+            raise FTRHandoffError(f"scoped window {window_id} execution does not match deterministic plan")
+        if counters["provider_calls"] + counters["suppressed"] > counters["attempts"]:
+            raise FTRHandoffError(f"scoped window {window_id} provider calls exceed attempts")
+        if counters["successes"] + counters["empty"] + counters["failures"] > counters["provider_calls"]:
+            raise FTRHandoffError(f"scoped window {window_id} provider outcomes exceed calls")
+        reason = raw.get("reason")
+        if reason is not None and not isinstance(reason, str):
+            raise FTRHandoffError(f"scoped window {window_id} reason must be text or null")
+        if status == "succeeded":
+            if (
+                counters["provider_calls"] <= 0
+                or counters["failures"]
+                or counters["suppressed"]
+                or counters["unsupported"]
+                or counters["successes"] + counters["empty"] != counters["provider_calls"]
+            ):
+                raise FTRHandoffError(f"scoped window {window_id} succeeded without complete execution truth")
+        elif status == "not_attempted":
+            if counters["attempts"] or counters["provider_calls"]:
+                raise FTRHandoffError(f"scoped window {window_id} not_attempted contradicts execution")
+            expected_reason = "no_queryable_date_pair" if expected_pairs == 0 else "budget_unattempted"
+            if reason != expected_reason:
+                raise FTRHandoffError(f"scoped window {window_id} not_attempted reason is inconsistent")
+        else:
+            if not (
+                counters["attempts"]
+                and (counters["failures"] or counters["suppressed"] or counters["unsupported"] or reason == "inconsistent_execution")
+            ):
+                raise FTRHandoffError(f"scoped window {window_id} failed without failure evidence")
+        normalized[window_id] = {"status": status, "reason": reason, **counters}
+    return normalized
+
+
 def _profile(record: AirfareRecord) -> str:
     market = market_slice(record.destination.country)
     return market if market in {"japan", "korea", "china"} else "world"
@@ -460,16 +610,18 @@ def _provider_health(
     *,
     origin_rows: Mapping[str, Mapping[str, Any]],
     flight_deals: Mapping[str, int],
+    window_rows: Mapping[str, Mapping[str, Any]],
 ) -> Mapping[str, Any]:
     statuses = [str(value.get("status") or "") for value in origin_rows.values()]
     attempted_count = sum(value != "not_attempted" for value in statuses)
     all_required_failed = bool(statuses) and attempted_count == len(statuses) and all(value == "failed" for value in statuses)
+    window_statuses = [str(value.get("status") or "") for value in window_rows.values()]
     if all_required_failed and int(flight_deals.get("provider_calls", 0)) > 0:
         status = "provider_failed"
         reasons = ["all required scoped Flight Deals origin slices failed"]
-    elif any(value != "attempted" for value in statuses):
+    elif any(value != "attempted" for value in statuses) or any(value != "succeeded" for value in window_statuses):
         status = "degraded"
-        reasons = ["bounded scoped plan left a required origin failed or not_attempted"]
+        reasons = ["bounded scoped plan left a required origin or availability window failed/not_attempted"]
     else:
         status = "healthy"
         reasons = []
@@ -552,6 +704,43 @@ def validate_scoped_snapshot(snapshot: Mapping[str, Any], *, plan: ScopedSearchP
     max_budget = scoped.get("max_budget_twd")
     if max_budget is not None and (isinstance(max_budget, bool) or not isinstance(max_budget, int) or max_budget <= 0):
         raise FTRHandoffError("scoped snapshot max_budget_twd invalid")
+
+    validation_plan = plan
+    if validation_plan is None:
+        execution_policy_raw = _mapping(scoped.get("execution_policy"))
+        validation_plan = ScopedSearchPlan(
+            request_id=request_id,
+            request_fingerprint=fingerprint,
+            plan_id=plan_id,
+            windows=windows,
+            discovery_tasks=tuple(
+                ScopedDiscoveryTask(
+                    task_id=str(_mapping(value).get("task_id") or ""),
+                    window_id=str(_mapping(value).get("window_id") or ""),
+                    origin=str(_mapping(value).get("origin") or ""),
+                    anchor_departure=str(_mapping(value).get("anchor_departure") or ""),
+                    anchor_return=str(_mapping(value).get("anchor_return") or ""),
+                )
+                for value in (scoped.get("discovery_plan") or [])
+            ),
+            discovery_truncated=bool(scoped.get("discovery_truncated")),
+            duration=duration,
+            max_budget_twd=max_budget,
+            execution_policy=ScopedExecutionPolicy(
+                max_discovery_calls=int(execution_policy_raw.get("max_discovery_calls") or 0),
+                max_exact_revalidations=int(execution_policy_raw.get("max_exact_revalidations") or 0),
+            ),
+        )
+        validation_plan.execution_policy.validate()
+
+    scoped_execution = _mapping(scoped.get("execution"))
+    window_execution = _mapping(scoped_execution.get("window_execution"))
+    normalized_windows = _normalized_window_coverage(validation_plan, window_execution)
+    persisted_windows = _mapping(_mapping(snapshot.get("coverage")).get("windows"))
+    if dict(persisted_windows) != dict(normalized_windows):
+        raise FTRHandoffError("scoped snapshot coverage.windows mismatches scoped execution truth")
+    if any(str(value["status"]) != "succeeded" for value in normalized_windows.values()):
+        raise FTRHandoffError("scoped window coverage incomplete; snapshot is not consumable")
 
     for opportunity in snapshot.get("opportunities") or []:
         for variant in _mapping(opportunity).get("variants") or []:
@@ -709,15 +898,7 @@ async def acquire_scoped(
     }
     provider_failures: list[Mapping[str, str]] = []
     scoped_rows: list[tuple[AirfareRecord, str]] = []
-    window_attempts: dict[str, dict[str, int]] = {
-        f"w-{window.start_date}-{window.end_date}": {
-            "attempts": 0,
-            "successes": 0,
-            "failures": 0,
-            "records": 0,
-        }
-        for window in plan.windows
-    }
+    window_attempts = _window_execution_rows(plan)
 
     for task in plan.discovery_tasks:
         origin = task.origin
@@ -743,10 +924,10 @@ async def acquire_scoped(
             or route_plan.entries[0].provider != "gflights_google_flight_deals"
         ):
             execution["flight_deals"]["unsupported"] += 1
+            window_attempts[task.window_id]["unsupported"] += 1
             origin_state[origin]["status"] = "failed"
             message = route_plan.fallback_reason or "scoped Flight Deals routing unavailable"
             origin_state[origin]["errors"].append(message)
-            window_attempts[task.window_id]["failures"] += 1
             provider_failures.append({
                 "provider": "gflights",
                 "origin": origin,
@@ -761,12 +942,12 @@ async def acquire_scoped(
             anchor_return=task.anchor_return,
         )
         _count(execution, "flight_deals", result)
-        if result.coverage_state == "failed":
+        _count_window_result(window_attempts[task.window_id], result)
+        if result.coverage_state in {"failed", "unsupported"} or not result.request_sent:
             origin_state[origin]["status"] = "failed"
-            message = result.error or "provider failure"
+            message = result.error or result.coverage_state
             origin_state[origin]["errors"].append(message)
-            window_attempts[task.window_id]["failures"] += 1
-            if result.request_sent:
+            if result.coverage_state == "failed" and result.request_sent:
                 provider_failures.append({
                     "provider": result.provider,
                     "origin": origin,
@@ -777,8 +958,6 @@ async def acquire_scoped(
 
         if origin_state[origin]["status"] == "not_attempted":
             origin_state[origin]["status"] = "attempted"
-        window_attempts[task.window_id]["successes"] += 1
-        window_attempts[task.window_id]["records"] += len(result.records)
         origin_state[origin]["returned_flight_deals"] += len(result.records)
         for record in result.records:
             if not is_international_asia_oceania(record.destination.country):
@@ -797,6 +976,9 @@ async def acquire_scoped(
                 and _minimum_away_satisfied(record)
             ):
                 market_rows[market]["qualified"] += 1
+
+    _finalize_window_execution(window_attempts)
+    normalized_window_coverage = _normalized_window_coverage(plan, window_attempts)
 
     if plan.discovery_truncated:
         for origin in origins:
@@ -993,15 +1175,26 @@ async def acquire_scoped(
     for market in MARKETS:
         market_rows[market]["status"] = market_status
 
-    health = _provider_health(origin_rows=origin_state, flight_deals=execution["flight_deals"])
-    provider_slice_status = (
-        "failed"
-        if execution["flight_deals"]["failures"] or execution["flight_deals"]["unsupported"]
-        else "succeeded"
+    health = _provider_health(
+        origin_rows=origin_state,
+        flight_deals=execution["flight_deals"],
+        window_rows=normalized_window_coverage,
     )
+    flight_deals_execution = execution["flight_deals"]
+    if (
+        flight_deals_execution["failures"]
+        or flight_deals_execution["unsupported"]
+        or flight_deals_execution["suppressed"]
+    ):
+        provider_slice_status = "failed"
+    elif flight_deals_execution["provider_calls"] > 0:
+        provider_slice_status = "succeeded"
+    else:
+        provider_slice_status = "not_attempted"
     coverage = {
         "origins": origin_state,
         "markets": market_rows,
+        "windows": normalized_window_coverage,
         "execution": execution,
         "all_origins_attempted": all(value["status"] != "not_attempted" for value in origin_state.values()),
         "destination_scope": "asia_oceania",
@@ -1026,7 +1219,7 @@ async def acquire_scoped(
     )
     result = apply_absolute_low_selection(base, policy=policy)
     return plan, result, {
-        "window_execution": window_attempts,
+        "window_execution": normalized_window_coverage,
         "eligible_seed_count": len(pool),
         "exact_selected_count": len(selected),
         "discovery_truncated": plan.discovery_truncated,
@@ -1093,6 +1286,12 @@ async def execute_scoped_search(
             generated_at=generated_at,
         )
         snapshot = dict(base_snapshot)
+        snapshot_coverage = dict(_mapping(snapshot.get("coverage")))
+        snapshot_coverage["windows"] = {
+            str(key): dict(_mapping(value))
+            for key, value in _mapping(scoped_execution.get("window_execution")).items()
+        }
+        snapshot["coverage"] = snapshot_coverage
         snapshot["scoped_search"] = _scoped_metadata(plan, execution=scoped_execution)
         validate_scoped_snapshot(snapshot, plan=plan)
         staged = stage_snapshot(history_dir=history_dir, snapshot=snapshot)
