@@ -36,3 +36,13 @@ jobs:
             !.git
           include-hidden-files: true
           retention-days: 1
+
+      - name: Stage offline Gate dependencies
+        run: python -m pip download --dest /tmp/rp06-wheelhouse scrapy parsel
+
+      - name: Export offline Gate dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: rp06-offline-wheelhouse
+          path: /tmp/rp06-wheelhouse
+          retention-days: 1
