@@ -36,6 +36,24 @@ capability_state:
   - CFR-SR-D_executable_TWD0_redundancy
   - CFR-SR-E_blind_spot_schema
   - CFR-SR-F_crawler_simplification
+  post_reassessment_followups:
+    status: complete
+    resolved_on: 2026-08-21
+    SR-B:
+      status: passed
+      evidence: docs/gflights-qualification-2026-08-21.md
+    SR-C:
+      status: resolved_keep_current_adapt
+      evidence: docs/scoped-native-window-bakeoff-2026-08-21.md
+    SR-D:
+      status: passed_known_route_exact_flexible_redundancy_only
+      evidence: docs/executable-redundancy-qualification-2026-08-21.md
+    SR-E:
+      status: passed
+      evidence: docs/access-blind-spots-2026-08-21.md
+    SR-F:
+      status: passed
+      evidence: docs/public-intelligence-simplification-2026-08-21.md
 search:
   horizon_days: 120
   origin_country: TW

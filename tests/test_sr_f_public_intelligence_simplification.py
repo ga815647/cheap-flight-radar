@@ -77,6 +77,23 @@ class SRFPublicIntelligenceSimplificationTests(unittest.TestCase):
         self.assertNotIn('policy["public_intelligence"]["fixed_watch_registry"]', source)
         self.assertIn("Historical fixed-watch evidence", source)
 
+    def test_post_reassessment_followups_are_durably_closed(self):
+        followups = self.policy["capability_state"]["post_reassessment_followups"]
+        self.assertEqual(followups["status"], "complete")
+        self.assertEqual(str(followups["resolved_on"]), "2026-08-21")
+        self.assertEqual(
+            [followups[key]["status"] for key in ("SR-B", "SR-C", "SR-D", "SR-E", "SR-F")],
+            [
+                "passed",
+                "resolved_keep_current_adapt",
+                "passed_known_route_exact_flexible_redundancy_only",
+                "passed",
+                "passed",
+            ],
+        )
+        for key in ("SR-B", "SR-C", "SR-D", "SR-E", "SR-F"):
+            self.assertTrue((ROOT / followups[key]["evidence"]).is_file())
+
     def test_current_docs_make_old_fixed_watch_material_historical(self):
         text = (ROOT / "docs/search-strategy.md").read_text(encoding="utf-8")
         self.assertIn("Current public-intelligence contract (SR-F, 2026-08-21)", text)

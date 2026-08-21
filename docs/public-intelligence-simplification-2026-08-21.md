@@ -1,337 +1,43 @@
 # CFR-SR-F — public-intelligence simplification (2026-08-21)
 
-Status: bounded implementation evidence for Issue #73.
-
 ## Decision
-Retire the fixed-watch crawler/cadence/state subsystem. Its optional Signal value does not justify maintaining a separate Scrapy/Playwright execution plane, freshness state machine, artifacts and parser registry after the substrate reassessment. Public intelligence remains best-effort opportunistic/verification-only context and is never Deal/anomaly/backend coverage authority.
+
+SR-F retires CFR's fixed-watch crawler/cadence/state subsystem. Fixed watches were always optional Signal context rather than Deal/anomaly authority; after substrate reassessment, their marginal recall value does not justify a separate Scrapy/Playwright execution plane, freshness state machine, parser registry, artifacts, and browser plumbing. Public intelligence remains a best-effort opportunistic/verification-only lane controlled by the ChatGPT orchestrator.
+
+## Base-main inventory before SR-F
+
+The fresh pre-SR-F main contained all of the following current executable or policy surfaces:
+
+- `.github/workflows/fixed-watch-run.yml` — on-demand fixed-watch crawler execution and artifact upload.
+- `src/cheap_flight_radar/fixed_watch_runner.py` — Scrapy crawler plus optional Playwright path.
+- `src/cheap_flight_radar/fixed_watch_state.py` — cadence, prior-success reuse, and manifest state.
+- `src/cheap_flight_radar/public_sources.py` — fixed-source parser dispatch/contracts.
+- `src/cheap_flight_radar/public_intelligence.py` — fixed-watch registry/planning types mixed with generic provenance/dedupe primitives.
+- fixed-watch-only tests and `tests/fixtures/public_sources/`.
+- `pyproject.toml` dependencies on Scrapy and optional `scrapy-playwright`.
+- `flight-radar.yaml` fixed-watch registry/runtime/cadence policy plus publication requirement `fixed_watch_coverage_and_freshness`.
+- `src/cheap_flight_radar/publication.py` dependence on the current fixed-watch registry to render cadence labels.
 
 ## KEEP
-- `src/cheap_flight_radar/public_intelligence.py`: source-agnostic `DiscoverySighting`, campaign identity/dedupe, exact-itinerary identity and observation provenance helpers.
-- ChatGPT Web/public social/news/airline promotion discovery as opportunistic Signal/seed input when useful.
+
+- `src/cheap_flight_radar/public_intelligence.py` as a small source-agnostic module for `DiscoverySighting`, campaign identity/dedupe, exact-itinerary identity, and observation provenance.
+- `src/cheap_flight_radar/secondary_recall.py` and current opportunistic one-way Web-seed expansion.
+- Public Web/search/social/news/airline-promotion observations as opportunistic Signal/seed context when useful.
 - Candidate-triggered airline/OTA/metasearch verification surfaces.
-- Existing core Daily/Scoped provider routing, SR-D gflights/Kiwi behavior, SR-E blind spots and CFR→FTR truth.
+- Historical immutable manifests: if they contain fixed-watch evidence, publication may render it explicitly as historical evidence.
+- All Daily/Scoped provider routing, gflights/Kiwi SR-D behavior, SR-E blind spots, Deal/absolute-low/open-jaw/fail-closed/TWD-0 semantics, and CFR→FTR contract.
 
 ## RETIRE
+
 - `.github/workflows/fixed-watch-run.yml`.
-- `fixed_watch_runner.py`, `fixed_watch_state.py`, `public_sources.py`.
-- fixed-watch cadence/reuse/manifest/parser contracts and tests/fixtures.
-- Scrapy and scrapy-playwright project dependencies/browser installation path.
-- fixed-watch publication coverage requirement and machine-SSOT registry/runtime.
+- `fixed_watch_runner.py`, `fixed_watch_state.py`, and `public_sources.py`.
+- fixed-watch cadence/reuse/manifest/parser contracts and their dedicated tests/fixtures.
+- Scrapy and `scrapy-playwright` project dependencies and browser-install path.
+- current fixed-watch registry/runtime/cadence policy and the fixed-watch publication coverage requirement.
+- publication's dependency on current fixed-watch registry/cadence configuration.
 
-## Before inventory
-- `.github/workflows/fixed-watch-run.yml:11:        description: Comma-separated due fixed-watch ids selected by the ChatGPT orchestrator`
-- `.github/workflows/fixed-watch-run.yml:37:          required=$(python -m cheap_flight_radar.fixed_watch_runner --watch-ids "${{ inputs.watch_ids }}" --print-browser-required)`
-- `.github/workflows/fixed-watch-run.yml:46:      - name: Execute requested fixed watches`
-- `.github/workflows/fixed-watch-run.yml:48:          python -m cheap_flight_radar.fixed_watch_runner`
-- `.github/workflows/fixed-watch-run.yml:51:          --output artifacts/fixed-watch-run.json`
-- `.github/workflows/fixed-watch-run.yml:57:          name: fixed-watch-run-${{ inputs.radar_run_id }}`
-- `.github/workflows/fixed-watch-run.yml:58:          path: artifacts/fixed-watch-run.json`
-- `.github/workflows/sr-f-worker-pr.yml:36:          new_strip = '''def _coverage_strip_html(manifest: Mapping[str, Any]) -> str:\n    origins, fixed, china = _coverage_data(manifest)\n    origin_values = [str(value) for value in origins.values()]\n    origin_status = "complete" if origin_values and all(_status_tone(value) == "good" for value in origin_values) else "partial"\n    china_status = str(china.get("status", "unknown"))\n    pills = [f'<div class="coverage-pill"><span>Origins</span>{_status_badge(origin_status)}</div>']\n    # SR-F retired fixed-watch acquisition. Preserve an old immutable run's\n    # historical fixed-watch evidence when present, but do not synthesize a\n    # current fixed-watch status for new runs.\n    if fixed:\n        pills.append(\n            f'<div class="coverage-pill"><span>Historical fixed watch</span>{_status_badge(str(fixed.get("status", "unknown")))}</div>'\n        )\n    pills.append(f'<div class="coverage-pill"><span>China mode</span>{_status_badge(china_status)}</div>')\n    return '<div class="coverage-strip" aria-label="Radar coverage summary">' + "".join(pills) + '</div>'\n'''`
-- `.github/workflows/sr-f-worker-pr.yml:41:          old_html = '''def _coverage_html(manifest: Mapping[str, Any], policy: Mapping[str, Any]) -> str:\n    origins, fixed, china = _coverage_data(manifest)\n    origin_rows = "".join(\n        f'<li><span>{escape(str(origin))}</span>{_status_badge(str(state))}</li>'\n        for origin, state in sorted(origins.items())\n    )\n    registry = policy["public_intelligence"]["fixed_watch_registry"]\n    cadence = {str(item["id"]): item["cadence_hours"] for item in registry}\n    source_rows = []\n    for item in fixed.get("sources", []):\n        source_id = str(item.get("id", "unknown"))\n        state = str(item.get("state", "unknown"))\n        threshold = cadence.get(source_id)\n        label = source_id + (f" · {threshold}h" if threshold is not None else "")\n        source_rows.append(f'<li><span>{escape(label)}</span>{_status_badge(state)}</li>')\n    china_rows = []\n    modes = china.get("modes", {})\n    if isinstance(modes, Mapping):\n        china_rows = [\n            f'<li><span>{escape(str(mode))}</span>{_status_badge(str(state))}</li>'\n            for mode, state in sorted(modes.items())\n        ]\n    return (\n        '<section class="ops-card"><div class="section-heading"><div><h2>Coverage &amp; Freshness</h2>'\n        '<p>Operational completeness for this immutable run.</p></div></div><div class="ops-grid">'\n        '<div class="ops-block"><h3>Origin coverage</h3><ul class="ops-list">' + origin_rows + '</ul></div>'\n        f'<div class="ops-block"><h3>Fixed-watch coverage: {escape(str(fixed.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(source_rows) + '</ul></div>'\n        f'<div class="ops-block"><h3>China-mode coverage: {escape(str(china.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(china_rows) + '</ul></div>'\n        '</div></section>'\n    )\n'''`
-- `.github/workflows/sr-f-worker-pr.yml:42:          new_html = '''def _coverage_html(manifest: Mapping[str, Any], policy: Mapping[str, Any]) -> str:\n    origins, fixed, china = _coverage_data(manifest)\n    origin_rows = "".join(\n        f'<li><span>{escape(str(origin))}</span>{_status_badge(str(state))}</li>'\n        for origin, state in sorted(origins.items())\n    )\n    # Historical immutable manifests may contain fixed-watch evidence from the\n    # retired subsystem. Render that evidence from the manifest itself; current\n    # SSOT intentionally has no fixed-watch registry/cadence contract.\n    source_rows = []\n    for item in fixed.get("sources", []):\n        source_id = str(item.get("id", "unknown"))\n        state = str(item.get("state", "unknown"))\n        source_rows.append(f'<li><span>{escape(source_id)}</span>{_status_badge(state)}</li>')\n    fixed_block = ""\n    if fixed:\n        fixed_block = (\n            f'<div class="ops-block"><h3>Historical fixed-watch evidence: {escape(str(fixed.get("status", "unknown")))}</h3>'\n            '<ul class="ops-list">' + "".join(source_rows) + '</ul></div>'\n        )\n    china_rows = []\n    modes = china.get("modes", {})\n    if isinstance(modes, Mapping):\n        china_rows = [\n            f'<li><span>{escape(str(mode))}</span>{_status_badge(str(state))}</li>'\n            for mode, state in sorted(modes.items())\n        ]\n    return (\n        '<section class="ops-card"><div class="section-heading"><div><h2>Coverage &amp; Freshness</h2>'\n        '<p>Operational completeness for this immutable run.</p></div></div><div class="ops-grid">'\n        '<div class="ops-block"><h3>Origin coverage</h3><ul class="ops-list">' + origin_rows + '</ul></div>'\n        + fixed_block\n        + f'<div class="ops-block"><h3>China-mode coverage: {escape(str(china.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(china_rows) + '</ul></div>'\n        + '</div></section>'\n    )\n'''`
-- `.github/workflows/sr-f-worker-pr.yml:49:          needle = '    def test_current_docs_make_old_fixed_watch_material_historical(self):\n'`
-- `.github/workflows/sr-f-worker-pr.yml:50:          extra = '''    def test_publication_has_no_active_fixed_watch_registry_dependency(self):\n        source = (ROOT / "src/cheap_flight_radar/publication.py").read_text(encoding="utf-8")\n        self.assertNotIn('policy["public_intelligence"]["fixed_watch_registry"]', source)\n        self.assertIn("Historical fixed-watch evidence", source)\n\n'''`
-- `.github/workflows/sr-f-worker-pr.yml:62:          pat = r'fixed_watch|fixed-watch|fixed watch|Scrapy|scrapy|scrapy_playwright|scrapy-playwright|public_sources|fixed_watch_coverage'`
-- `.github/workflows/sr-f-worker-pr.yml:66:          suffix = '\n\nRemaining matches are retirement markers, historical evidence/docs, or regression assertions; no current fixed-watch executable runtime remains.\n\nHistorical research/docs may still mention fixed watches as prior evidence. Current executable authority is `PRODUCT_INTENT.md` + `flight-radar.yaml` + the SR-F current section in `docs/search-strategy.md`.\n'`
-- `.github/workflows/sr-f-worker-pr.yml:76:          if git grep -n -I -E 'from cheap_flight_radar\.(fixed_watch_runner|fixed_watch_state|public_sources)|Scrapy>=|scrapy-playwright|fixed-watch-run\.yml|policy\["public_intelligence"\]\["fixed_watch_registry"\]' -- pyproject.toml src tests .github/workflows flight-radar.yaml; then`
-- `.github/workflows/sr-f-worker-pr.yml:77:            echo 'Executable fixed-watch/crawler residue remains' >&2`
-- `.github/workflows/sr-f-worker.yml:33:              pat = r'fixed_watch|fixed-watch|fixed watch|Scrapy|scrapy|scrapy_playwright|scrapy-playwright|public_sources|fixed_watch_coverage'`
-- `.github/workflows/sr-f-worker.yml:39:          # Remove fixed-watch executable/runtime surface.`
-- `.github/workflows/sr-f-worker.yml:41:              '.github/workflows/fixed-watch-run.yml',`
-- `.github/workflows/sr-f-worker.yml:42:              'src/cheap_flight_radar/fixed_watch_runner.py',`
-- `.github/workflows/sr-f-worker.yml:43:              'src/cheap_flight_radar/fixed_watch_state.py',`
-- `.github/workflows/sr-f-worker.yml:44:              'src/cheap_flight_radar/public_sources.py',`
-- `.github/workflows/sr-f-worker.yml:45:              'tests/test_fixed_watch_state.py',`
-- `.github/workflows/sr-f-worker.yml:53:          fixture_dir = root / 'tests/fixtures/public_sources'`
-- `.github/workflows/sr-f-worker.yml:60:          text = text.replace('  "Scrapy>=2.17,<3",\n', '')`
-- `.github/workflows/sr-f-worker.yml:61:          text = text.replace('\n[project.optional-dependencies]\nbrowser = [\n  "scrapy-playwright>=0.0.48,<0.1",\n]\n', '\n')`
-- `.github/workflows/sr-f-worker.yml:69:          SR-F deliberately retired CFR's fixed-watch crawler/cadence/state machinery.`
-- `.github/workflows/sr-f-worker.yml:207:          # Replace fixed-watch operational SSOT with a small opportunistic/verification lane.`
-- `.github/workflows/sr-f-worker.yml:307:            retired_fixed_watch_subsystem:`
-- `.github/workflows/sr-f-worker.yml:314:          ptxt = ptxt.replace('  - fixed_watch_coverage_and_freshness\n', '')`
-- `.github/workflows/sr-f-worker.yml:317:          # Current search-strategy header: old fixed-watch passages below remain historical only.`
-- `.github/workflows/sr-f-worker.yml:327:              The fixed-watch crawler/cadence/state subsystem is retired. Public intelligence is now a best-effort opportunistic/verification-only Signal lane operated directly by the ChatGPT orchestrator when useful; it is not Deal/anomaly/backend coverage authority and has no independent GitHub schedule or crawler runtime. Generic provenance/campaign/itinerary dedupe helpers remain. Older fixed-watch/crawler sections below are historical design evidence only and do not override `PRODUCT_INTENT.md` or `flight-radar.yaml`.`
-- `.github/workflows/sr-f-worker.yml:351:              def test_fixed_watch_executable_surface_is_retired(self):`
-- `.github/workflows/sr-f-worker.yml:353:                      ".github/workflows/fixed-watch-run.yml",`
-- `.github/workflows/sr-f-worker.yml:354:                      "src/cheap_flight_radar/fixed_watch_runner.py",`
-- `.github/workflows/sr-f-worker.yml:355:                      "src/cheap_flight_radar/fixed_watch_state.py",`
-- `.github/workflows/sr-f-worker.yml:356:                      "src/cheap_flight_radar/public_sources.py",`
-- `.github/workflows/sr-f-worker.yml:360:                  self.assertNotIn("scrapy", pyproject)`
-- `.github/workflows/sr-f-worker.yml:363:                  self.assertFalse(hasattr(pi, "plan_fixed_watches"))`
-- `.github/workflows/sr-f-worker.yml:370:                  self.assertEqual(self.public["retired_fixed_watch_subsystem"]["status"], "retired_by_CFR_SR_F")`
-- `.github/workflows/sr-f-worker.yml:371:                  self.assertNotIn("fixed_watch_coverage_and_freshness", self.policy["publication"]["required_operational_sections"])`
-- `.github/workflows/sr-f-worker.yml:408:              def test_current_docs_make_old_fixed_watch_material_historical(self):`
-- `.github/workflows/sr-f-worker.yml:411:                  self.assertIn("fixed-watch crawler/cadence/state subsystem is retired", text)`
-- `.github/workflows/sr-f-worker.yml:422:          doc.write_text(f'''# CFR-SR-F — public-intelligence simplification (2026-08-21)\n\nStatus: bounded implementation evidence for Issue #73.\n\n## Decision\nRetire the fixed-watch crawler/cadence/state subsystem. Its optional Signal value does not justify maintaining a separate Scrapy/Playwright execution plane, freshness state machine, artifacts and parser registry after the substrate reassessment. Public intelligence remains best-effort opportunistic/verification-only context and is never Deal/anomaly/backend coverage authority.\n\n## KEEP\n- `src/cheap_flight_radar/public_intelligence.py`: source-agnostic `DiscoverySighting`, campaign identity/dedupe, exact-itinerary identity and observation provenance helpers.\n- ChatGPT Web/public social/news/airline promotion discovery as opportunistic Signal/seed input when useful.\n- Candidate-triggered airline/OTA/metasearch verification surfaces.\n- Existing core Daily/Scoped provider routing, SR-D gflights/Kiwi behavior, SR-E blind spots and CFR→FTR truth.\n\n## RETIRE\n- `.github/workflows/fixed-watch-run.yml`.\n- `fixed_watch_runner.py`, `fixed_watch_state.py`, `public_sources.py`.\n- fixed-watch cadence/reuse/manifest/parser contracts and tests/fixtures.\n- Scrapy and scrapy-playwright project dependencies/browser installation path.\n- fixed-watch publication coverage requirement and machine-SSOT registry/runtime.\n\n## Before inventory\n{before_text}\n\n## After inventory\n{after_text}\n\nHistorical research/docs may still mention fixed watches as prior evidence. Current executable authority is `PRODUCT_INTENT.md` + `flight-radar.yaml` + the SR-F current section in `docs/search-strategy.md`.\n''', encoding='utf-8')`
-- `.github/workflows/sr-f-worker.yml:433:          # No executable fixed-watch/crawler residue may remain outside historical docs/evidence.`
-- `.github/workflows/sr-f-worker.yml:434:          if git grep -n -I -E 'from cheap_flight_radar\.(fixed_watch_runner|fixed_watch_state|public_sources)|Scrapy>=|scrapy-playwright|fixed-watch-run\.yml' -- pyproject.toml src tests .github/workflows flight-radar.yaml; then`
-- `.github/workflows/sr-f-worker.yml:435:            echo 'Executable fixed-watch/crawler residue remains' >&2`
-- `docs/crawler-runtime-spike-2026-08-11.md:5:Use **Scrapy as the fixed-watch HTTP runtime**. Keep **scrapy-playwright as an opt-in vanilla JavaScript fallback interface**, but do not promote a source to fixed coverage merely because a browser exits successfully.`
-- `docs/crawler-runtime-spike-2026-08-11.md:7:Do not build a custom crawler runtime. Source-specific parsers, fixtures, coverage semantics, normalized observation models, provenance, and dedupe stay in this repository. Scrapy owns request scheduling, queueing, normal retries, cookies/session continuity, downloader lifecycle, and selector response objects.`
-- `docs/crawler-runtime-spike-2026-08-11.md:13:GitHub Actions is **not** the primary scheduler. A ChatGPT scheduled radar run reads the registry and prior successful attempt state, determines which fixed watches are due, dispatches the deterministic GitHub execution backend, reads the attempt manifest and normalized observations, then continues with opportunistic Web discovery, deep search, revalidation, and final reporting.`
-- `docs/crawler-runtime-spike-2026-08-11.md:15:`cadence_hours` is the maximum reusable age of the latest **successful** fixed-watch attempt. It is not an Actions cron expression. A failed attempt never refreshes the due clock. Production fixed-watch execution is `workflow_dispatch` only; there is no independent GitHub cron.`
-- `docs/crawler-runtime-spike-2026-08-11.md:21:| Scrapy + scrapy-playwright | Native HTTP; per-request Playwright opt-in | Mature scheduler, retry middleware, cookies | Parsel is fixture-friendly; repo controls normalized manifests | pip 9.46s; Chromium 22.90s; HTTP+JS smoke 1.62s | Clean HTTP-first boundary; vanilla Playwright only | BSD-3-Clause / BSD-3-Clause | **Selected** |`
-- `docs/crawler-runtime-spike-2026-08-11.md:29:- `e8bd1995b81500c30fc10bb4804966b5c6ade0ad`, run `31472215749`: corrected probe. Scrapy+Playwright and Crawlee both passed deterministic HTTP+JS fixtures; Crawlee used `fingerprint_generator=None`, `retry_on_blocked=False`, and no session rotation. changedetection.io started successfully; urlwatch browser job returned the JS fixture. Project CI run `31472215751` passed.`
-- `docs/crawler-runtime-spike-2026-08-11.md:52:This result changed the registry. Tigerair is **not** a fixed watch in v1. Public Web discovery can find official Tigerair news and `static.tigerairtw.com` event pages, so Tigerair remains valuable as `opportunistic`, but a source whose deterministic HTTP and vanilla-browser attempts cannot establish a stable parse contract must not permanently degrade fixed coverage.`
-- `docs/crawler-runtime-spike-2026-08-11.md:56:Current fixed watches are:`
-- `docs/crawler-runtime-spike-2026-08-11.md:61:Therefore current fixed-watch executions install **Scrapy only**. The production workflow retains a conditional `scrapy-playwright` installation path for a future source only after that source has a repeatable, public, source-specific browser contract and fixture. No current fixed watch requires a browser.`
-- `docs/crawler-runtime-spike-2026-08-11.md:63:Tigerair official news/static event pages are handled by ChatGPT's opportunistic open-Web phase and do not count toward fixed-watch coverage.`
-- `docs/crawler-runtime-spike-2026-08-11.md:70:- fixed-watch attempt/run manifests;`
-- `docs/crawler-runtime-spike-2026-08-11.md:76:Scrapy owns:`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:3:Status: implementation contract for Issue #10 / PR #11. `flight-radar.yaml` remains the policy SSOT; this document explains how the existing ChatGPT-orchestrated fixed-watch policy is carried across radar runs.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:14:- no opportunistic source allowed to repair failed fixed-watch coverage.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:16:The caller decides when a radar run occurs, reads prior successful state, computes due fixed watches, dispatches GitHub execution only when needed, then consumes the returned manifest before continuing to open-Web discovery and downstream fare work.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:20:The existing `.github/workflows/fixed-watch-run.yml` persists every requested execution as a GitHub Actions artifact:`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:22:- artifact name: `fixed-watch-run-${radar_run_id}`;`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:23:- contained file: `artifacts/fixed-watch-run.json`;`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:26:Current fixed-watch freshness thresholds are 3 hours and 6 hours, so the artifact retention window is intentionally much longer than the state required for cadence reuse. If artifacts are unavailable or have expired, the orchestrator has no trustworthy prior-success evidence and the existing due planner conservatively returns `due_now`.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:32:`cheap_flight_radar.fixed_watch_state` reads one or more extracted `fixed-watch-run.json` files and produces one current orchestration state object.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:37:python -m cheap_flight_radar.fixed_watch_state \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:38:  --manifest artifacts/run-a/fixed-watch-run.json \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:39:  --manifest artifacts/run-b/fixed-watch-run.json \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:41:  --output artifacts/fixed-watch-state.json`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:51:The current registry drives planning. Attempts for sources that existed in older artifacts but are no longer fixed watches are ignored by the cadence planner.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:74:1. Read the current fixed-watch registry from the repo SSOT.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:75:2. List/download recent non-expired fixed-watch run artifacts from the intended production execution ref and extract their manifests.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:76:3. Resolve current state with `fixed_watch_state` (or the same strict contract in the caller).`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:78:5. If one or more watches are due, dispatch `.github/workflows/fixed-watch-run.yml` with only those ids and the caller's radar-run id.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:79:6. Download the resulting artifact, add its manifest to the state set, and resolve again. Any source that remains due / failed is reported as incomplete fixed-watch coverage rather than repaired by another source.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:80:7. Merge fresh fixed-watch sightings into ChatGPT's opportunistic public-Web discovery while retaining separate provenance.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:82:9. Revalidate serious exact itineraries where a suitable source exists, preserve unknown fare components as unknown, then produce the final report with fixed-watch coverage status.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:94:At approximately 17:12 Asia/Taipei on 2026-08-11, both current-registry successes from that artifact were less than one hour old. Under the current 6h / 3h thresholds, a ChatGPT radar run should therefore reuse both exact successes and dispatch **no** new fixed-watch execution. The obsolete Tigerair attempt does not participate in current fixed-watch planning.`
-- `docs/free-public-source-registry-2026-08-11.md:9:- `fixed_watch`: deterministic public discovery source required when its latest successful attempt is older than its declared `cadence_hours`; a due source that is unavailable/blocked/fetch-failed/parse-failed reduces fixed-watch coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:13:A fixed-watch success proves only that the declared source contract was successfully read. It does not claim exhaustive airline, market, airport, or fare coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:19:`cadence_hours` means the maximum reusable age of the latest **successful** fixed-watch attempt:`
-- `docs/free-public-source-registry-2026-08-11.md:37:- Peach: stock headless could render expected public content, but incremental fixed-watch yield was not established;`
-- `docs/free-public-source-registry-2026-08-11.md:48:A one-shot GitHub-hosted Ubuntu integration probe used the new Scrapy runner against the original three fixed candidates:`
-- `docs/free-public-source-registry-2026-08-11.md:56:The corrected probe used exact source head `86d3bf3e9c3e93ae32a9a8a1cbba5d5475181f12` and vanilla `scrapy-playwright` only for Tigerair:`
-- `docs/free-public-source-registry-2026-08-11.md:70:| China Airlines official | 4 | 5 | 5 | 4 | 5 | 5 | 4 | 1 | **fixed_watch** |`
-- `docs/free-public-source-registry-2026-08-11.md:71:| PTT Japan_Travel `[資訊]` | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 1 | **fixed_watch (Japan)** |`
-- `docs/free-public-source-registry-2026-08-11.md:84:## 6. v1 fixed-watch registry`
-- `docs/free-public-source-registry-2026-08-11.md:90:- acquisition: direct HTTP via Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:98:- acquisition: direct HTTP via Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:104:`tigerair_tw_official` is **not** a v1 fixed watch. The fixed candidate was demoted after both direct HTTP and ordinary Playwright produced HTTP 200 without a stable promotion DOM contract on GitHub-hosted Ubuntu.`
-- `docs/free-public-source-registry-2026-08-11.md:106:Preferred Tigerair discovery is now opportunistic public Web search over official news and official static event pages. These sightings retain official provenance but do not repair fixed-watch coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:165:Coverage accounting is independent of dedupe: duplicate opportunistic sightings cannot substitute for a failed due fixed watch.`
-- `docs/free-public-source-registry-2026-08-11.md:169:Current fixed watches are direct HTTP and therefore the normal Actions execution installs only Scrapy. The repo keeps a conditional vanilla `scrapy-playwright` fallback interface for a future source only after repeatable public browser retrieval plus a deterministic fixture establish a real parser contract.`
-- `docs/free-public-source-registry-2026-08-11.md:171:The repository owns registry/due semantics, attempt/run manifests, normalized sightings, parsers/fixtures, provenance/dedupe, and coverage interpretation. Scrapy owns crawling mechanics.`
-- `docs/free-public-source-registry-2026-08-11.md:179:3. crawler runtime reuse spike selected Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:184:The next atomic package should integrate persisted prior-attempt state / artifact retrieval into the ChatGPT-triggered radar-run interface, then connect normalized fixed-watch observations to opportunistic discovery and downstream deep-search/revalidation without creating an independent GitHub schedule.`
-- `docs/outbound-first-contract-2026-08-12.md:92:This is independent of fixed-watch coverage. PTT is not required anywhere in the outbound-first execution path.`
-- `docs/price-history.md:210:1. load fixed-watch state and perform current fixed-watch/opportunistic/deep-search/revalidation work according to orchestration policy;`
-- `docs/publication-ui.md:30:Origin coverage, fixed-watch freshness, and China-mode coverage are summarized near the top as status badges and expanded near the bottom as a complete operational panel.`
-- `docs/search-strategy.md:292:Public/indexed Facebook or airfare-editor posts are `opportunistic` seed evidence only. They may provide route/date/promotion/price text when accessible without login bypass, but they never establish a verified fare and do not repair fixed-watch coverage.`
-- `docs/substrate-bakeoff-2026-08-13.md:159:- fixed-watch success → Signal freshness, not Radar Deal coverage authority;`
-- `docs/substrate-reassessment-2026-08-21.md:294:- fixed-watch crawler program should retain only low-maintenance/high-signal public sources;`
-- `docs/substrate-reassessment-2026-08-21.md:458:   - retire low-value crawler/fixed-watch complexity that does not improve Deal truth or recall enough to justify maintenance.`
-- `flight-radar.yaml:716:  - fixed_watch_coverage_and_freshness`
-- `flight-radar.yaml:813:    fixed_watch:`
-- `flight-radar.yaml:827:    due_clock_source: latest_successful_fixed_watch_attempt`
-- `flight-radar.yaml:834:    - determine_due_fixed_watches`
-- `flight-radar.yaml:844:    selected: scrapy`
-- `flight-radar.yaml:845:    http_runtime: scrapy`
-- `flight-radar.yaml:846:    js_fallback: scrapy_playwright_opt_in_only`
-- `flight-radar.yaml:857:    fixed_watch_attempts_are_coverage_authority: false`
-- `flight-radar.yaml:868:    failed_fixed_watch_must_be_reported: true`
-- `flight-radar.yaml:869:    opportunistic_source_cannot_substitute_fixed_watch_coverage: false`
-- `flight-radar.yaml:897:  fixed_watch_registry:`
-- `flight-radar.yaml:918:  fixed_watch_research_exclusions:`
-- `pyproject.toml:12:  "Scrapy>=2.17,<3",`
-- `pyproject.toml:19:  "scrapy-playwright>=0.0.48,<0.1",`
-- `src/cheap_flight_radar/fixed_watch_runner.py:1:"""Scrapy-backed execution backend for due fixed public-intelligence watches."""`
-- `src/cheap_flight_radar/fixed_watch_runner.py:11:import scrapy`
-- `src/cheap_flight_radar/fixed_watch_runner.py:12:from scrapy.crawler import CrawlerProcess`
-- `src/cheap_flight_radar/fixed_watch_runner.py:19:    load_fixed_watch_registry,`
-- `src/cheap_flight_radar/fixed_watch_runner.py:23:from .public_sources import ParseContractError, parse_source_html`
-- `src/cheap_flight_radar/fixed_watch_runner.py:39:            "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",`
-- `src/cheap_flight_radar/fixed_watch_runner.py:40:            "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",`
-- `src/cheap_flight_radar/fixed_watch_runner.py:49:class FixedWatchSpider(scrapy.Spider):`
-- `src/cheap_flight_radar/fixed_watch_runner.py:50:    name = "cheap-flight-radar-fixed-watch"`
-- `src/cheap_flight_radar/fixed_watch_runner.py:86:                    from scrapy_playwright.page import PageMethod`
-- `src/cheap_flight_radar/fixed_watch_runner.py:111:            yield scrapy.Request(`
-- `src/cheap_flight_radar/fixed_watch_runner.py:120:    def parse_watch(self, response: scrapy.http.Response, watch: FixedWatch):`
-- `src/cheap_flight_radar/fixed_watch_runner.py:250:        raise SystemExit("--watch-ids must contain at least one fixed-watch id")`
-- `src/cheap_flight_radar/fixed_watch_runner.py:254:        raise SystemExit(f"unknown fixed-watch ids: {', '.join(missing)}")`
-- `src/cheap_flight_radar/fixed_watch_runner.py:261:    parser.add_argument("--watch-ids", required=True, help="comma-separated fixed-watch ids chosen by the ChatGPT orchestrator")`
-- `src/cheap_flight_radar/fixed_watch_runner.py:267:    registry = load_fixed_watch_registry(args.policy)`
-- `src/cheap_flight_radar/fixed_watch_runner.py:277:            import scrapy_playwright  # noqa: F401`
-- `src/cheap_flight_radar/fixed_watch_runner.py:292:        raise SystemExit("fixed-watch crawler exited without writing a manifest")`
-- `src/cheap_flight_radar/fixed_watch_state.py:1:"""Read persisted fixed-watch manifests for the ChatGPT radar orchestrator."""`
-- `src/cheap_flight_radar/fixed_watch_state.py:18:    load_fixed_watch_registry,`
-- `src/cheap_flight_radar/fixed_watch_state.py:19:    plan_fixed_watches,`
-- `src/cheap_flight_radar/fixed_watch_state.py:28:    """Raised when a persisted fixed-watch manifest is malformed or inconsistent."""`
-- `src/cheap_flight_radar/fixed_watch_state.py:52:def load_fixed_watch_manifest(path: str | Path) -> FixedWatchRunManifest:`
-- `src/cheap_flight_radar/fixed_watch_state.py:53:    """Load and validate one extracted ``fixed-watch-run.json`` artifact file.`
-- `src/cheap_flight_radar/fixed_watch_state.py:64:        raise ManifestError(f"cannot read fixed-watch manifest {manifest_path}: {exc}") from exc`
-- `src/cheap_flight_radar/fixed_watch_state.py:66:        raise ManifestError("fixed-watch manifest must contain a JSON object")`
-- `src/cheap_flight_radar/fixed_watch_state.py:67:    return parse_fixed_watch_manifest(payload)`
-- `src/cheap_flight_radar/fixed_watch_state.py:70:def parse_fixed_watch_manifest(payload: Mapping[str, Any]) -> FixedWatchRunManifest:`
-- `src/cheap_flight_radar/fixed_watch_state.py:73:        raise ManifestError(f"unsupported fixed-watch manifest schema_version: {version!r}")`
-- `src/cheap_flight_radar/fixed_watch_state.py:98:def build_fixed_watch_artifact_state(`
-- `src/cheap_flight_radar/fixed_watch_state.py:111:    plan = plan_fixed_watches(watches, attempts, now)`
-- `src/cheap_flight_radar/fixed_watch_state.py:168:        help="extracted fixed-watch-run.json path; repeat for multiple prior artifacts",`
-- `src/cheap_flight_radar/fixed_watch_state.py:179:    watches = load_fixed_watch_registry(args.policy)`
-- `src/cheap_flight_radar/fixed_watch_state.py:180:    manifests = tuple(load_fixed_watch_manifest(path) for path in args.manifest)`
-- `src/cheap_flight_radar/fixed_watch_state.py:181:    state = build_fixed_watch_artifact_state(watches, manifests, now)`
-- `src/cheap_flight_radar/production_radar.py:931:            "fixed_watch_is_deal_coverage_authority": False,`
-- `src/cheap_flight_radar/public_intelligence.py:52:            raise ValueError(f"unsupported fixed-watch attempt status: {self.status}")`
-- `src/cheap_flight_radar/public_intelligence.py:131:    if runtime.get("selected") != "scrapy":`
-- `src/cheap_flight_radar/public_intelligence.py:132:        raise RegistryError("selected fixed-watch runtime must be scrapy")`
-- `src/cheap_flight_radar/public_intelligence.py:137:def load_fixed_watch_registry(`
-- `src/cheap_flight_radar/public_intelligence.py:142:    rows = ((policy.get("public_intelligence") or {}).get("fixed_watch_registry") or [])`
-- `src/cheap_flight_radar/public_intelligence.py:144:        raise RegistryError("fixed_watch_registry must be a non-empty list")`
-- `src/cheap_flight_radar/public_intelligence.py:150:            raise RegistryError("each fixed watch must be a mapping")`
-- `src/cheap_flight_radar/public_intelligence.py:153:            raise RegistryError(f"fixed watch id is missing or duplicated: {source_id!r}")`
-- `src/cheap_flight_radar/public_intelligence.py:186:def plan_fixed_watches(`
-- `src/cheap_flight_radar/public_sources.py:42:    raise ParseContractError(f"no fixed-watch parser registered for {watch.id}")`
-- `src/cheap_flight_radar/publication.py:331:    fixed = coverage.get("fixed_watch", {})`
-- `src/cheap_flight_radar/publication.py:361:    registry = policy["public_intelligence"]["fixed_watch_registry"]`
-- `tests/fixtures/publication/corrected-radar-v1-manifest.json:68:    "fixed_watch": {`
-- `tests/test_fixed_watch_state.py:9:from cheap_flight_radar.fixed_watch_state import (`
-- `tests/test_fixed_watch_state.py:11:    build_fixed_watch_artifact_state,`
-- `tests/test_fixed_watch_state.py:13:    parse_fixed_watch_manifest,`
-- `tests/test_fixed_watch_state.py:15:from cheap_flight_radar.public_intelligence import load_fixed_watch_registry`
-- `tests/test_fixed_watch_state.py:25:        self.watches = load_fixed_watch_registry(POLICY_PATH)`
-- `tests/test_fixed_watch_state.py:98:        manifest = parse_fixed_watch_manifest(self.manifest_payload())`
-- `tests/test_fixed_watch_state.py:99:        state = build_fixed_watch_artifact_state(self.watches, (manifest,), self.now)`
-- `tests/test_fixed_watch_state.py:108:        old = parse_fixed_watch_manifest(`
-- `tests/test_fixed_watch_state.py:115:        recent_failure = parse_fixed_watch_manifest(`
-- `tests/test_fixed_watch_state.py:123:        state = build_fixed_watch_artifact_state(self.watches, (old, recent_failure), self.now)`
-- `tests/test_fixed_watch_state.py:128:        older = parse_fixed_watch_manifest(`
-- `tests/test_fixed_watch_state.py:135:        newer = parse_fixed_watch_manifest(`
-- `tests/test_fixed_watch_state.py:142:        state = build_fixed_watch_artifact_state(self.watches, (older, newer), self.now)`
-- `tests/test_fixed_watch_state.py:153:            parse_fixed_watch_manifest(payload)`
-- `tests/test_fixed_watch_state.py:157:            manifest_path = Path(tmp) / "fixed-watch-run.json"`
-- `tests/test_fixed_watch_state.py:180:        workflow_path = ROOT / ".github/workflows/fixed-watch-run.yml"`
-- `tests/test_fixed_watch_state.py:186:        self.assertIn("name: fixed-watch-run-${{ inputs.radar_run_id }}", text)`
-- `tests/test_fixed_watch_state.py:187:        self.assertIn("path: artifacts/fixed-watch-run.json", text)`
-- `tests/test_public_intelligence_runtime.py:7:from cheap_flight_radar.fixed_watch_runner import browser_required`
-- `tests/test_public_intelligence_runtime.py:15:    load_fixed_watch_registry,`
-- `tests/test_public_intelligence_runtime.py:17:    plan_fixed_watches,`
-- `tests/test_public_intelligence_runtime.py:29:        self.watches = load_fixed_watch_registry(POLICY_PATH)`
-- `tests/test_public_intelligence_runtime.py:53:        registry = policy["public_intelligence"]["fixed_watch_registry"]`
-- `tests/test_public_intelligence_runtime.py:71:        plan = {entry.source_id: entry for entry in plan_fixed_watches(self.watches, (), self.now)}`
-- `tests/test_public_intelligence_runtime.py:79:        entry = plan_fixed_watches((china,), (fresh,), self.now)[0]`
-- `tests/test_public_intelligence_runtime.py:85:        entry = plan_fixed_watches((china,), (boundary,), self.now)[0]`
-- `tests/test_public_intelligence_runtime.py:93:        entry = plan_fixed_watches((china,), (expired_success, recent_failure), self.now)[0]`
-- `tests/test_public_intelligence_runtime.py:160:    def test_fixed_watch_workflow_has_no_schedule_and_browser_install_is_conditional(self):`
-- `tests/test_public_intelligence_runtime.py:161:        workflow_path = ROOT / ".github/workflows/fixed-watch-run.yml"`
-- `tests/test_public_intelligence_spec.py:16:    def test_fixed_watch_registry_is_minimal_signal_only_and_explicit(self) -> None:`
-- `tests/test_public_intelligence_spec.py:17:        registry = self.public["fixed_watch_registry"]`
-- `tests/test_public_intelligence_spec.py:26:    def test_ptt_is_not_an_active_fixed_watch(self) -> None:`
-- `tests/test_public_intelligence_spec.py:27:        fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}`
-- `tests/test_public_intelligence_spec.py:31:        fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}`
-- `tests/test_public_intelligence_spec.py:33:        exclusion = self.public["fixed_watch_research_exclusions"]["tigerair_tw_official"]`
-- `tests/test_public_intelligence_spec.py:41:    def test_fixed_watch_is_not_deal_coverage_authority(self) -> None:`
-- `tests/test_public_intelligence_spec.py:43:        self.assertFalse(coverage["fixed_watch_attempts_are_coverage_authority"])`
-- `tests/test_public_intelligence_spec.py:44:        self.assertFalse(coverage["opportunistic_source_cannot_substitute_fixed_watch_coverage"])`
-- `tests/test_public_intelligence_spec.py:46:        role = self.public["roles"]["fixed_watch"]`
-- `tests/test_public_intelligence_spec.py:62:        fixed_ids = {source["id"] for source in self.public["fixed_watch_registry"]}`
-- `tests/test_public_source_parsers.py:5:from cheap_flight_radar.public_intelligence import load_fixed_watch_registry`
-- `tests/test_public_source_parsers.py:6:from cheap_flight_radar.public_sources import parse_source_html`
-- `tests/test_public_source_parsers.py:10:FIXTURES = ROOT / "tests/fixtures/public_sources"`
-- `tests/test_public_source_parsers.py:17:        watches = load_fixed_watch_registry(ROOT / "flight-radar.yaml")`
-- `tests/test_publication.py:48:            "fixed_watch": {"status": "complete", "sources": []},`
-- `tools/sr_f_worker.py:12:    pat = r'fixed_watch|fixed-watch|fixed watch|Scrapy|scrapy|scrapy_playwright|scrapy-playwright|public_sources|fixed_watch_coverage'`
-- `tools/sr_f_worker.py:20:    '.github/workflows/fixed-watch-run.yml',`
-- `tools/sr_f_worker.py:21:    'src/cheap_flight_radar/fixed_watch_runner.py',`
-- `tools/sr_f_worker.py:22:    'src/cheap_flight_radar/fixed_watch_state.py',`
-- `tools/sr_f_worker.py:23:    'src/cheap_flight_radar/public_sources.py',`
-- `tools/sr_f_worker.py:24:    'tests/test_fixed_watch_state.py',`
-- `tools/sr_f_worker.py:32:fixture_dir = root / 'tests/fixtures/public_sources'`
-- `tools/sr_f_worker.py:38:text = text.replace('  "Scrapy>=2.17,<3",\n', '')`
-- `tools/sr_f_worker.py:39:text = text.replace('\n[project.optional-dependencies]\nbrowser = [\n  "scrapy-playwright>=0.0.48,<0.1",\n]\n', '\n')`
-- `tools/sr_f_worker.py:46:SR-F deliberately retired CFR's fixed-watch crawler/cadence/state machinery.`
-- `tools/sr_f_worker.py:283:  retired_fixed_watch_subsystem:`
-- `tools/sr_f_worker.py:290:ptxt = ptxt.replace('  - fixed_watch_coverage_and_freshness\n', '')`
-- `tools/sr_f_worker.py:302:The fixed-watch crawler/cadence/state subsystem is retired. Public intelligence is now a best-effort opportunistic/verification-only Signal lane operated directly by the ChatGPT orchestrator when useful; it is not Deal/anomaly/backend coverage authority and has no independent GitHub schedule or crawler runtime. Generic provenance/campaign/itinerary dedupe helpers remain. Older fixed-watch/crawler sections below are historical design evidence only and do not override `PRODUCT_INTENT.md` or `flight-radar.yaml`.`
-- `tools/sr_f_worker.py:325:    def test_fixed_watch_executable_surface_is_retired(self):`
-- `tools/sr_f_worker.py:327:            ".github/workflows/fixed-watch-run.yml",`
-- `tools/sr_f_worker.py:328:            "src/cheap_flight_radar/fixed_watch_runner.py",`
-- `tools/sr_f_worker.py:329:            "src/cheap_flight_radar/fixed_watch_state.py",`
-- `tools/sr_f_worker.py:330:            "src/cheap_flight_radar/public_sources.py",`
-- `tools/sr_f_worker.py:334:        self.assertNotIn("scrapy", pyproject)`
-- `tools/sr_f_worker.py:337:        self.assertFalse(hasattr(pi, "plan_fixed_watches"))`
-- `tools/sr_f_worker.py:344:        self.assertEqual(self.public["retired_fixed_watch_subsystem"]["status"], "retired_by_CFR_SR_F")`
-- `tools/sr_f_worker.py:345:        self.assertNotIn("fixed_watch_coverage_and_freshness", self.policy["publication"]["required_operational_sections"])`
-- `tools/sr_f_worker.py:382:    def test_current_docs_make_old_fixed_watch_material_historical(self):`
-- `tools/sr_f_worker.py:385:        self.assertIn("fixed-watch crawler/cadence/state subsystem is retired", text)`
-- `tools/sr_f_worker.py:396:doc.write_text(f'''# CFR-SR-F — public-intelligence simplification (2026-08-21)\n\nStatus: bounded implementation evidence for Issue #73.\n\n## Decision\nRetire the fixed-watch crawler/cadence/state subsystem. Its optional Signal value does not justify maintaining a separate Scrapy/Playwright execution plane, freshness state machine, artifacts and parser registry after the substrate reassessment. Public intelligence remains best-effort opportunistic/verification-only context and is never Deal/anomaly/backend coverage authority.\n\n## KEEP\n- `src/cheap_flight_radar/public_intelligence.py`: source-agnostic `DiscoverySighting`, campaign identity/dedupe, exact-itinerary identity and observation provenance helpers.\n- ChatGPT Web/public social/news/airline promotion discovery as opportunistic Signal/seed input when useful.\n- Candidate-triggered airline/OTA/metasearch verification surfaces.\n- Existing core Daily/Scoped provider routing, SR-D gflights/Kiwi behavior, SR-E blind spots and CFR→FTR truth.\n\n## RETIRE\n- `.github/workflows/fixed-watch-run.yml`.\n- `fixed_watch_runner.py`, `fixed_watch_state.py`, `public_sources.py`.\n- fixed-watch cadence/reuse/manifest/parser contracts and tests/fixtures.\n- Scrapy and scrapy-playwright project dependencies/browser installation path.\n- fixed-watch publication coverage requirement and machine-SSOT registry/runtime.\n\n## Before inventory\n{before_text}\n\n## After inventory\n{after_text}\n\nHistorical research/docs may still mention fixed watches as prior evidence. Current executable authority is `PRODUCT_INTENT.md` + `flight-radar.yaml` + the SR-F current section in `docs/search-strategy.md`.\n''', encoding='utf-8')`
+## Final runtime truth
 
-## After inventory
-- `docs/crawler-runtime-spike-2026-08-11.md:5:Use **Scrapy as the fixed-watch HTTP runtime**. Keep **scrapy-playwright as an opt-in vanilla JavaScript fallback interface**, but do not promote a source to fixed coverage merely because a browser exits successfully.`
-- `docs/crawler-runtime-spike-2026-08-11.md:7:Do not build a custom crawler runtime. Source-specific parsers, fixtures, coverage semantics, normalized observation models, provenance, and dedupe stay in this repository. Scrapy owns request scheduling, queueing, normal retries, cookies/session continuity, downloader lifecycle, and selector response objects.`
-- `docs/crawler-runtime-spike-2026-08-11.md:13:GitHub Actions is **not** the primary scheduler. A ChatGPT scheduled radar run reads the registry and prior successful attempt state, determines which fixed watches are due, dispatches the deterministic GitHub execution backend, reads the attempt manifest and normalized observations, then continues with opportunistic Web discovery, deep search, revalidation, and final reporting.`
-- `docs/crawler-runtime-spike-2026-08-11.md:15:`cadence_hours` is the maximum reusable age of the latest **successful** fixed-watch attempt. It is not an Actions cron expression. A failed attempt never refreshes the due clock. Production fixed-watch execution is `workflow_dispatch` only; there is no independent GitHub cron.`
-- `docs/crawler-runtime-spike-2026-08-11.md:21:| Scrapy + scrapy-playwright | Native HTTP; per-request Playwright opt-in | Mature scheduler, retry middleware, cookies | Parsel is fixture-friendly; repo controls normalized manifests | pip 9.46s; Chromium 22.90s; HTTP+JS smoke 1.62s | Clean HTTP-first boundary; vanilla Playwright only | BSD-3-Clause / BSD-3-Clause | **Selected** |`
-- `docs/crawler-runtime-spike-2026-08-11.md:29:- `e8bd1995b81500c30fc10bb4804966b5c6ade0ad`, run `31472215749`: corrected probe. Scrapy+Playwright and Crawlee both passed deterministic HTTP+JS fixtures; Crawlee used `fingerprint_generator=None`, `retry_on_blocked=False`, and no session rotation. changedetection.io started successfully; urlwatch browser job returned the JS fixture. Project CI run `31472215751` passed.`
-- `docs/crawler-runtime-spike-2026-08-11.md:52:This result changed the registry. Tigerair is **not** a fixed watch in v1. Public Web discovery can find official Tigerair news and `static.tigerairtw.com` event pages, so Tigerair remains valuable as `opportunistic`, but a source whose deterministic HTTP and vanilla-browser attempts cannot establish a stable parse contract must not permanently degrade fixed coverage.`
-- `docs/crawler-runtime-spike-2026-08-11.md:56:Current fixed watches are:`
-- `docs/crawler-runtime-spike-2026-08-11.md:61:Therefore current fixed-watch executions install **Scrapy only**. The production workflow retains a conditional `scrapy-playwright` installation path for a future source only after that source has a repeatable, public, source-specific browser contract and fixture. No current fixed watch requires a browser.`
-- `docs/crawler-runtime-spike-2026-08-11.md:63:Tigerair official news/static event pages are handled by ChatGPT's opportunistic open-Web phase and do not count toward fixed-watch coverage.`
-- `docs/crawler-runtime-spike-2026-08-11.md:70:- fixed-watch attempt/run manifests;`
-- `docs/crawler-runtime-spike-2026-08-11.md:76:Scrapy owns:`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:3:Status: implementation contract for Issue #10 / PR #11. `flight-radar.yaml` remains the policy SSOT; this document explains how the existing ChatGPT-orchestrated fixed-watch policy is carried across radar runs.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:14:- no opportunistic source allowed to repair failed fixed-watch coverage.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:16:The caller decides when a radar run occurs, reads prior successful state, computes due fixed watches, dispatches GitHub execution only when needed, then consumes the returned manifest before continuing to open-Web discovery and downstream fare work.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:20:The existing `.github/workflows/fixed-watch-run.yml` persists every requested execution as a GitHub Actions artifact:`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:22:- artifact name: `fixed-watch-run-${radar_run_id}`;`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:23:- contained file: `artifacts/fixed-watch-run.json`;`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:26:Current fixed-watch freshness thresholds are 3 hours and 6 hours, so the artifact retention window is intentionally much longer than the state required for cadence reuse. If artifacts are unavailable or have expired, the orchestrator has no trustworthy prior-success evidence and the existing due planner conservatively returns `due_now`.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:32:`cheap_flight_radar.fixed_watch_state` reads one or more extracted `fixed-watch-run.json` files and produces one current orchestration state object.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:37:python -m cheap_flight_radar.fixed_watch_state \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:38:  --manifest artifacts/run-a/fixed-watch-run.json \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:39:  --manifest artifacts/run-b/fixed-watch-run.json \`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:41:  --output artifacts/fixed-watch-state.json`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:51:The current registry drives planning. Attempts for sources that existed in older artifacts but are no longer fixed watches are ignored by the cadence planner.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:74:1. Read the current fixed-watch registry from the repo SSOT.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:75:2. List/download recent non-expired fixed-watch run artifacts from the intended production execution ref and extract their manifests.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:76:3. Resolve current state with `fixed_watch_state` (or the same strict contract in the caller).`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:78:5. If one or more watches are due, dispatch `.github/workflows/fixed-watch-run.yml` with only those ids and the caller's radar-run id.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:79:6. Download the resulting artifact, add its manifest to the state set, and resolve again. Any source that remains due / failed is reported as incomplete fixed-watch coverage rather than repaired by another source.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:80:7. Merge fresh fixed-watch sightings into ChatGPT's opportunistic public-Web discovery while retaining separate provenance.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:82:9. Revalidate serious exact itineraries where a suitable source exists, preserve unknown fare components as unknown, then produce the final report with fixed-watch coverage status.`
-- `docs/fixed-watch-artifact-interface-2026-08-11.md:94:At approximately 17:12 Asia/Taipei on 2026-08-11, both current-registry successes from that artifact were less than one hour old. Under the current 6h / 3h thresholds, a ChatGPT radar run should therefore reuse both exact successes and dispatch **no** new fixed-watch execution. The obsolete Tigerair attempt does not participate in current fixed-watch planning.`
-- `docs/free-public-source-registry-2026-08-11.md:9:- `fixed_watch`: deterministic public discovery source required when its latest successful attempt is older than its declared `cadence_hours`; a due source that is unavailable/blocked/fetch-failed/parse-failed reduces fixed-watch coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:13:A fixed-watch success proves only that the declared source contract was successfully read. It does not claim exhaustive airline, market, airport, or fare coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:19:`cadence_hours` means the maximum reusable age of the latest **successful** fixed-watch attempt:`
-- `docs/free-public-source-registry-2026-08-11.md:37:- Peach: stock headless could render expected public content, but incremental fixed-watch yield was not established;`
-- `docs/free-public-source-registry-2026-08-11.md:48:A one-shot GitHub-hosted Ubuntu integration probe used the new Scrapy runner against the original three fixed candidates:`
-- `docs/free-public-source-registry-2026-08-11.md:56:The corrected probe used exact source head `86d3bf3e9c3e93ae32a9a8a1cbba5d5475181f12` and vanilla `scrapy-playwright` only for Tigerair:`
-- `docs/free-public-source-registry-2026-08-11.md:70:| China Airlines official | 4 | 5 | 5 | 4 | 5 | 5 | 4 | 1 | **fixed_watch** |`
-- `docs/free-public-source-registry-2026-08-11.md:71:| PTT Japan_Travel `[資訊]` | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 1 | **fixed_watch (Japan)** |`
-- `docs/free-public-source-registry-2026-08-11.md:84:## 6. v1 fixed-watch registry`
-- `docs/free-public-source-registry-2026-08-11.md:90:- acquisition: direct HTTP via Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:98:- acquisition: direct HTTP via Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:104:`tigerair_tw_official` is **not** a v1 fixed watch. The fixed candidate was demoted after both direct HTTP and ordinary Playwright produced HTTP 200 without a stable promotion DOM contract on GitHub-hosted Ubuntu.`
-- `docs/free-public-source-registry-2026-08-11.md:106:Preferred Tigerair discovery is now opportunistic public Web search over official news and official static event pages. These sightings retain official provenance but do not repair fixed-watch coverage.`
-- `docs/free-public-source-registry-2026-08-11.md:165:Coverage accounting is independent of dedupe: duplicate opportunistic sightings cannot substitute for a failed due fixed watch.`
-- `docs/free-public-source-registry-2026-08-11.md:169:Current fixed watches are direct HTTP and therefore the normal Actions execution installs only Scrapy. The repo keeps a conditional vanilla `scrapy-playwright` fallback interface for a future source only after repeatable public browser retrieval plus a deterministic fixture establish a real parser contract.`
-- `docs/free-public-source-registry-2026-08-11.md:171:The repository owns registry/due semantics, attempt/run manifests, normalized sightings, parsers/fixtures, provenance/dedupe, and coverage interpretation. Scrapy owns crawling mechanics.`
-- `docs/free-public-source-registry-2026-08-11.md:179:3. crawler runtime reuse spike selected Scrapy;`
-- `docs/free-public-source-registry-2026-08-11.md:184:The next atomic package should integrate persisted prior-attempt state / artifact retrieval into the ChatGPT-triggered radar-run interface, then connect normalized fixed-watch observations to opportunistic discovery and downstream deep-search/revalidation without creating an independent GitHub schedule.`
-- `docs/outbound-first-contract-2026-08-12.md:92:This is independent of fixed-watch coverage. PTT is not required anywhere in the outbound-first execution path.`
-- `docs/price-history.md:210:1. load fixed-watch state and perform current fixed-watch/opportunistic/deep-search/revalidation work according to orchestration policy;`
-- `docs/publication-ui.md:30:Origin coverage, fixed-watch freshness, and China-mode coverage are summarized near the top as status badges and expanded near the bottom as a complete operational panel.`
-- `docs/search-strategy.md:5:The fixed-watch crawler/cadence/state subsystem is retired. Public intelligence is now a best-effort opportunistic/verification-only Signal lane operated directly by the ChatGPT orchestrator when useful; it is not Deal/anomaly/backend coverage authority and has no independent GitHub schedule or crawler runtime. Generic provenance/campaign/itinerary dedupe helpers remain. Older fixed-watch/crawler sections below are historical design evidence only and do not override `PRODUCT_INTENT.md` or `flight-radar.yaml`.`
-- `docs/search-strategy.md:296:Public/indexed Facebook or airfare-editor posts are `opportunistic` seed evidence only. They may provide route/date/promotion/price text when accessible without login bypass, but they never establish a verified fare and do not repair fixed-watch coverage.`
-- `docs/substrate-bakeoff-2026-08-13.md:159:- fixed-watch success → Signal freshness, not Radar Deal coverage authority;`
-- `docs/substrate-reassessment-2026-08-21.md:294:- fixed-watch crawler program should retain only low-maintenance/high-signal public sources;`
-- `docs/substrate-reassessment-2026-08-21.md:458:   - retire low-value crawler/fixed-watch complexity that does not improve Deal truth or recall enough to justify maintenance.`
-- `flight-radar.yaml:903:  retired_fixed_watch_subsystem:`
-- `src/cheap_flight_radar/production_radar.py:931:            "fixed_watch_is_deal_coverage_authority": False,`
-- `src/cheap_flight_radar/public_intelligence.py:3:SR-F deliberately retired CFR's fixed-watch crawler/cadence/state machinery.`
-- `src/cheap_flight_radar/publication.py:331:    fixed = coverage.get("fixed_watch", {})`
-- `src/cheap_flight_radar/publication.py:346:    # SR-F retired fixed-watch acquisition. Preserve an old immutable run's`
-- `src/cheap_flight_radar/publication.py:347:    # historical fixed-watch evidence when present, but do not synthesize a`
-- `src/cheap_flight_radar/publication.py:348:    # current fixed-watch status for new runs.`
-- `src/cheap_flight_radar/publication.py:351:            f'<div class="coverage-pill"><span>Historical fixed watch</span>{_status_badge(str(fixed.get("status", "unknown")))}</div>'`
-- `src/cheap_flight_radar/publication.py:363:    # Historical immutable manifests may contain fixed-watch evidence from the`
-- `src/cheap_flight_radar/publication.py:365:    # SSOT intentionally has no fixed-watch registry/cadence contract.`
-- `src/cheap_flight_radar/publication.py:374:            f'<div class="ops-block"><h3>Historical fixed-watch evidence: {escape(str(fixed.get("status", "unknown")))}</h3>'`
-- `tests/fixtures/publication/corrected-radar-v1-manifest.json:68:    "fixed_watch": {`
-- `tests/test_publication.py:48:            "fixed_watch": {"status": "complete", "sources": []},`
+`flight-radar.yaml` now defines public intelligence as `simplified_opportunistic_signal_lane_v2`: only opportunistic and verification-only roles remain. Public-intelligence absence or source failure does not change provider health, does not establish market absence, and cannot become Deal/anomaly/backend coverage authority. Generic provenance/dedupe remains available. Historical docs may describe the retired design but do not override current Product Intent or machine SSOT.
 
-Remaining matches are retirement markers, historical evidence/docs, or regression assertions; no current fixed-watch executable runtime remains.
-
-Historical research/docs may still mention fixed watches as prior evidence. Current executable authority is `PRODUCT_INTENT.md` + `flight-radar.yaml` + the SR-F current section in `docs/search-strategy.md`.
+No live airfare/provider acquisition was performed for SR-F. No FTR code/schema/consumer behavior was changed.
