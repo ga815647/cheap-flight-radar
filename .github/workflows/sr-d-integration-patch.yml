@@ -1,0 +1,187 @@
+name: SR-D integration worker
+
+on:
+  push:
+    branches:
+      - feat/cfr-sr-d-kiwi-mcp-fallback
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cfr-sr-d-kiwi-mcp-fallback
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Apply bounded SR-D integration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f'{path}: expected {count} occurrences, found {actual}: {old[:80]!r}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          # Dependency: standard MCP client used by the qualified public Kiwi remote MCP.
+          replace(
+              'pyproject.toml',
+              '  "gflights==0.3.1",\n]',
+              '  "gflights==0.3.1",\n  "mcp>=1.29,<2",\n]',
+          )
+
+          # Source router: RoutePlan can now truthfully contain a qualified keyless fallback.
+          replace(
+              'src/cheap_flight_radar/source_router.py',
+              'KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client"}',
+              'KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client", "agent_mcp_remote"}',
+          )
+          replace(
+              'src/cheap_flight_radar/source_router.py',
+              '    Legacy ``fallback_provider`` drift fails closed instead of reviving a fake\n    fallback.\n',
+              '    Legacy ``fallback_provider`` drift fails closed instead of reviving a fake\n    fallback. A qualified ``automatic_executable_fallback`` may create a second\n    RoutePlan entry only when that provider is integrated in the canonical backend.\n',
+          )
+          replace(
+              'src/cheap_flight_radar/source_router.py',
+              '        reason=(\n            f"selected by SSOT for shared known-route {request.search_stage}"\n            if request.search_stage in KNOWN_ROUTE_WEB_STAGES\n            else f"selected by SSOT for {request.profile}/{request.search_stage}"\n        ),\n    )',
+              '        reason=(\n            f"selected by SSOT for shared known-route {request.search_stage}"\n            if request.search_stage in KNOWN_ROUTE_WEB_STAGES\n            else f"selected by SSOT for {request.profile}/{request.search_stage}"\n        ),\n        allow_fallback=not request.open_jaw_required,\n    )',
+          )
+          replace(
+              'src/cheap_flight_radar/source_router.py',
+              '    provider_states: Mapping[str, ProviderState],\n    reason: str,\n) -> RoutePlan:',
+              '    provider_states: Mapping[str, ProviderState],\n    reason: str,\n    allow_fallback: bool = True,\n) -> RoutePlan:',
+          )
+          replace(
+              'src/cheap_flight_radar/source_router.py',
+              '''    fallback = stage_config.get("automatic_executable_fallback")\n    if fallback is None:\n        return RoutePlan(entries=tuple(entries), coverage_state="planned")\n\n    return _unavailable(\n        "automatic_executable_fallback is invalid while the current canonical runtime fallback executor is absent; "\n        "provider metadata alone cannot create a second executable RoutePlan entry",\n        state="invalid_contract",\n    )\n''',
+              '''    fallback = stage_config.get("automatic_executable_fallback")\n    if fallback is None or not allow_fallback:\n        return RoutePlan(entries=tuple(entries), coverage_state="planned")\n\n    fallback_provider = str(fallback)\n    if not _canonical_backend_executable(fallback_provider, provider_registry):\n        return _unavailable(\n            f"{fallback_provider} is configured as automatic fallback but is not an integrated executable provider",\n            state="invalid_contract",\n        )\n    fallback_config = provider_registry.get(fallback_provider) or {}\n    fallback_mode = str(fallback_config.get("execution_mode") or "")\n    fallback_credential_required = bool(\n        fallback_config.get("credential_required", fallback_mode not in KEYLESS_EXECUTION_MODES)\n    )\n    if fallback_credential_required:\n        state = provider_states.get(fallback_provider)\n        if state is None or not state.credential_available or not state.healthy:\n            return _unavailable(\n                f"{fallback_provider} automatic fallback is not currently executable",\n                state="unavailable",\n            )\n    entries.append(\n        ProviderPlanEntry(\n            provider=fallback_provider,\n            reason=f"automatic executable fallback after {provider} technical failure",\n        )\n    )\n    return RoutePlan(entries=tuple(entries), coverage_state="planned")\n''',
+          )
+
+          # Production wrapper: one exact/flexible fallback attempt, with separate attempt truth.
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              'from .providers.gflights import GFlightsAdapter\n',
+              'from .operational_status import derive_provider_health\nfrom .providers.gflights import GFlightsAdapter\nfrom .providers.kiwi_mcp import KiwiMCPAdapter\n',
+          )
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              '''    def __init__(self, *, primary: Any, multi_city: Any) -> None:\n        self._primary = primary\n        self._multi_city = multi_city\n        self._circuit_reason: dict[str, str | None] = {"primary": None, "multi_city": None}\n''',
+              '''    def __init__(self, *, primary: Any, multi_city: Any, known_route_fallback: Any | None = None) -> None:\n        self._primary = primary\n        self._multi_city = multi_city\n        self._known_route_fallback = known_route_fallback\n        self.known_route_fallback_provider = getattr(known_route_fallback, "provider", None)\n        self.fallback_events: list[dict[str, Any]] = []\n        self._circuit_reason: dict[str, str | None] = {"primary": None, "multi_city": None}\n''',
+          )
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              '''    async def exact(self, **kwargs: Any) -> ProviderResult:\n        return await self._call(lane="primary", surface="exact", method=self._primary.exact, kwargs=kwargs)\n\n    async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:\n        return await self._call(lane="primary", surface="cheapest_dates", method=self._primary.cheapest_dates, kwargs=kwargs)\n''',
+              '''    async def _known_route_call(\n        self,\n        *,\n        surface: str,\n        primary_method: Any,\n        fallback_method: Any | None,\n        kwargs: Mapping[str, Any],\n    ) -> ProviderResult:\n        primary = await self._call(lane="primary", surface=surface, method=primary_method, kwargs=kwargs)\n        if primary.coverage_state != "failed" or fallback_method is None:\n            return primary\n        fallback = await fallback_method(**kwargs)\n        self.fallback_events.append({\n            "surface": surface,\n            "primary_provider": "gflights_google_exact",\n            "primary_state": primary.coverage_state,\n            "primary_request_sent": primary.request_sent,\n            "primary_error": primary.error,\n            "fallback_provider": "kiwi_mcp_exact",\n            "fallback_state": fallback.coverage_state,\n            "fallback_request_sent": fallback.request_sent,\n            "fallback_error": fallback.error,\n            "fallback_record_count": len(fallback.records),\n        })\n        if fallback.coverage_state != "failed":\n            return fallback\n        return ProviderResult(\n            fallback.provider,\n            fallback.surface,\n            "failed",\n            error=(\n                f"primary gflights failed: {primary.error or primary.coverage_state}; "\n                f"fallback kiwi_mcp failed: {fallback.error or fallback.coverage_state}"\n            ),\n            request_sent=fallback.request_sent,\n        )\n\n    async def exact(self, **kwargs: Any) -> ProviderResult:\n        fallback_method = getattr(self._known_route_fallback, "exact", None)\n        return await self._known_route_call(\n            surface="exact",\n            primary_method=self._primary.exact,\n            fallback_method=fallback_method,\n            kwargs=kwargs,\n        )\n\n    async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:\n        fallback_method = getattr(self._known_route_fallback, "cheapest_dates", None)\n        return await self._known_route_call(\n            surface="cheapest_dates",\n            primary_method=self._primary.cheapest_dates,\n            fallback_method=fallback_method,\n            kwargs=kwargs,\n        )\n''',
+          )
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              '''async def run_once(\n    *,\n    policy: Mapping[str, Any],\n    adapter: Any,\n    prior_history: Sequence[Any] = (),\n    run_at: datetime | None = None,\n) -> RadarRunResult:\n''',
+              '''def attach_access_redundancy_truth(result: RadarRunResult, *, adapter: Any) -> RadarRunResult:\n    events = [dict(item) for item in getattr(adapter, "fallback_events", ())]\n    coverage = dict(result.coverage)\n    coverage["access_redundancy"] = {\n        "destination_free": {\n            "automatic_executable_fallback": None,\n            "semantics": "no_independent_destination_free_or_anomaly_fallback_qualified",\n        },\n        "known_route_exact_flexible": {\n            "primary": "gflights_google_exact",\n            "automatic_executable_fallback": getattr(adapter, "known_route_fallback_provider", None),\n            "fallback_scope": "exact_and_flexible_only_no_open_jaw",\n            "fallback_attempt_count": len(events),\n            "fallback_success_count": sum(1 for item in events if item.get("fallback_state") == "complete"),\n            "fallback_failure_count": sum(1 for item in events if item.get("fallback_state") == "failed"),\n            "events": events,\n        },\n    }\n    failures = list(result.provider_failures)\n    for item in events:\n        failures.append({\n            "origin": "known_route",\n            "surface": str(item.get("surface") or "known_route"),\n            "kind": (\n                "primary_failure_recovered_by_fallback"\n                if item.get("fallback_state") == "complete"\n                else "primary_and_fallback_failure"\n            ),\n            "error": (\n                f"gflights primary failed ({item.get('primary_error') or item.get('primary_state')}); "\n                f"kiwi_mcp fallback={item.get('fallback_state')}"\n            ),\n        })\n    coverage["provider_health"] = derive_provider_health(coverage, failures)\n    return RadarRunResult(\n        radar_run_id=result.radar_run_id,\n        run_at=result.run_at,\n        deals=result.deals,\n        signals=result.signals,\n        coverage=coverage,\n        provider_failures=tuple(failures),\n        exact_non_deal_candidates=result.exact_non_deal_candidates,\n        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,\n    )\n\n\nasync def run_once(\n    *,\n    policy: Mapping[str, Any],\n    adapter: Any,\n    prior_history: Sequence[Any] = (),\n    run_at: datetime | None = None,\n) -> RadarRunResult:\n''',
+          )
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              '    return apply_absolute_low_selection(converged, policy=policy)\n',
+              '    selected = apply_absolute_low_selection(converged, policy=policy)\n    return attach_access_redundancy_truth(selected, adapter=adapter)\n',
+          )
+          replace(
+              'src/cheap_flight_radar/production_runtime.py',
+              '''    adapter = ProductionExecutionAdapter(\n        primary=GFlightsAdapter(),\n        multi_city=GFlightsAdapter(),\n    )\n''',
+              '''    adapter = ProductionExecutionAdapter(\n        primary=GFlightsAdapter(),\n        multi_city=GFlightsAdapter(),\n        known_route_fallback=KiwiMCPAdapter(),\n    )\n''',
+          )
+
+          # Dynamic source provenance for exact observations and truthful coverage labels.
+          replace(
+              'src/cheap_flight_radar/production_radar.py',
+              '        source_id="gflights_google_exact",\n',
+              '        source_id={"gflights": "gflights_google_exact", "kiwi_mcp": "kiwi_mcp_exact"}.get(exact.provider, exact.provider),\n',
+          )
+          replace(
+              'src/cheap_flight_radar/production_radar.py',
+              '            "exact_completion_surface": "google_flights_exact",\n',
+              '            "exact_completion_surface": "provider_routed_known_route_exact",\n            "exact_completion_primary": "gflights_google_exact",\n            "exact_completion_fallback": "kiwi_mcp_exact",\n',
+          )
+
+          # Machine SSOT: fallback is known-route only; destination-free remains fail-closed.
+          replace(
+              'flight-radar.yaml',
+              '    automatic_executable_fallback: none\n',
+              '    destination_free_automatic_executable_fallback: none\n    known_route_exact_flexible_automatic_executable_fallback: kiwi_mcp_exact\n',
+          )
+          replace('flight-radar.yaml', '  status: provider_execution_truth_converged_v3\n', '  status: provider_execution_truth_converged_v4\n')
+          replace(
+              'flight-radar.yaml',
+              '''      broad_discovery:\n        primary_provider: gflights_google_exact\n        automatic_executable_fallback: null\n        primary_failure_action: fail_closed\n        researched_not_integrated_candidates:\n        - fli_google_exact\n        execution_mode: keyless_http_client\n''',
+              '''      broad_discovery:\n        primary_provider: gflights_google_exact\n        automatic_executable_fallback: kiwi_mcp_exact\n        primary_failure_action: try_automatic_executable_fallback_then_fail_closed\n        fallback_capability_scope: exact_and_flexible_known_route_only_no_open_jaw\n        researched_not_integrated_candidates:\n        - fli_google_exact\n        execution_mode: keyless_http_client\n''',
+          )
+          replace(
+              'flight-radar.yaml',
+              '''    china:\n      deep_search:\n        primary_provider: gflights_google_exact\n        automatic_executable_fallback: null\n        primary_failure_action: fail_closed\n''',
+              '''    china:\n      deep_search:\n        primary_provider: gflights_google_exact\n        automatic_executable_fallback: kiwi_mcp_exact\n        primary_failure_action: try_automatic_executable_fallback_then_fail_closed\n''',
+          )
+          replace(
+              'flight-radar.yaml',
+              '''    fli_google_exact:\n      execution_plane: researched_not_integrated_backend_candidate\n''',
+              '''    kiwi_mcp_exact:\n      execution_plane: canonical_backend\n      current_integration_state: integrated\n      automatic_execution_supported: true\n      execution_mode: agent_mcp_remote\n      endpoint: https://mcp.kiwi.com\n      server: kiwicom-flight-search\n      live_qualified_server_version: 1.28.1\n      credential_required: false\n      ongoing_cost_twd: 0\n      anomaly_authority: false\n      selected_roles:\n      - exact_completion_fallback\n      - flexible_dates_fallback\n      excluded_roles:\n      - destination_free_deal_discovery\n      - anomaly_truth\n      - open_jaw_multi_city\n      qualification_evidence: docs/executable-redundancy-qualification-2026-08-21.md\n      access_change_action: fail_closed_and_requalify\n    fli_google_exact:\n      execution_plane: researched_not_integrated_backend_candidate\n''',
+          )
+          replace(
+              'flight-radar.yaml',
+              '      historical_note: prior_live_bakeoff_required_explicit_click_due_wheel_metadata_defect\n',
+              '      historical_note: safe-transport_SR-D_probe_succeeded_but_not_selected_same_google_upstream_and_stock_transport_noncompliant\n      qualification_disposition: not_selected_for_redundancy\n',
+          )
+
+          # Current explanatory doc header only; historical body remains evidence until SR-F.
+          old_header = '''## Current executable provider contract (RP-07, 2026-08-20)\n\nThe short-lived canonical backend currently executes only the integrated `gflights==0.3.0` substrate. `RoutePlan.entries` is an execution contract: every listed provider must be invokable by that backend for the represented request shape.\n\n- Destination-free canonical discovery: `gflights_google_flight_deals` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.\n- Known-route exact/flexible/open-jaw completion: `gflights_google_exact` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed.\n- Expedia airport-origin public Web remains an external ChatGPT-Web/direct destination-recall/fallback **candidate**. It is seed/recall evidence only, is not anomaly authority, is not canonical backend execution coverage, and cannot silently repair a gflights failure.\n- `fli` / `flights==0.9.0` remains historical bake-off evidence for an exact/flexible comparator/fallback candidate. The current repo has no fli production adapter and no `flights`/`click` dependency, so fli is not a current executable RoutePlan entry.\n- FlyAI is a different legacy adapter/provider contract (`flyai`), not fli and not a substitute for the researched fli candidate.\n'''
+          new_header = '''## Current executable provider contract (SR-D, 2026-08-21)\n\n`RoutePlan.entries` is an execution contract: every listed provider must be invokable by the canonical backend for the represented request shape.\n\n- Destination-free canonical discovery/anomaly acquisition: qualified `gflights==0.3.1` / `gflights_google_flight_deals` remains the executable primary and automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.\n- Known-route exact/flexible completion: `gflights_google_exact` is primary; the qualified official Kiwi.com remote MCP (`kiwi_mcp_exact`) is a one-attempt automatic fallback after primary technical failure. Primary degradation remains visible even when fallback succeeds.\n- Open-jaw/multi-city remains `gflights_google_exact` only; Kiwi MCP is not claimed as open-jaw or anomaly coverage.\n- Expedia airport-origin public Web remains external ChatGPT-Web/direct recall only and cannot silently repair canonical coverage.\n- `fli` / `flights==0.9.0` safe-transport protocol/parser proof succeeded in SR-D, but it is not selected because stock transport uses browser impersonation/retries and it shares the Google upstream with gflights.\n- FlyAI remains a different legacy adapter/provider contract and is not part of SR-D redundancy.\n'''
+          replace('docs/search-strategy.md', old_header, new_header)
+
+          # Converge regressions written for the pre-SR-D no-fallback state.
+          replace(
+              'tests/test_sr_a_operational_ssot.py',
+              '        self.assertEqual(current["automatic_executable_fallback"], "none")\n',
+              '        self.assertEqual(current["destination_free_automatic_executable_fallback"], "none")\n        self.assertEqual(current["known_route_exact_flexible_automatic_executable_fallback"], "kiwi_mcp_exact")\n',
+          )
+          replace(
+              'tests/test_sr_a_operational_ssot.py',
+              '        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact"])\n',
+              '        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])\n',
+          )
+          replace(
+              'tests/test_provider_fallback_truth.py',
+              '    def test_current_plans_are_gflights_only_and_fallback_is_none(self):\n',
+              '    def test_current_destination_free_is_gflights_only_and_known_route_has_qualified_fallback(self):\n',
+          )
+          replace(
+              'tests/test_provider_fallback_truth.py',
+              '''        self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])\n        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact"])\n        shared = self.policy["source_routing"]["selected_routes"]["shared"]\n        self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])\n        self.assertIsNone(shared["broad_discovery"]["automatic_executable_fallback"])\n        self.assertEqual(shared["origin_wide_discovery"]["primary_failure_action"], "fail_closed")\n        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "fail_closed")\n''',
+              '''        self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])\n        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])\n        shared = self.policy["source_routing"]["selected_routes"]["shared"]\n        self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])\n        self.assertEqual(shared["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")\n        self.assertEqual(shared["origin_wide_discovery"]["primary_failure_action"], "fail_closed")\n        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")\n''',
+          )
+          replace(
+              'tests/test_provider_fallback_truth.py',
+              '        self.assertIn("automatic executable fallback is **none**", strategy)\n',
+              '        self.assertIn("automatic executable fallback is **none**", strategy)\n        self.assertIn("kiwi_mcp_exact", strategy)\n',
+          )
+
+          print('SR-D integration patch applied')
+          PY
+      - name: Commit patched integration
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml flight-radar.yaml docs/search-strategy.md \
+            src/cheap_flight_radar/source_router.py src/cheap_flight_radar/production_runtime.py \
+            src/cheap_flight_radar/production_radar.py tests/test_sr_a_operational_ssot.py \
+            tests/test_provider_fallback_truth.py
+          git commit -m "Integrate qualified Kiwi MCP known-route fallback"
+          git push origin HEAD:feat/cfr-sr-d-kiwi-mcp-fallback
