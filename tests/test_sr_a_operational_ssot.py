@@ -44,7 +44,8 @@ class SRAOperationalSSOTTests(unittest.TestCase):
         current = state["current_runtime"]
         self.assertEqual(current["destination_free_discovery_adapter"], "gflights_google_flight_deals")
         self.assertEqual(current["exact_flexible_open_jaw_adapter"], "gflights_google_exact")
-        self.assertEqual(current["automatic_executable_fallback"], "none")
+        self.assertEqual(current["destination_free_automatic_executable_fallback"], "none")
+        self.assertEqual(current["known_route_exact_flexible_automatic_executable_fallback"], "kiwi_mcp_exact")
 
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-21"),
@@ -65,7 +66,7 @@ class SRAOperationalSSOTTests(unittest.TestCase):
             {},
         )
         self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])
-        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact"])
+        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
 
     def test_preserved_product_truth_contracts_remain_active(self):
         self.assertEqual(

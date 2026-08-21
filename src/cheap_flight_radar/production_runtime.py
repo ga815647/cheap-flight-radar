@@ -50,7 +50,9 @@ from .production_radar import (
     load_policy,
     write_run_artifacts as _write_run_artifacts,
 )
+from .operational_status import derive_provider_health
 from .providers.gflights import GFlightsAdapter
+from .providers.kiwi_mcp import KiwiMCPAdapter
 
 
 STICKY_RATE_LIMIT_MARKERS = (
@@ -79,9 +81,12 @@ class ProductionExecutionAdapter:
     reset, new identity, proxy, or client rotation is performed.
     """
 
-    def __init__(self, *, primary: Any, multi_city: Any) -> None:
+    def __init__(self, *, primary: Any, multi_city: Any, known_route_fallback: Any | None = None) -> None:
         self._primary = primary
         self._multi_city = multi_city
+        self._known_route_fallback = known_route_fallback
+        self.known_route_fallback_provider = getattr(known_route_fallback, "provider", None)
+        self.fallback_events: list[dict[str, Any]] = []
         self._circuit_reason: dict[str, str | None] = {"primary": None, "multi_city": None}
 
     def _suppressed(self, *, lane: str, surface: str) -> ProviderResult:
@@ -111,11 +116,60 @@ class ProductionExecutionAdapter:
     async def explore(self, **kwargs: Any) -> ProviderResult:
         return await self._call(lane="primary", surface="explore", method=self._primary.explore, kwargs=kwargs)
 
+    async def _known_route_call(
+        self,
+        *,
+        surface: str,
+        primary_method: Any,
+        fallback_method: Any | None,
+        kwargs: Mapping[str, Any],
+    ) -> ProviderResult:
+        primary = await self._call(lane="primary", surface=surface, method=primary_method, kwargs=kwargs)
+        if primary.coverage_state != "failed" or fallback_method is None:
+            return primary
+        fallback = await fallback_method(**kwargs)
+        self.fallback_events.append({
+            "surface": surface,
+            "primary_provider": "gflights_google_exact",
+            "primary_state": primary.coverage_state,
+            "primary_request_sent": primary.request_sent,
+            "primary_error": primary.error,
+            "fallback_provider": "kiwi_mcp_exact",
+            "fallback_state": fallback.coverage_state,
+            "fallback_request_sent": fallback.request_sent,
+            "fallback_error": fallback.error,
+            "fallback_record_count": len(fallback.records),
+        })
+        if fallback.coverage_state != "failed":
+            return fallback
+        return ProviderResult(
+            fallback.provider,
+            fallback.surface,
+            "failed",
+            error=(
+                f"primary gflights failed: {primary.error or primary.coverage_state}; "
+                f"fallback kiwi_mcp failed: {fallback.error or fallback.coverage_state}"
+            ),
+            request_sent=fallback.request_sent,
+        )
+
     async def exact(self, **kwargs: Any) -> ProviderResult:
-        return await self._call(lane="primary", surface="exact", method=self._primary.exact, kwargs=kwargs)
+        fallback_method = getattr(self._known_route_fallback, "exact", None)
+        return await self._known_route_call(
+            surface="exact",
+            primary_method=self._primary.exact,
+            fallback_method=fallback_method,
+            kwargs=kwargs,
+        )
 
     async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
-        return await self._call(lane="primary", surface="cheapest_dates", method=self._primary.cheapest_dates, kwargs=kwargs)
+        fallback_method = getattr(self._known_route_fallback, "cheapest_dates", None)
+        return await self._known_route_call(
+            surface="cheapest_dates",
+            primary_method=self._primary.cheapest_dates,
+            fallback_method=fallback_method,
+            kwargs=kwargs,
+        )
 
     async def open_jaw(self, **kwargs: Any) -> ProviderResult:
         return await self._call(lane="multi_city", surface="open_jaw", method=self._multi_city.open_jaw, kwargs=kwargs)
@@ -481,6 +535,52 @@ def converge_rp06_route_variants(
     )
 
 
+def attach_access_redundancy_truth(result: RadarRunResult, *, adapter: Any) -> RadarRunResult:
+    events = [dict(item) for item in getattr(adapter, "fallback_events", ())]
+    coverage = dict(result.coverage)
+    coverage["access_redundancy"] = {
+        "destination_free": {
+            "automatic_executable_fallback": None,
+            "semantics": "no_independent_destination_free_or_anomaly_fallback_qualified",
+        },
+        "known_route_exact_flexible": {
+            "primary": "gflights_google_exact",
+            "automatic_executable_fallback": getattr(adapter, "known_route_fallback_provider", None),
+            "fallback_scope": "exact_and_flexible_only_no_open_jaw",
+            "fallback_attempt_count": len(events),
+            "fallback_success_count": sum(1 for item in events if item.get("fallback_state") == "complete"),
+            "fallback_failure_count": sum(1 for item in events if item.get("fallback_state") == "failed"),
+            "events": events,
+        },
+    }
+    failures = list(result.provider_failures)
+    for item in events:
+        failures.append({
+            "origin": "known_route",
+            "surface": str(item.get("surface") or "known_route"),
+            "kind": (
+                "primary_failure_recovered_by_fallback"
+                if item.get("fallback_state") == "complete"
+                else "primary_and_fallback_failure"
+            ),
+            "error": (
+                f"gflights primary failed ({item.get('primary_error') or item.get('primary_state')}); "
+                f"kiwi_mcp fallback={item.get('fallback_state')}"
+            ),
+        })
+    coverage["provider_health"] = derive_provider_health(coverage, failures)
+    return RadarRunResult(
+        radar_run_id=result.radar_run_id,
+        run_at=result.run_at,
+        deals=result.deals,
+        signals=result.signals,
+        coverage=coverage,
+        provider_failures=tuple(failures),
+        exact_non_deal_candidates=result.exact_non_deal_candidates,
+        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,
+    )
+
+
 async def run_once(
     *,
     policy: Mapping[str, Any],
@@ -505,7 +605,8 @@ async def run_once(
         policy=policy,
         discovery_records=recorder.discovery_records,
     )
-    return apply_absolute_low_selection(converged, policy=policy)
+    selected = apply_absolute_low_selection(converged, policy=policy)
+    return attach_access_redundancy_truth(selected, adapter=adapter)
 
 
 def write_run_artifacts(
@@ -623,6 +724,7 @@ async def _async_main(args: argparse.Namespace) -> int:
     adapter = ProductionExecutionAdapter(
         primary=GFlightsAdapter(),
         multi_city=GFlightsAdapter(),
+        known_route_fallback=KiwiMCPAdapter(),
     )
     result = await run_once(
         policy=policy,

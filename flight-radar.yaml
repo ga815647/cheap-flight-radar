@@ -19,7 +19,8 @@ capability_state:
     destination_scope_semantics: implemented_filter_preserved_until_separate_qualification
     destination_free_discovery_adapter: gflights_google_flight_deals
     exact_flexible_open_jaw_adapter: gflights_google_exact
-    automatic_executable_fallback: none
+    destination_free_automatic_executable_fallback: none
+    known_route_exact_flexible_automatic_executable_fallback: kiwi_mcp_exact
   accepted_qualified_future:
     destination_scope: substrate_native_worldwide_non_exhaustive
     priority_markets:
@@ -944,7 +945,7 @@ public_intelligence:
     - fare_family
     unknown_components_remain_unknown: true
 source_routing:
-  status: provider_execution_truth_converged_v3
+  status: provider_execution_truth_converged_v4
   strict_no_silent_degradation: true
   route_plan_execution_contract:
     entry_means_current_execution_plane_can_invoke_provider: true
@@ -984,8 +985,9 @@ source_routing:
         full_market_coverage_claim: false
       broad_discovery:
         primary_provider: gflights_google_exact
-        automatic_executable_fallback: null
-        primary_failure_action: fail_closed
+        automatic_executable_fallback: kiwi_mcp_exact
+        primary_failure_action: try_automatic_executable_fallback_then_fail_closed
+        fallback_capability_scope: exact_and_flexible_known_route_only_no_open_jaw
         researched_not_integrated_candidates:
         - fli_google_exact
         execution_mode: keyless_http_client
@@ -1003,8 +1005,8 @@ source_routing:
     china:
       deep_search:
         primary_provider: gflights_google_exact
-        automatic_executable_fallback: null
-        primary_failure_action: fail_closed
+        automatic_executable_fallback: kiwi_mcp_exact
+        primary_failure_action: try_automatic_executable_fallback_then_fail_closed
         execution_mode: keyless_http_client
         credential_required: false
         query_scope: known_route_exact_or_flexible_completion
@@ -1096,6 +1098,26 @@ source_routing:
       - open_jaw
       - booking_offer_revalidation
       verification_state: current_search_evidence_revalidate_before_publish
+    kiwi_mcp_exact:
+      execution_plane: canonical_backend
+      current_integration_state: integrated
+      automatic_execution_supported: true
+      execution_mode: agent_mcp_remote
+      endpoint: https://mcp.kiwi.com
+      server: kiwicom-flight-search
+      live_qualified_server_version: 1.28.1
+      credential_required: false
+      ongoing_cost_twd: 0
+      anomaly_authority: false
+      selected_roles:
+      - exact_completion_fallback
+      - flexible_dates_fallback
+      excluded_roles:
+      - destination_free_deal_discovery
+      - anomaly_truth
+      - open_jaw_multi_city
+      qualification_evidence: docs/executable-redundancy-qualification-2026-08-21.md
+      access_change_action: fail_closed_and_requalify
     fli_google_exact:
       execution_plane: researched_not_integrated_backend_candidate
       current_integration_state: absent
@@ -1108,7 +1130,8 @@ source_routing:
       credential_required: false
       selected_roles:
       - exact_and_flexible_fallback_comparator_candidate
-      historical_note: prior_live_bakeoff_required_explicit_click_due_wheel_metadata_defect
+      historical_note: safe-transport_SR-D_probe_succeeded_but_not_selected_same_google_upstream_and_stock_transport_noncompliant
+      qualification_disposition: not_selected_for_redundancy
     kiwi_anywhere_web:
       selected_roles:
       - secondary_seed_discovery

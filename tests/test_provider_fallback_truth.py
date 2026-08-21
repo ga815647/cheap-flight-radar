@@ -74,7 +74,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("fallback_provider", set(keys(routing["selected_routes"])))
 
-    def test_current_plans_are_gflights_only_and_fallback_is_none(self):
+    def test_current_destination_free_is_gflights_only_and_known_route_has_qualified_fallback(self):
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-20"),
             self.policy,
@@ -94,12 +94,12 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
             {},
         )
         self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])
-        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact"])
+        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
         shared = self.policy["source_routing"]["selected_routes"]["shared"]
         self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])
-        self.assertIsNone(shared["broad_discovery"]["automatic_executable_fallback"])
+        self.assertEqual(shared["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")
         self.assertEqual(shared["origin_wide_discovery"]["primary_failure_action"], "fail_closed")
-        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "fail_closed")
+        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
 
     def test_expedia_is_external_recall_candidate_not_anomaly_or_backend_coverage(self):
         routing = self.policy["source_routing"]
@@ -152,6 +152,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
         strategy = (ROOT / "docs" / "search-strategy.md").read_text(encoding="utf-8")
         bakeoff = (ROOT / "docs" / "substrate-bakeoff-2026-08-13.md").read_text(encoding="utf-8")
         self.assertIn("automatic executable fallback is **none**", strategy)
+        self.assertIn("kiwi_mcp_exact", strategy)
         self.assertIn("Expedia airport-origin public Web remains an external", strategy)
         self.assertIn("no fli production adapter", strategy)
         self.assertIn("preserves the 2026-08-13 live bake-off evidence", bakeoff)
