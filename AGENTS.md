@@ -5,7 +5,7 @@ This file is the required first entry for any ChatGPT/Codex/agent session workin
 ## 1. Product intent and source of truth
 
 - `PRODUCT_INTENT.md` is the durable human-level statement of **what the user wants Cheap Flight Radar to achieve and how results should be judged**.
-- `flight-radar.yaml` is the **single machine-readable operational source of truth (SSOT)** for current implemented travel-search policy.
+- `flight-radar.yaml` is the **single machine-readable operational source of truth (SSOT)**. It records current implemented travel-search policy and may also record accepted qualified-future capability only when that capability is explicitly state-labelled. A target/future entry does not authorize runtime execution or broader coverage until its qualification gate is completed and the current-runtime state is changed.
 - The operational SSOT must evolve to conform to `PRODUCT_INTENT.md`; implementation details must not silently redefine product intent.
 - When `PRODUCT_INTENT.md` and current `flight-radar.yaml` conflict, treat that as an explicit policy inconsistency to reconcile in a policy-change branch/PR. Do not silently reinterpret the product intent to preserve legacy behavior, and do not silently bypass the current SSOT at runtime before the policy change is made.
 - `docs/*.md` explains reasoning, evidence, and edge cases behind current policy.
@@ -35,7 +35,7 @@ Do not substitute generic trip-planning quality, absolute-low-fare leaderboards,
 
 ## 4. Search behavior
 
-Current executable behavior is defined by `flight-radar.yaml`; do not rely on a duplicated summary in this file when details matter.
+Current executable behavior is defined by the current-runtime state in `flight-radar.yaml`; do not rely on a duplicated summary in this file when details matter. Accepted target capability in the SSOT is not executable merely because the product permits or desires it.
 
 General invariants:
 
@@ -43,8 +43,9 @@ General invariants:
 - a cheap one-way observation may seed investigation, but a formal Deal requires a concrete complete airfare itinerary under the current policy;
 - outbound-first and direct round-trip discovery may coexist;
 - open-jaw is a first-class airfare possibility;
+- search paths and provider/access adapters are replaceable implementation details, not product intent;
 - do not assume a cached/search-result fare is currently purchasable;
-- do not turn temporary search horizon, source coverage, compute budget, or crawler limitations into durable product preferences.
+- do not turn temporary search horizon, source coverage, compute budget, crawler limitations, or current geographic runtime filters into durable product preferences.
 
 ## 5. Evidence rules
 
@@ -85,6 +86,7 @@ As collectors/data pipelines are added, add deterministic fixture-based tests be
 
 - Keep discovery, itinerary construction, anomaly/truth evaluation, Deal validation, presentation, and notification policy separable.
 - Do not build provider-independent abstractions merely for elegance; prefer the smallest architecture that supports qualified stable sources and required fallback.
+- Treat provider/access adapters as replaceable after bounded qualification; provider identity must not redefine Deal, coverage, or CFR→FTR semantics.
 - Prefer deterministic normalized records over scraping-page-specific structures when persistence or cross-source comparison requires them.
 - Reuse stable external typical-price/anomaly capabilities when qualified instead of rebuilding expensive historical machinery by default.
 - Historical price data is supplemental evidence/fallback unless current policy explicitly gives it a stronger role.
@@ -93,4 +95,4 @@ As collectors/data pipelines are added, add deterministic fixture-based tests be
 
 ## 9. Current non-goals
 
-Current product intent does not require automated booking, exhaustive global fare-matrix coverage, detailed destination itinerary planning, lodging/visa optimization, or guaranteed checkout prices. Europe, the Americas, and Africa are future expansion rather than current production scope.
+Current product intent does not require automated booking, exhaustive global fare-matrix coverage, detailed destination itinerary planning, lodging/visa optimization, or guaranteed checkout prices. Worldwide substrate-native discovery is an accepted qualified-future direction, not a claim of current worldwide runtime coverage: Europe, the Americas, Africa, or any other geography may enter production only through separately qualified sustainable TWD-0 capability, while current runtime remains bounded by the implemented scope recorded in `flight-radar.yaml`.
