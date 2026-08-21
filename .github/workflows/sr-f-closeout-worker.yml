@@ -1,0 +1,91 @@
+name: SR-F closeout worker
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    if: github.head_ref == 'feat/cfr-sr-f-public-intelligence-simplification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cfr-sr-f-public-intelligence-simplification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Converge durable SR-F closeout evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('.')
+          policy_path = root / 'flight-radar.yaml'
+          text = policy_path.read_text(encoding='utf-8')
+          marker = '''  qualification_gates:\n  - CFR-SR-B_gflights_qualification\n  - CFR-SR-C_scoped_native_window_BORROW_bakeoff\n  - CFR-SR-D_executable_TWD0_redundancy\n  - CFR-SR-E_blind_spot_schema\n  - CFR-SR-F_crawler_simplification\n'''
+          closeout = '''  post_reassessment_followups:\n    status: complete\n    resolved_on: 2026-08-21\n    SR-B:\n      status: passed\n      evidence: docs/gflights-qualification-2026-08-21.md\n    SR-C:\n      status: resolved_keep_current_adapt\n      evidence: docs/scoped-native-window-bakeoff-2026-08-21.md\n    SR-D:\n      status: passed_known_route_exact_flexible_redundancy_only\n      evidence: docs/executable-redundancy-qualification-2026-08-21.md\n    SR-E:\n      status: passed\n      evidence: docs/access-blind-spots-2026-08-21.md\n    SR-F:\n      status: passed\n      evidence: docs/public-intelligence-simplification-2026-08-21.md\n'''
+          if '  post_reassessment_followups:\n' not in text:
+              if marker not in text:
+                  raise SystemExit('qualification_gates marker not found')
+              text = text.replace(marker, marker + closeout, 1)
+              policy_path.write_text(text, encoding='utf-8')
+
+          doc = root / 'docs/public-intelligence-simplification-2026-08-21.md'
+          doc.write_text('''# CFR-SR-F — public-intelligence simplification (2026-08-21)\n\n## Decision\n\nSR-F retires CFR's fixed-watch crawler/cadence/state subsystem. Fixed watches were always optional Signal context rather than Deal/anomaly authority; after substrate reassessment, their marginal recall value does not justify a separate Scrapy/Playwright execution plane, freshness state machine, parser registry, artifacts, and browser plumbing. Public intelligence remains a best-effort opportunistic/verification-only lane controlled by the ChatGPT orchestrator.\n\n## Base-main inventory before SR-F\n\nThe fresh pre-SR-F main contained all of the following current executable or policy surfaces:\n\n- `.github/workflows/fixed-watch-run.yml` — on-demand fixed-watch crawler execution and artifact upload.\n- `src/cheap_flight_radar/fixed_watch_runner.py` — Scrapy crawler plus optional Playwright path.\n- `src/cheap_flight_radar/fixed_watch_state.py` — cadence, prior-success reuse, and manifest state.\n- `src/cheap_flight_radar/public_sources.py` — fixed-source parser dispatch/contracts.\n- `src/cheap_flight_radar/public_intelligence.py` — fixed-watch registry/planning types mixed with generic provenance/dedupe primitives.\n- fixed-watch-only tests and `tests/fixtures/public_sources/`.\n- `pyproject.toml` dependencies on Scrapy and optional `scrapy-playwright`.\n- `flight-radar.yaml` fixed-watch registry/runtime/cadence policy plus publication requirement `fixed_watch_coverage_and_freshness`.\n- `src/cheap_flight_radar/publication.py` dependence on the current fixed-watch registry to render cadence labels.\n\n## KEEP\n\n- `src/cheap_flight_radar/public_intelligence.py` as a small source-agnostic module for `DiscoverySighting`, campaign identity/dedupe, exact-itinerary identity, and observation provenance.\n- `src/cheap_flight_radar/secondary_recall.py` and current opportunistic one-way Web-seed expansion.\n- Public Web/search/social/news/airline-promotion observations as opportunistic Signal/seed context when useful.\n- Candidate-triggered airline/OTA/metasearch verification surfaces.\n- Historical immutable manifests: if they contain fixed-watch evidence, publication may render it explicitly as historical evidence.\n- All Daily/Scoped provider routing, gflights/Kiwi SR-D behavior, SR-E blind spots, Deal/absolute-low/open-jaw/fail-closed/TWD-0 semantics, and CFR→FTR contract.\n\n## RETIRE\n\n- `.github/workflows/fixed-watch-run.yml`.\n- `fixed_watch_runner.py`, `fixed_watch_state.py`, and `public_sources.py`.\n- fixed-watch cadence/reuse/manifest/parser contracts and their dedicated tests/fixtures.\n- Scrapy and `scrapy-playwright` project dependencies and browser-install path.\n- current fixed-watch registry/runtime/cadence policy and the fixed-watch publication coverage requirement.\n- publication's dependency on current fixed-watch registry/cadence configuration.\n\n## Final runtime truth\n\n`flight-radar.yaml` now defines public intelligence as `simplified_opportunistic_signal_lane_v2`: only opportunistic and verification-only roles remain. Public-intelligence absence or source failure does not change provider health, does not establish market absence, and cannot become Deal/anomaly/backend coverage authority. Generic provenance/dedupe remains available. Historical docs may describe the retired design but do not override current Product Intent or machine SSOT.\n\nNo live airfare/provider acquisition was performed for SR-F. No FTR code/schema/consumer behavior was changed.\n''', encoding='utf-8')
+
+          test_path = root / 'tests/test_sr_f_public_intelligence_simplification.py'
+          test = test_path.read_text(encoding='utf-8')
+          needle = '    def test_current_docs_make_old_fixed_watch_material_historical(self):\n'
+          method = '''    def test_post_reassessment_followups_are_durably_closed(self):\n        followups = self.policy["capability_state"]["post_reassessment_followups"]\n        self.assertEqual(followups["status"], "complete")\n        self.assertEqual(str(followups["resolved_on"]), "2026-08-21")\n        self.assertEqual(\n            [followups[key]["status"] for key in ("SR-B", "SR-C", "SR-D", "SR-E", "SR-F")],\n            [\n                "passed",\n                "resolved_keep_current_adapt",\n                "passed_known_route_exact_flexible_redundancy_only",\n                "passed",\n                "passed",\n            ],\n        )\n        for key in ("SR-B", "SR-C", "SR-D", "SR-E", "SR-F"):\n            self.assertTrue((ROOT / followups[key]["evidence"]).is_file())\n\n'''
+          if method not in test:
+              if needle not in test:
+                  raise SystemExit('SR-F test insertion marker not found')
+              test_path.write_text(test.replace(needle, method + needle, 1), encoding='utf-8')
+          PY
+      - name: Install and run exact Worker gate
+        shell: bash
+        run: |
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+      - name: Verify final architecture and clean generated files
+        shell: bash
+        run: |
+          test ! -e .github/workflows/fixed-watch-run.yml
+          test ! -e src/cheap_flight_radar/fixed_watch_runner.py
+          test ! -e src/cheap_flight_radar/fixed_watch_state.py
+          test ! -e src/cheap_flight_radar/public_sources.py
+          ! grep -qiE 'Scrapy|scrapy-playwright' pyproject.toml
+          test -e src/cheap_flight_radar/public_intelligence.py
+          test -e src/cheap_flight_radar/secondary_recall.py
+          test -e src/cheap_flight_radar/access_blind_spots.py
+          test -e src/cheap_flight_radar/providers/kiwi_mcp.py
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          p = yaml.safe_load(Path('flight-radar.yaml').read_text(encoding='utf-8'))
+          f = p['capability_state']['post_reassessment_followups']
+          assert f['status'] == 'complete'
+          assert f['SR-F']['status'] == 'passed'
+          assert p['public_intelligence']['status'] == 'simplified_opportunistic_signal_lane_v2'
+          PY
+          find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find src tests -type f -name '*.pyc' -delete
+          rm -rf src/cheap_flight_radar.egg-info
+          rm -f .github/workflows/sr-f-closeout-worker.yml
+          git diff --check
+      - name: Commit durable closeout
+        shell: bash
+        run: |
+          git config user.name 'CFR SR-F Closeout Worker'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Close CFR post-reassessment followups'
+          git push origin HEAD:feat/cfr-sr-f-public-intelligence-simplification
