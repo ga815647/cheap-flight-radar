@@ -4,25 +4,25 @@ Status: Phase-1 durable research conclusion for issue #56 under the Travel Stack
 
 This document is research/architecture evidence. It does not itself change runtime provider routing. Product Intent changes are handled separately from implementation changes.
 
-## 1. Question and preserved product value
+## 1. Preserved product value
 
-Cheap Flight Radar (CFR) should preserve the parts that are genuinely differentiated and borrow commodity airfare-search capability whenever a mature surface can provide it reliably.
+Cheap Flight Radar (CFR) should preserve the differentiated parts of the product and borrow commodity airfare-search capability whenever a mature substrate can provide it reliably.
 
 Preserved product value:
 
-- Daily Radar: without asking the user to search manually, discover and organize unusually cheap airfare from Taiwan, roughly daily.
-- Query / Scoped Mode: given one or more supplied date windows, autonomously find where airfare is cheap.
-- Formal Deal truth remains anomaly-first: relative discount versus a normal/typical route price is the primary Deal concept.
-- Absolute-low current airfare is a separate useful axis and is an important bounded downstream input for Family Trip Radar (FTR).
-- Open-jaw is first-class, but CFR does not need to manufacture combinations itself when a mature substrate can search multi-city/open-jaw directly.
+- **Daily Radar** — without requiring manual search, autonomously discover and organize unusually cheap airfare from Taiwan, roughly daily.
+- **Query / Scoped Mode** — given one or more supplied availability windows, autonomously find where airfare is cheap.
+- Formal Deal truth remains **anomaly-first**: relative discount versus normal/typical price is the primary Deal concept.
+- Exact **absolute-low non-Deal** airfare is separately useful, especially to FTR.
+- Open-jaw is first-class; CFR may delegate multi-city/open-jaw search to mature substrates.
 - One adult, economy remains the normalized discovery probe.
-- Sustainable recurring production cost remains TWD 0 unless the owner later approves a paid dependency.
+- Recurring production remains TWD 0 unless the owner explicitly approves a paid dependency.
 
-## 2. Evidence base
+## 2. Evidence base and measurements
 
-Fresh authority was resolved from current main before this reassessment. At Phase-1 start, current main was `09fb37c7ccb9baec1ae40a24eb54c29b40a44a66`.
+Fresh authority was resolved from current main before the reassessment. Phase 1 began from `09fb37c7ccb9baec1ae40a24eb54c29b40a44a66`.
 
-Durable prior CFR evidence accepted as still relevant:
+Accepted prior durable evidence:
 
 - `docs/substrate-bakeoff-2026-08-13.md`
 - `docs/provider-source-research-2026-08-10.md`
@@ -30,27 +30,28 @@ Durable prior CFR evidence accepted as still relevant:
 - `docs/production-sticky-429-circuit-2026-08-19.md`
 - `docs/ftr-scoped-search.md`
 - `docs/ftr-handoff.md`
-- issue #51 as prior source-expansion context, not as the new Phase-1 contract
+- issue #51 as prior context only, not this reassessment contract
 
-Key prior live measurements on clean GitHub-hosted Ubuntu from 2026-08-13 remain useful:
+The clean GitHub-hosted Ubuntu bakeoff on 2026-08-13 established that the current Google/gflights path could provide commodity capabilities CFR otherwise would have had to build:
 
-- `gflights==0.3.0` exact TPE→NRT round trip: 21 results, including Taiwan/Japan LCC and FSC examples.
-- Google Explore through the same client: TPE 88, TSA 88, RMQ 109, KHH 88 destination records.
-- Google Flight Deals: 30 records for each TPE/TSA/RMQ/KHH probe.
-- TPE→NRT three-month cheapest-date query: 84 date pairs.
-- multi-city/open-jaw TPE→NRT + KIX→KHH: 10 results.
-- the same path returned current TWD fare, exact Taiwan origin/destination identity and representative Flight Deals typical-price/discount evidence.
+- exact TPE→NRT round trip: 21 results with LCC/FSC examples;
+- Explore: TPE 88, TSA 88, RMQ 109, KHH 88 destination records;
+- Flight Deals: 30 records per TPE/TSA/RMQ/KHH probe;
+- TPE→NRT flexible-date search: 84 date pairs;
+- TPE→NRT + KIX→KHH open-jaw/multi-city: 10 results;
+- current TWD fares plus representative typical-price/discount evidence.
 
-The reliability counter-evidence is also material. The explicit 2026-08-19 operator acquisition recorded a sticky Google/gflights 429 state: only one of twelve Flight Deals calls returned records, TSA/RMQ/KHH discovery failed, exact/flexible completion did not converge, and the run became degraded. CFR correctly fails closed after the first sticky-client failure rather than resetting the client, rotating identity, or hiding missing coverage.
+Reliability is not assumed from that success. The explicit 2026-08-19 operator run recorded a sticky Google/gflights 429 state: only one of twelve Flight Deals calls returned records; TSA/RMQ/KHH discovery failed; exact/flexible completion did not converge; CFR correctly degraded/fail-closed instead of resetting identity, rotating sessions/proxies or hiding missing coverage.
 
-Current official/public product documentation and surfaces were rechecked on 2026-08-21, including Google Flights / Flight Deals, Trip.com, Skyscanner, Kiwi.com, Expedia, airline/member surfaces, and selected API/provider documentation.
+Current official/public documentation and surfaces were rechecked on 2026-08-21 for Google Flights / Flight Deals, Trip.com, Skyscanner, Kiwi.com, Expedia, airline/member surfaces, and selected qualified API classes.
 
-Representative current official sources:
+Representative sources:
 
 - Google Flights / Flight Deals:
   - https://www.google.com/travel/flights
-  - https://support.google.com/travel/answer/16496104
-- Trip.com Flights:
+  - https://support.google.com/travel/answer/16497283
+  - https://support.google.com/travel/answer/2475306
+- Trip.com:
   - https://www.trip.com/flights/
   - https://developers.trip.com/
 - Skyscanner:
@@ -63,34 +64,27 @@ Representative current official sources:
   - https://www.kiwi.com/en/pages/content/mcp/
 - Expedia:
   - https://www.expedia.com/Flights
-  - https://www.expedia.com/deals/flights
+  - https://www.expedia.com/product/flight-deals/
   - https://developers.expediagroup.com/docs/products/rapid
 - Duffel:
   - https://duffel.com/docs/api/v2/offer-requests
   - https://duffel.com/pricing
 
-No search-engine snippet or cached/indexed fare is accepted as exact Deal truth.
+Search-engine snippets, cached/indexed fares, and unverified app/member hints are never exact Deal truth.
 
-## 3. Semantic separation required by the target architecture
+## 3. Required fare/access semantics
 
-The following states must remain distinct:
+The target architecture must keep these concepts separate:
 
-1. `fare_exists`
-   - A fare may exist in the market or in a restricted channel.
-   - Absence from CFR evidence never proves market nonexistence.
-2. `surface_shows_fare`
-   - A named surface displayed a fare or fare hint.
-   - This can still be cached, indicative, member-only, app-only, incomplete, or stale.
-3. `radar_can_observe_fare`
-   - CFR's currently authorized execution plane can automatically obtain the observation without bypass/evasion or a hidden human step.
-4. `radar_can_reproduce_exact_fare`
-   - CFR can re-run or follow the exact itinerary/date identity to a current complete fare with trusted seller/provenance evidence.
-5. `formal_deal_truth`
-   - The fare additionally satisfies CFR's anomaly-first Deal rules and current exact/reproducible/trust requirements.
+1. **`fare_exists`** — a fare may exist somewhere in the market or a restricted channel.
+2. **`surface_shows_fare`** — a named surface displays a fare/hint; it may still be cached, indicative, restricted or stale.
+3. **`radar_can_observe_fare`** — CFR's authorized automatic execution plane can obtain the observation without hidden human work or bypass/evasion.
+4. **`radar_can_reproduce_exact_fare`** — CFR can re-run/follow the exact dates/itinerary to a current complete fare with trusted seller/provenance.
+5. **`formal_deal_truth`** — the exact/reproducible fare also satisfies CFR's anomaly-first Deal rules.
 
-This distinction is especially important for app/member/login fare classes. A known inaccessible class is a coverage blind spot, not a negative fare observation.
+`Radar cannot access a fare` never implies `the fare does not exist`.
 
-Suggested access-coverage states for later machine SSOT implementation:
+Suggested later machine coverage classes:
 
 - `public_automatable`
 - `public_agent_observable_seed_only`
@@ -98,102 +92,96 @@ Suggested access-coverage states for later machine SSOT implementation:
 - `credential_or_partner_gated`
 - `not_observed_or_unknown`
 
-Coverage reports must say what CFR attempted and could observe. They must not claim exhaustive market fare existence.
+Coverage reports describe what CFR attempted/could observe, not exhaustive market existence.
 
 ## 4. Capability matrix
 
-Legend:
-
-- `strong`: mature/current capability exposed by the substrate.
-- `partial`: useful but incomplete or requires another surface for exact truth.
-- `no`: capability not supplied for the CFR role.
-- `gated`: access depends on credentials/partnership/login/member/app/human setup.
-
-| Substrate / access path | Destination-free | Supplied date-window | Typical/anomaly | Absolute-low | Flexible dates | Open-jaw / multi-city | Taiwan / LCC evidence | Global breadth | Exact complete fare / freshness | Automation plane | Stable recurring TWD-0 | Access blind spots | Phase-1 role |
+| Substrate / access path | Destination-free | Scoped/window | Anomaly/typical | Absolute-low | Flexible | Open-jaw / multi-city | TW/LCC | Global | Exact/fresh | Access/automation | Sustainable TWD-0 | Blind spots / constraints | Phase-1 role |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Google Flight Deals semantic surface | **strong** | partial/provider-selected constraints | **strong: typical + discount** | strong: also surfaces lowest-price matches | strong at Google product level | via Google Flights exact/multi-city | **live-proven** on TPE/TSA/RMQ/KHH and LCC/FSC examples | **strong** consumer surface | Deal record needs exact follow-up; seller revalidation still required | official Web; current backend via unofficial client | semantic surface free; automation access not guaranteed | partner/seller/member inventory can differ | **BORROW primary discovery/anomaly concept** |
-| Google Explore / Flights exact / price graph / multi-city | **strong Explore** | strong when query shape is supported | partial price-insight context | **strong** | **strong** | **strong** | live-proven | **strong** | **strong after exact revalidation** | official Web; current backend via `gflights` | semantic surface free; automation access not guaranteed | same as above | **BORROW commodity search/completion** |
-| `gflights` access client (current 0.3.0; upstream 0.3.1 exists) | strong | partial according to exposed request shape | strong for Flight Deals | strong | strong | strong | live-proven | strong | live-proven but subject to Google changes | GitHub runner/local | keyless today; not an official Google API; reliability risk | sticky 429; upstream/interface/ToS drift; no evasion allowed | **ADAPT replaceable machine adapter, reliability probation** |
-| Trip.com consumer Web / app | **strong Anywhere** | **strong consumer UI** | no uniform CFR-qualified normal-price authority | strong | **strong** | **strong** | strong public examples | strong | current seller search available, but deterministic unattended exact extraction not proven | ChatGPT/public Web only in current CFR | public Web TWD 0; flight API self-service not proven | **member-only/app-only discounts explicitly exist** | **VERIFY-ONLY / recall seed; scoped substrate candidate** |
-| Skyscanner Everywhere / consumer Web | **strong** | strong consumer UI | no CFR-qualified route-normal anomaly authority | strong indicative | **strong** | **strong** | strong | strong | Everywhere/month values can be estimated/cached; live search required for exact | ChatGPT/public Web; API if approved | Web TWD 0; API requires partner approval/key | API partnership gate; seller/member differences | **VERIFY-ONLY / recall seed; API inaccessible today** |
-| Skyscanner Live API | no destination-free by itself; Indicative covers broad discovery | strong route/date live search | no CFR anomaly authority | strong if queried | API family supports indicative/flexible patterns | multi-city supported | likely broad but CFR access not granted | strong | **strong live + refresh** | backend only with approved API key | **not currently available as owner-independent TWD-0 dependency** | partnership criteria / API key | **credential/partner-gated candidate, not production dependency** |
-| Kiwi consumer Anywhere / Nomad | **strong** | **strong date/range UI** | no qualified CFR anomaly authority | strong | **strong** | **strong, including Nomad/self-transfer** | useful | strong | current consumer results; final itinerary risk must be normalized | ChatGPT/public Web | public Web TWD 0 | app-only offers; self-transfer/virtual-interlining risk | **VERIFY-ONLY / recall and scoped candidate** |
-| Kiwi official MCP | no proven destination-free primitive in current exposed search contract | bounded date/flex search | no | strong for requested route | ±date flexibility in current contract | current MCP contract is narrower than full consumer Nomad | plausible, not CFR-qualified live | broad | current search + booking links | agent/custom connector | service is public, but current Chat environment has no installed Kiwi connector | custom connector/human setup; MCP still evolving | **VERIFY-ONLY; promising agent lane, not Daily primary** |
-| Expedia public Flights / Flight Deals | public destination/deal browsing available | strong consumer UI | **promising: current public deal cards can expose % less than typical** | strong | strong UI | multi-city | useful | strong | exact follow-up needed | ChatGPT/public Web | public Web TWD 0 | member/account deals; partner APIs gated | **VERIFY-ONLY now; fresh anomaly-fallback qualification candidate** |
-| airline official public booking surfaces | no cross-market discovery | strong for own routes | promotion context only, not cross-route normal | route-local | carrier dependent | carrier dependent | **best own-inventory identity** incl LCC | carrier limited | **strong final seller/existence check when public** | Web/manual/agent; selective backend only when official feed exists | usually public | member/app/subscription inventory can be lower and inaccessible | **VERIFY-ONLY final seller truth** |
-| airline member/app/subscription fare classes | no | carrier dependent | no general anomaly authority | can contain real low fares | carrier dependent | carrier dependent | material for Taiwan LCCs | carrier limited | real fare may exist | **restricted** | no autonomous public guarantee | login/member/app/payment/subscription | **ACCESS BLIND SPOT, never negative evidence** |
-| `fli` / `flights==0.9.0` prior bakeoff | no | known-route/date/flexible only | no | route-local | strong in prior test | supported | useful fixed-basket evidence | broad | live-proven in prior bakeoff | GitHub runner if integrated | keyless; prior packaging defect | not currently integrated; maintenance uncertainty | **VERIFY-ONLY comparator/fallback candidate** |
-| Duffel Flights API | no | **strong known route/date slices** | no | route-local | no destination-free discovery | multiple slices possible | requires credentialed coverage measurement | broad airline API network | **strong live offers; short expiry** | credentialed backend | **fails Daily TWD-0 economics at high search:book ratio** | access token + excess-search fee after 1500:1 | **VERIFY-ONLY for purchase-oriented exact checks, not Daily Radar** |
-| CFR own price history | no | n/a | useful fallback/supplemental anomaly | records observed floors only | n/a | preserves observed shapes | only what CFR observed | only what CFR observed | exactness equals retained source evidence | deterministic backend | **yes** | cannot see inaccessible or never-searched space | **BUILD/KEEP as provenance + fallback evidence, not primary search engine** |
-| CFR public-intelligence crawlers | seed-only | seed-only | no | hint only | no | no | useful for promos/local editorial | broad if indexed | not exact fare truth | Web / bounded crawler | yes if low maintenance | login/private groups invisible | **SIMPLIFY: optional Signal/seed lane only** |
-| custom city×date×city brute force | potentially | yes by enumeration | no unless external baseline added | potentially | yes at high cost | combinatorial | depends on provider | costly | only as good as provider | custom backend | poor sustainability/reliability | still cannot cover restricted inventory | **DO NOT BUILD now** |
+| **Google Flight Deals semantic surface** | **strong** | partial; current feature does not support every search shape | **strong**; current official Deal logic uses typical-price history and savings | **strong**; current feature also surfaces lowest-priced non-savings matches | strong product-level flexibility | Flight Deals itself excludes multi-city; pair with Google Flights exact/multi-city | **live-proven CFR basket** | **strong** | Deal discovery needs exact/seller follow-up | official Web; current backend through unofficial client | semantic surface free; machine access not guaranteed | partner coverage not exhaustive; seller/member inventory can differ | **BORROW primary destination-free/anomaly semantics** |
+| **Google Explore / Flights exact / calendar / price graph / multi-city** | **strong Explore** | strong when query shape is supported | partial price insight | **strong** | **strong** | **strong** | live-proven | **strong** | **strong after exact revalidation** | official Web; current backend via `gflights` | semantic surface free; machine access not guaranteed | Google itself states not all airlines/offers are included | **BORROW commodity discovery/completion** |
+| **`gflights` current machine adapter** | strong | partial by exposed request shape | strong for Flight Deals | strong | strong | strong | live-proven | strong | live-proven but volatile | GitHub runner/local, unofficial Google client | keyless today | sticky 429; upstream/interface/ToS drift; no proxy/session/UA evasion allowed | **ADAPT replaceable adapter; reliability probation** |
+| **Trip.com consumer Web/app** | **strong Anywhere** | **strong UI/date flexibility** | no uniformly qualified CFR route-normal authority | strong | **strong** | **strong** | useful LCC/FSC evidence | strong | current seller results, but deterministic unattended exact extraction not proven | public Web + app | public Web TWD 0; flight API self-service not proven | explicit member/app discounts | **VERIFY-ONLY / seed; Scoped candidate** |
+| **Skyscanner Everywhere / consumer Web** | **strong** | strong consumer controls | no CFR-qualified anomaly authority | strong indicative | **strong** | **strong** | strong | strong | Everywhere/month values may be estimated from prior searches; live step needed | public Web; API only if approved | Web free | API/partnership gate; seller/member differences | **VERIFY-ONLY / seed** |
+| **Skyscanner APIs** | Indicative suitable for broad discovery | strong route/date live search | no CFR anomaly authority | strong if queried | API family supports indicative/flexible patterns | Live supports multi-city | likely broad but unmeasured without key | strong | **strong live + refresh** | backend only with approved partner key | **not available as owner-independent production dependency today** | partner/API-key qualification gate | **credential/partner-gated candidate, not core** |
+| **Kiwi consumer Anywhere / Nomad** | **strong** | **strong ranges** | no qualified CFR anomaly authority | strong | **strong** | **strong**, including virtual interlining/self-transfer | useful | strong | current consumer results; itinerary risk needs normalization | public Web/app | Web free | app-exclusive offers; self-transfer risk | **VERIFY-ONLY / recall + Scoped candidate** |
+| **Kiwi official MCP** | current exposed contract has no proven Anywhere primitive | bounded route/date/flex search | no | route-local strong | bounded flexibility | narrower than consumer Nomad | unqualified for CFR | broad | current search + booking links | agent/custom connector | public service, but not installed in current Chat environment | human connector setup; evolving surface | **VERIFY-ONLY agent-native candidate, not Daily primary** |
+| **Expedia public Flights** | no qualified public destination-free anomaly feed | ordinary route/date search | no public CFR-qualified anomaly feed | route/date search | consumer flexibility | multi-city | useful | strong | exact public search can be cross-check evidence | public Web | TWD 0 Web | member/account inventory differences | **VERIFY-ONLY ordinary fare/seller cross-check** |
+| **Expedia Flight Deals app** | **strong worldwide feed from home airport** | app filters destination/date | **strong concept: at least 20% below typical predicted price** | deal feed | app filtering | not established as CFR open-jaw substrate | potentially useful | strong | real consumer Deal feed | **app-exclusive according to Expedia official product page** | app use itself may be free, but no authorized unattended CFR path proven | **app-only restricted surface** | **ACCESS BLIND SPOT / benchmark, not public Web fallback** |
+| **airline official public booking surfaces** | no cross-carrier discovery | own-route exact | promo context only | route-local | carrier-dependent | carrier-dependent | **best own-inventory identity**, incl LCC | carrier-limited | **strong seller/existence check when public** | Web/manual/agent; selective official feed only | generally public | member/app/subscription fare classes may be lower | **VERIFY-ONLY final seller truth** |
+| **airline member/app/subscription fares** | no | carrier-dependent | no general anomaly authority | may contain real lower fares | carrier-dependent | carrier-dependent | material, including Taiwan LCC programs | carrier-limited | fare may genuinely exist | **restricted** | no autonomous public guarantee | login/member/app/payment/subscription | **ACCESS BLIND SPOT, never negative evidence** |
+| **`fli` / `flights==0.9.0` prior bakeoff** | no | known route/date | no | route-local | useful | supported | fixed-basket evidence | broad | prior live comparator evidence | GitHub runner if integrated | keyless historically | not integrated; packaging/maintenance uncertainty | **VERIFY-ONLY comparator/fallback candidate** |
+| **Duffel Flights API** | no | **strong known route/date slices** | no | route-local | not destination-free | multiple slices | requires credentialed coverage test | broad network | **strong live offers; short expiry** | credentialed backend | **not suitable as free discovery core at high search:book ratio** | access token; excess-search fee above 1500:1 | **VERIFY-ONLY purchase-oriented exact check, not Daily core** |
+| **CFR own price history** | no | n/a | useful supplemental/fallback anomaly | observed floors only | n/a | preserves observed shapes | only CFR-observed | only CFR-observed | as exact as retained evidence | deterministic backend | **yes** | cannot see unsearched/restricted space | **BUILD/KEEP provenance + fallback, not search engine** |
+| **CFR public-intelligence collectors** | seed-only | seed-only | no | hint only | no | no | useful promo/editorial hints | broad if public/indexed | not exact Deal truth | Web/bounded crawler | yes if low-maintenance | private/login surfaces invisible | **SIMPLIFY to optional Signal/seed lane** |
+| **custom city×date×city brute force** | potentially | yes by enumeration | no unless another baseline built | potentially | costly | combinatorial | provider-dependent | expensive | provider-dependent | custom backend | poor sustainability | still misses restricted inventory | **DO NOT BUILD now** |
 
-## 5. What changed since the 2026-08-13 convergence
+## 5. Fresh-source corrections and implications
 
-The 2026-08-13 core insight survives: CFR should borrow Google airfare-search primitives rather than build a broad search engine or make repository price history its primary anomaly model.
+### 5.1 Google supports CFR's semantic split directly
 
-Three corrections are required now:
+Current official Google Flight Deals documentation distinguishes:
 
-### 5.1 Semantic substrate versus access adapter
+- savings Deals that are materially below typical price; and
+- cheap flights that are among the lowest fares for matching destinations but may **not** be below typical price.
 
-Google Flights / Flight Deals is the borrowed semantic substrate. `gflights` is only one unofficial access adapter to that substrate.
+It ranks savings first by savings magnitude, then lower absolute price, and ranks non-savings results by lowest price. This independently supports CFR's existing separation between anomaly-qualified `Deal` and exact `absolute_low_non_deal` rather than merging them.
 
-Current CFR accidentally risks treating those as the same architectural commitment. They must be separated. A future adapter replacement must not require changing CFR Deal semantics, FTR handoff semantics, or search intent.
+### 5.2 Google is broad but not exhaustive
 
-The 2026-08-19 sticky-429 incident proves the access adapter has a real reliability boundary. Fail-closed circuit behavior is correct, but reliability work should focus on replaceable qualified access rather than evasion or retries.
+Google Flights documents more than 300 airline/OTA/aggregator partners and explicitly says not all airlines or available flights are included. Worldwide substrate-native discovery therefore supports broader CFR geography, but never justifies an exhaustive-market claim.
 
-### 5.2 Absolute-low is first-class output even when not a Deal
+### 5.3 Expedia Flight Deals is an access-blind-spot example, not a public fallback
 
-Google Flight Deals itself currently distinguishes unusually discounted trips from other lowest-priced matches. CFR should likewise preserve separate truth classes:
+Expedia's current official Flight Deals product scans millions of flights and identifies fares at least 20% below typical predicted price, with anywhere/date filtering. However, Expedia explicitly says the Flight Deals feature is **exclusive to the app**.
 
-- `Deal`: anomaly-qualified, exact/reproducible current airfare.
-- `absolute_low_non_deal`: exact/revalidated current low airfare without the required anomaly truth.
-- `Signal`: weaker discovery/promotional evidence.
+Therefore:
 
-Do not make absolute-low a fake Deal and do not hide it as diagnostic-only when serving the FTR contract or Scoped Mode.
+- the anomaly capability is real;
+- it is useful product/substrate evidence;
+- CFR does **not** currently have an authorized repeatable unattended path to treat it as backend coverage or formal Deal authority;
+- it belongs in the restricted/app-only blind-spot class unless a future authorized machine interface is proven.
 
-### 5.3 Geography should follow qualified substrate breadth, not legacy compute limits
-
-Google, Trip.com, Skyscanner and Kiwi consumer discovery products are global. CFR therefore no longer has a product reason to make Asia/Oceania a permanent ceiling merely to avoid custom search explosion.
-
-The correct target is substrate-native worldwide discovery with truthful attempted coverage, while keeping Japan/Korea/China as priority markets. This is not a claim of exhaustive global fare coverage, and it does not authorize a worldwide city/date brute-force matrix.
+This supersedes any interpretation of indexed/search-visible Expedia Deal snippets as a public Web anomaly collector.
 
 ## 6. Target architecture
 
-Use the smallest stable architecture that preserves differentiated CFR truth.
+Use the smallest stable architecture that preserves CFR's differentiated truth.
 
-### Layer A — CFR product/truth core: BUILD/KEEP
+### Layer A — CFR product/truth core: BUILD / KEEP
 
-CFR owns only the logic that is genuinely product-specific:
+CFR owns:
 
 - normalized 1-adult economy probe policy;
-- exact Taiwan origin/return gateway and destination route-shape identity;
-- anomaly-first Deal qualification and ordering;
-- separate absolute-low non-Deal selection;
+- exact Taiwan outbound/return gateway and destination route-shape identity;
+- anomaly-first Deal qualification/ranking;
+- separate exact absolute-low non-Deal selection;
 - Signal isolation;
 - exact/reproducible/fresh/trusted seller gates;
-- access-blind-spot and attempted-coverage truth;
+- attempted-coverage and access-blind-spot truth;
 - immutable provenance/history/audit evidence;
-- bounded Daily/Scoped orchestration and fail-closed provider-health semantics;
+- bounded Daily/Scoped orchestration and fail-closed health semantics;
 - versioned CFR→FTR handoff.
 
-### Layer B — commodity search capabilities: BORROW
+### Layer B — commodity airfare search: BORROW
 
-Borrow mature substrate capabilities instead of recreating them:
+Borrow instead of rebuilding:
 
 - destination-free discovery;
-- typical-price/anomaly intelligence;
+- normal-price/anomaly intelligence;
 - worldwide broad discovery;
 - flexible-date/fare-calendar search;
-- exact fare search;
-- multi-city/open-jaw search;
+- exact airfare shopping;
+- open-jaw/multi-city search;
 - seller/deeplink handoff.
 
-Google Flights / Flight Deals remains the best currently qualified combined semantic substrate because the existing CFR live bakeoff proved all of those capabilities except unrestricted access stability.
+Google Flights / Flight Deals remains the best currently qualified **semantic substrate** because CFR has live evidence for destination-free, flexible, exact and multi-city/open-jaw capability plus typical-price/discount evidence.
 
-### Layer C — replaceable access adapters: ADAPT
+### Layer C — replaceable machine access: ADAPT
 
-Keep a thin provider-capability interface rather than a large source-specific search engine. The interface should express capabilities, not brand assumptions, for example:
+The current `gflights` path is an **access adapter**, not the product architecture and not an official Google API.
+
+A thin capability interface should express intent rather than brand assumptions, for example:
 
 - `discover_destination_free(origin, policy)`
 - `discover_scoped(origin, availability_window, policy)`
@@ -203,38 +191,36 @@ Keep a thin provider-capability interface rather than a large source-specific se
 - `get_anomaly_context(candidate)`
 - `get_booking_offers(candidate)`
 
-Current `gflights` can implement qualified calls behind this boundary, with fixed project identity, no proxy, no session/UA rotation, bounded calls and sticky-429 fail-closed handling. It must remain replaceable.
+Current gflights calls may sit behind this boundary with fixed project identity, no proxy, no session/UA rotation, bounded budgets and sticky-429 fail-closed handling. Replacement or an additional access adapter should not change Deal/FTR semantics.
 
-Do not automatically upgrade to upstream `gflights` 0.3.1 merely because it is newer. A small isolated qualification package should compare the pinned client with the current upstream release using the fixed CFR basket and existing guardrails before any dependency change.
+Any newer upstream gflights release must be qualified against the pinned production client before dependency change; newer is not automatically better.
 
-### Layer D — Web/agent recall and verification lane: VERIFY-ONLY by default
+### Layer D — Web/agent lane: VERIFY-ONLY by default
 
-A Web/agent lane is legitimate, but its evidence must be typed.
-
-Use public Google/Trip.com/Skyscanner/Kiwi/Expedia/airline surfaces for:
+Public Google/Trip/Skyscanner/Kiwi/Expedia ordinary-search/airline surfaces can legitimately supply:
 
 - independent recall seeds;
-- current source capability checks;
+- current capability checks;
 - final seller/cross-check evidence;
-- access-blind-spot reporting.
+- blind-spot reporting.
 
-A Web/agent observation does not automatically satisfy canonical backend coverage or formal Deal truth. It may do so only if a later implementation proves exact query identity, current complete price, trusted seller/provenance and repeatable automated observation under the same CFR gates.
+A Web/agent observation cannot silently satisfy canonical backend coverage or formal Deal truth. Promotion requires exact query identity, complete current price, trusted seller/provenance and repeatable authorized observation.
 
-Kiwi's official MCP is worth a bounded follow-up because it is an explicit agent interface with current search results and booking links. Today it is not a Daily Radar replacement: the current exposed contract is narrower than consumer Anywhere/Nomad, and the current Chat environment does not have it installed as an available connector.
+Kiwi's official MCP merits bounded follow-up because it is an explicit agent search interface with booking links. Today it is not a Daily replacement: the currently exposed contract is narrower than consumer Anywhere/Nomad and the current Chat environment has no installed Kiwi connector.
 
 ## 7. Daily Radar conclusion
 
 Target Daily Radar:
 
-1. For each configured Taiwan origin, borrow destination-free Flight Deals/Explore-style discovery rather than enumerate destinations.
-2. Preserve route-relative anomaly as the formal Deal authority when qualified typical-price evidence is present.
-3. Preserve low-price candidates separately even without anomaly truth.
-4. Revalidate serious candidates on exact route/date/current fare.
-5. Delegate flexible-date and multi-city/open-jaw search to mature substrate primitives for competitive endpoints.
-6. Expand geography using substrate-native worldwide results; keep JP/KR/CN as priority slices rather than hard scope boundaries.
-7. Fail closed when the automatic access adapter degrades. External Web recall may surface additional Signals but must not silently convert a failed canonical provider slice into succeeded coverage.
+1. Borrow destination-free Flight Deals/Explore-style discovery per configured Taiwan origin rather than enumerate destination matrices.
+2. Use qualified route-relative anomaly as formal Deal authority.
+3. Retain exact low-price non-Deals separately.
+4. Revalidate competitive candidates on exact route/date/current fare.
+5. Delegate flexible-date and multi-city/open-jaw search to mature substrate primitives.
+6. Expand geography through substrate-native worldwide results; JP/KR/CN remain priority slices, not hard boundaries.
+7. Fail closed when automatic access collapses. Web/app evidence may expose Signals or blind spots but cannot fabricate successful canonical coverage.
 
-No custom fare engine or global brute-force matrix is justified.
+No custom global fare engine or city×date×city matrix passes the BUILD gate.
 
 ## 8. Query / Scoped Mode conclusion
 
@@ -242,132 +228,131 @@ The smallest stable product interface remains:
 
 `availability_windows -> cheap airfare opportunities`
 
-with both `Deal` and `absolute_low_non_deal` outputs preserved.
+with `Deal` and `absolute_low_non_deal` retained separately.
 
-Current RP-03 is a useful bounded interim implementation because it:
+Current RP-03 is a useful **ADAPT interim** because it:
 
-- binds provider calls to supplied windows instead of running the canonical horizon then post-filtering;
-- keeps deterministic per-window coverage;
-- fails closed when a supplied window was not actually attempted;
-- reuses CFR exact revalidation and truth classes.
+- sends provider calls inside supplied windows rather than canonical-horizon post-filtering;
+- records deterministic per-window coverage;
+- fails closed when a window was not actually attempted;
+- reuses CFR exact revalidation/truth classes.
 
-However it is not the final ideal substrate architecture. The current adapter cannot truthfully claim arbitrary-window coverage from Explore/cheapest-date/open-jaw surfaces, so those surfaces are explicitly `not_attempted`.
+It is not the final ideal substrate architecture. The current adapter cannot truthfully claim arbitrary-window coverage from every Explore/flexible/open-jaw surface.
 
-Phase-1 target:
+Target:
 
-- retain the current bounded planner as `ADAPT` interim;
-- define a capability-based `discover_scoped()` contract;
-- run a bounded qualification specifically for native destination-free supplied-window capability across Google current surfaces, Trip.com Anywhere/date-range, Skyscanner Everywhere/date controls, Kiwi Anywhere/date range/agent surface, and Expedia current Deal discovery;
-- prefer `BORROW` if any candidate is automatable/repeatable/TWD-0;
-- do not build a city×date×destination brute-force engine unless that focused qualification proves external substrates insufficient.
+- retain the bounded planner until a better borrowed primitive qualifies;
+- expose a provider-capability `discover_scoped()` contract;
+- run a focused qualification of native destination-free supplied-window behavior across current Google, Trip.com, Skyscanner, Kiwi and ordinary Expedia access paths;
+- prefer BORROW if an option is repeatable, authorized and TWD 0;
+- do not build a destination/date matrix unless qualified external substrates are proven insufficient.
 
-Open-jaw in Scoped Mode should be a delegated completion of selected endpoints when the chosen substrate supports it. It is not a reason to brute-force city pairs.
+Scoped open-jaw should be delegated completion of selected endpoints where supported, not a combinatorial search mandate.
 
 ## 9. Access blind spots
 
-Known examples prove that `Radar cannot access -> fare does not exist` is invalid.
+Known restricted classes include:
 
-Examples:
+- Expedia Flight Deals: official **app-exclusive** anomaly feed;
+- Trip.com member/app discounts;
+- Kiwi app-exclusive offers/features;
+- airline member/subscription/app inventory, including Taiwan-LCC programs.
 
-- Trip.com explicitly promotes member/app-only discounts and offers.
-- Kiwi promotes app-exclusive offers/features.
-- airline programs can expose subscription/member fares; Tigerair Taiwan's member/subscription products are an example of a Taiwan-LCC restricted fare class.
-- OTA/airline seller inventory can differ by logged-in state, market, payment method, loyalty status or app channel.
+Truth rules:
 
-Target semantics:
+- formal Deals require observable/reproducible evidence under CFR's trust contract;
+- exact absolute-low candidates require the same current/exact discipline, minus anomaly qualification;
+- known restricted classes may be recorded as `restricted_known` blind spots;
+- CFR never invents the inaccessible fare price;
+- CFR never describes the best public observed fare as `the cheapest fare that exists` unless such a stronger claim is actually supportable;
+- restricted hints may be Signals, never formal Deals or exact absolute-low candidates without authorized exact evidence.
 
-- CFR may publish a formal Deal only from an observable and reproducible fare under its current trust contract.
-- A known restricted fare class should be recorded as `restricted_known` / coverage blind spot with source identity when useful.
-- CFR must not invent the restricted price if it cannot observe it.
-- CFR must not report the public fare as `the cheapest fare that exists`; it may only report the cheapest fare observed/revalidated in the attempted public/authorized coverage.
-- Restricted-channel hints may become Signals, but not formal Deals or exact absolute-low candidates without exact authorized evidence.
-
-## 10. Keep / retire / simplify map
+## 10. Keep / retire / simplify
 
 ### KEEP
 
-- anomaly-first Deal semantics and destination-airport normalization;
+- anomaly-first Deal semantics;
 - exact/revalidated complete-airfare gate;
 - separate bounded absolute-low non-Deal producer;
 - open-jaw/different Taiwan gateway route-shape semantics;
 - immutable Git-backed price/run/provenance evidence;
 - provider health and slice-faithful attempted coverage;
-- sticky-429 fail-closed circuit semantics;
+- sticky-429 fail-closed semantics;
 - canonical/scoped/recovery identity isolation;
 - CFR→FTR schema/checksum/freshness/repair contract.
 
 ### KEEP BUT DEMOTE / ADAPT
 
-- `gflights`: keep as current machine adapter, not as sacred architecture or sole durable substrate; qualify current upstream separately.
-- own price history: keep for provenance, rolling lows, supplemental/fallback anomaly; do not expand into a primary custom normal-price engine.
-- public Web intelligence: keep only as typed Signal/seed/cross-check evidence.
-- source router: keep as a thin capability router; remove brand/legacy pipeline assumptions over time.
+- `gflights`: current machine adapter, not sacred architecture or sole durable substrate;
+- own price history: provenance/rolling lows/supplemental fallback, not primary normal-price engine;
+- source router: thin capability router, not a reason to maintain separate custom fare engines;
+- public Web intelligence: typed Signal/seed/cross-check only.
 
 ### SIMPLIFY
 
-- market-specific search algorithms: JP/KR/CN remain priority slices, not separate mandatory fare engines.
-- fixed-watch crawler program: retain only low-maintenance high-signal public sources; failures do not define airfare coverage.
-- legacy near-term/absolute presentation machinery: preserve useful absolute-low views where they serve users/FTR, but do not mix them into anomaly Deal ranking.
-- open-jaw construction: delegate to substrate multi-city where available instead of custom combinatorial construction.
+- JP/KR/CN remain priority slices but need not have separate search algorithms;
+- fixed-watch crawler program should retain only low-maintenance/high-signal public sources;
+- absolute-low display remains separate from anomaly ranking;
+- open-jaw construction should use substrate multi-city when available.
 
 ### RETIRE / DO NOT REVIVE
 
 - mandatory outbound-one-way-first architecture;
 - unbounded city×date×city brute force;
 - `trvl` as production core;
-- silent/executable fallback claims for providers not actually invokable;
-- any anti-bot path requiring CAPTCHA bypass, stealth fingerprinting, proxy rotation, residential proxy, rotating identity or session evasion;
-- assumption that Asia/Oceania is the desired permanent product ceiling;
+- claims of fallback providers that are not actually invokable;
+- CAPTCHA bypass, stealth fingerprinting, proxy rotation, residential proxy, rotating identity/session evasion;
+- permanent Asia/Oceania product ceiling;
 - assumption that inaccessible app/member fares do not exist.
 
-### VERIFY-ONLY / CANDIDATES, NOT COMMITMENTS
+### VERIFY-ONLY / CANDIDATES
 
-- Expedia public Flight Deals as a possible second anomaly/recall surface: current public cards now expose typical-price discount language, but Taiwan-origin repeatability must be measured before promotion.
-- `fli` as an exact/flexible comparator.
-- Trip.com / Skyscanner / Kiwi consumer surfaces as recall/scoped/final cross-check lanes.
-- Kiwi MCP as an agent-native bounded search candidate.
-- Skyscanner Live only if an approved key ever becomes available without violating the owner-approved cost/credential policy.
-- airline official pages as final seller/existence verification.
+- Trip.com / Skyscanner / Kiwi consumer surfaces for recall/scoped/final cross-check;
+- Kiwi MCP as agent-native bounded search candidate;
+- `fli` as exact/flexible comparator;
+- airline public seller pages as final existence verification;
+- Expedia public ordinary Flights as cross-check only; **Expedia Flight Deals app is a restricted benchmark/blind spot, not a current public fallback**;
+- Skyscanner Live only if approved access becomes available without violating owner cost policy.
 
 ## 11. Sustainable cost conclusion
 
-The target architecture can remain recurring TWD 0 only if production depends on public/free borrowed surfaces plus disposable compute already allowed by CFR.
+Recurring TWD 0 remains achievable only if production relies on qualified public/free borrowed surfaces plus already-allowed disposable compute.
 
-Do not adopt as unattended Daily dependencies without owner approval:
+Do not adopt as unattended Daily core without owner approval:
 
-- Skyscanner API: requires partnership/API-key approval and is not currently available as a guaranteed free production dependency.
-- Kiwi Tequila: new partnerships are invitation-only under current official policy.
-- Expedia partner flight connectivity: not a demonstrated self-service free daily Radar API.
-- Duffel: requires credentials and explicitly charges excess search above a 1500:1 search-to-book ratio, which is structurally mismatched with an autonomous discovery radar.
-- paid search-API wrappers/proxies: paid resource gate and do not solve product truth by themselves.
+- Skyscanner API: partnership/API-key approval gate;
+- Kiwi Tequila/new B2B access: invitation/partnership gate;
+- Expedia partner flight connectivity: not a demonstrated self-service free CFR dependency;
+- Duffel: credentialed and structurally exposes excess-search fees above a 1500:1 search-to-book ratio;
+- paid search wrappers, proxies or scraping APIs.
 
-## 12. CFR -> FTR implications
+## 12. CFR → FTR implications
 
-The existing handoff architecture is largely correct and should be preserved:
+The existing handoff architecture is largely correct and survives the reassessment:
 
-- FTR consumes exact airfare opportunities, not CFR's internal search implementation.
-- Formal Deals and bounded exact absolute-low non-Deals remain distinct candidate kinds.
-- FTR must not promote generic Signals.
-- exact dates, Taiwan gateways, destination route shape, complete airfare, observation time and evidence/provenance remain required.
-- provider/surface/origin/market coverage remains execution truth, not candidate count.
+- FTR consumes exact airfare opportunities, not CFR's search implementation;
+- formal `deal` and exact `absolute_low_non_deal` remain separate candidate kinds;
+- generic Signals never silently enter the exact low-price set;
+- exact dates, Taiwan gateways, destination route shape, complete fare, observation time and provenance remain required;
+- provider/surface/origin/market coverage is execution truth, never candidate count.
 
-Required future-compatible additions are small:
+Future-compatible additions should remain small:
 
-1. expose geographic/attempted coverage without assuming Asia/Oceania is exhaustive;
-2. optionally expose typed access-blind-spot metadata so FTR knows a route/fare class may be restricted/unobservable;
-3. keep provider identity abstract enough that replacing `gflights` or adding an agent lane does not change the consumer contract;
-4. Scoped snapshots should retain the same window-level attempted/not-attempted truth when a new substrate is plugged in.
+1. geographic attempted coverage must not assume Asia/Oceania exhaustiveness;
+2. typed access-blind-spot metadata may tell FTR that restricted/unobservable fare classes exist without inventing prices;
+3. provider identity stays abstract enough that replacing gflights or adding a qualified agent lane does not alter consumer semantics;
+4. Scoped snapshots retain per-window attempted/not-attempted truth with any new adapter.
 
-No FTR Phase-2 work is required or authorized by this conclusion.
+No FTR Phase 2 work is authorized by this document.
 
-## 13. BUILD / BORROW decision
+## 13. BORROW / ADAPT / VERIFY-ONLY / BUILD
 
 ### BORROW
 
 - destination-free discovery
 - worldwide broad discovery
 - typical-price/anomaly context
-- fare calendars/flexible dates
+- flexible-date/fare-calendar search
 - exact airfare shopping
 - open-jaw/multi-city search
 - seller/deeplink handoff
@@ -375,22 +360,22 @@ No FTR Phase-2 work is required or authorized by this conclusion.
 ### ADAPT
 
 - thin capability router and normalized adapters
-- current `gflights` adapter with strict no-evasion guardrails and reliability accounting
-- current bounded Scoped planner until a native arbitrary-window substrate is qualified
+- current gflights adapter under strict no-evasion and health accounting
+- current bounded Scoped planner until a native arbitrary-window substrate qualifies
 - source-specific normalization into CFR evidence types
 
 ### VERIFY-ONLY
 
 - public OTA/metasearch/airline Web surfaces
-- Expedia's newly observed anomaly-like public deal cards pending Taiwan repeatability
-- Trip.com / Skyscanner / Kiwi for cross-source recall and scoped research
-- Kiwi MCP pending connector availability and capability qualification
+- Trip.com / Skyscanner / Kiwi recall and scoped research
+- Kiwi MCP pending connector/capability qualification
+- Expedia public ordinary Flights; Expedia app-only Flight Deals as restricted benchmark
 - `fli` comparator
 - airline seller surfaces
 
 ### BUILD
 
-Only CFR-specific product truth and orchestration:
+Only CFR-specific product truth/orchestration:
 
 - anomaly Deal semantics
 - absolute-low non-Deal semantics
@@ -400,82 +385,76 @@ Only CFR-specific product truth and orchestration:
 - FTR handoff
 - bounded fail-closed orchestration
 
-A custom airfare search engine or brute-force fare floor does **not** pass the BUILD gate today.
+A custom airfare search engine or brute-force fare floor does **not** pass BUILD today.
 
-## 14. Product Intent delta separated from implementation
+## 14. Product Intent change separated from implementation
 
-Current Product Intent still encodes Asia/Oceania as a hard scope and does not make access-blind-spot semantics explicit enough for the clarified product direction.
+The accepted Phase-1 Product Intent delta is:
 
-A separate Product Intent-only change should:
+1. Daily Radar and Query/Scoped are explicit first-class CFR modes.
+2. Asia/Oceania is no longer a permanent product ceiling; worldwide substrate-native discovery is desired when qualified/sustainable, with JP/KR/CN still priority.
+3. Broader substrate capability does not imply exhaustive global coverage.
+4. Access blind spots are explicit: restricted/member/app/login fares may exist even when CFR cannot observe or reproduce them.
+5. Search implementation is not sacred; mature external commodity capability is preferred.
+6. Anomaly-first Deal, separate exact absolute-low, open-jaw, 1-adult economy normalization, exact/reproducible trust and TWD-0 default remain unchanged.
 
-1. make Daily Radar and Query/Scoped search explicit first-class CFR modes;
-2. replace the permanent Asia/Oceania ceiling with worldwide discovery when qualified sustainable substrates make it practical, while retaining Japan/Korea/China priority;
-3. state that broader capability never implies exhaustive global fare coverage;
-4. explicitly state the access-blind-spot rule: restricted/member/app/login fare classes may exist even when CFR cannot automatically observe or reproduce them;
-5. preserve anomaly-first Deal truth, separate absolute-low non-Deals, open-jaw, 1-adult economy normalization, exact/reproducible trust, and TWD-0 default production.
-
-Runtime/source-routing changes must follow as separate atomic implementation packages after the Product Intent change is merged.
+Runtime / `flight-radar.yaml` changes are separate follow-up implementation packages.
 
 ## 15. Issue #51 disposition
 
-Issue #51 should be closed as **superseded by #56 / this Phase-1 conclusion**, not retained as the architecture contract.
+Issue #51 is **superseded by #56 / this Phase-1 conclusion** and should close rather than remain the architecture contract.
 
-Its surviving ideas are redistributed as follows:
+Its surviving work maps as follows:
 
-- SR-01 source census: absorbed and superseded by Phase-1 evidence.
-- SR-02 custom brute-force producer: rejected for now under BUILD-vs-BORROW; reopen only if focused scoped/recall qualification proves mature borrowed substrates insufficient.
-- SR-03 curated intelligence: retained only as a simplified optional Signal/seed lane.
-- SR-04 executable redundancy: survives as a narrow future access-adapter qualification/integration package, not as permission to add an arbitrary second provider.
+- SR-01 source census: absorbed/superseded by Phase-1 evidence.
+- SR-02 custom brute-force producer: rejected for now under BUILD-vs-BORROW; reconsider only if focused borrowed-substrate qualification fails.
+- SR-03 curated intelligence: retain only as simplified optional Signal/seed work.
+- SR-04 executable redundancy: retain only as a narrow future access-adapter qualification/integration package.
 
-## 16. Remaining blockers and gates
+## 16. Remaining blockers
 
 ### Technical / researchable
 
-- qualify current upstream `gflights` release versus pinned 0.3.0 under the fixed CFR basket and no-evasion rules;
-- qualify whether Expedia's current public Flight Deals anomaly cards are repeatable for Taiwan-origin discovery;
-- focused Scoped native-window bakeoff across Google/Trip/Skyscanner/Kiwi/Expedia access paths;
-- determine whether any agent-native path can produce repeatable exact evidence that should count as an execution plane rather than seed-only evidence.
+- qualify current upstream gflights versus the pinned client under CFR fixed-UA/no-proxy/no-evasion rules;
+- focused Scoped native-window bakeoff across qualified public/agent surfaces;
+- qualify whether any agent-native path can provide repeatable exact evidence that legitimately counts as an execution lane;
+- identify a genuinely public/repeatable second anomaly source, if one exists; Expedia app-only Flight Deals does not satisfy that today.
 
 ### Inaccessible substrate
 
-- app-only/member-only/login-only fare classes where no authorized automated public observation exists.
+- app-only/member-only/login-only fare classes without authorized automated observation.
 
-### Credential / human-action gate
+### Credential / human-action gates
 
-- Skyscanner API partnership/key;
-- Kiwi custom MCP/connector installation in the current Chat environment if later chosen for qualification;
-- any airline/OTA member login needed to observe restricted inventory.
+- Skyscanner partnership/key;
+- Kiwi custom MCP/connector setup if later chosen for direct qualification;
+- airline/OTA member login where restricted inventory is intentionally being investigated.
 
-These are not required to accept the Phase-1 architecture.
+None is required for Phase-1 acceptance.
 
-### Paid-resource gate
+### Paid-resource gates
 
 - Duffel at radar-scale search ratios;
 - paid search wrappers/proxies/APIs;
 - any production API without a proven sustainable free quota.
 
-### Product-intent decision
+### Genuine unresolved product-intent decision
 
-None remains after the 2026-08-21 owner clarifications. The required Product Intent edit is an explicit durability update, not a request for another owner decision.
+None after the 2026-08-21 owner clarifications.
 
 ## 17. Recommended atomic follow-ups
 
-After the Product Intent-only change is independently audited and merged:
-
-1. **CFR-SR-A — capability-router / scope convergence**
-   - make machine SSOT geographic scope and provider-capability semantics match worldwide substrate-native discovery without claiming exhaustiveness;
-   - keep current runtime behavior until each capability is qualified.
+1. **CFR-SR-A — machine scope / capability-router convergence**
+   - align machine SSOT with worldwide substrate-native intent and truthful attempted coverage; no global brute force.
 2. **CFR-SR-B — gflights current-release + access-reliability qualification**
-   - compare pinned 0.3.0 with current upstream under fixed UA/no-proxy/no-evasion and fixed basket;
-   - dependency change only if evidence justifies it.
-3. **CFR-SR-C — Scoped native-window borrow bakeoff**
-   - compare externally supplied-window primitives; no brute force implementation.
-4. **CFR-SR-D — second anomaly/recall access qualification**
-   - focus first on Expedia public Flight Deals and other surfaces that now expose typical-price context;
-   - integrate only if repeatable/current/trusted and TWD-0.
-5. **CFR-SR-E — access-blind-spot evidence/coverage schema**
-   - add typed restricted/unobservable coverage metadata without fabricating prices or weakening Deal truth.
+   - fixed basket, fixed UA, no proxy/evasion; dependency change only if evidence supports it.
+3. **CFR-SR-C — Scoped native-window BORROW bakeoff**
+   - compare external supplied-window primitives before custom implementation.
+4. **CFR-SR-D — executable access redundancy qualification**
+   - seek a real authorized TWD-0 second execution path; do not count app-only Expedia Flight Deals as one.
+5. **CFR-SR-E — access-blind-spot evidence schema**
+   - add typed restricted/unobservable coverage metadata without fabricating fares.
 6. **CFR-SR-F — public-intelligence simplification**
-   - remove low-value fixed-watch/crawler complexity that does not improve Deal truth or recall enough to justify maintenance.
+   - retire low-value crawler/fixed-watch complexity that does not improve Deal truth or recall enough to justify maintenance.
 
 Implementation must not be bundled into this research conclusion.
