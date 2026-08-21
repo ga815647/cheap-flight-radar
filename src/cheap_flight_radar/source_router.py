@@ -12,6 +12,7 @@ KNOWN_ROUTE_WEB_STAGES = {"outbound_probe", "return_expansion", "round_trip_benc
 KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client", "agent_mcp_remote"}
 CANONICAL_BACKEND_EXECUTION_PLANE = "canonical_backend"
 INTEGRATED_PROVIDER_STATE = "integrated"
+CANONICAL_AUTOMATIC_FALLBACK_PROVIDERS = {"kiwi_mcp_exact"}
 
 
 def _unavailable(reason: str, state: str = "unavailable") -> RoutePlan:
@@ -79,14 +80,12 @@ def build_source_plan(
     A destination-bearing ``SearchRequest(search_stage="broad_discovery")`` is
     therefore not valid evidence of destination-free origin coverage.
 
-    RP-07 makes ``RoutePlan.entries`` an execution contract, not a research
-    shortlist. External Web recall surfaces and researched-but-not-integrated
-    providers remain in SSOT metadata. The current canonical runtime has no
-    fallback dispatcher, so metadata alone can never create a second executable
-    plan entry; a future bounded executor package must add that capability first.
-    Legacy ``fallback_provider`` drift fails closed instead of reviving a fake
-    fallback. A qualified ``automatic_executable_fallback`` may create a second
-    RoutePlan entry only when that provider is integrated in the canonical backend.
+    ``RoutePlan.entries`` is an execution contract, not a research shortlist.
+    External Web recall surfaces and researched-but-not-integrated providers
+    remain SSOT metadata only. Legacy ``fallback_provider`` drift fails closed.
+    A qualified ``automatic_executable_fallback`` creates a second plan entry
+    only when the canonical runtime has an explicit dispatcher for that provider
+    and the request shape is within its qualified capability.
     """
 
     routing = policy.get("source_routing") or {}
@@ -105,6 +104,7 @@ def build_source_plan(
             provider_registry=provider_registry,
             provider_states=provider_states,
             reason=f"selected by SSOT for destination-free {request.origin} origin sweep",
+            allow_fallback=False,
         )
 
     if request.search_stage == "broad_discovery":
@@ -149,7 +149,7 @@ def build_source_plan(
             if request.search_stage in KNOWN_ROUTE_WEB_STAGES
             else f"selected by SSOT for {request.profile}/{request.search_stage}"
         ),
-        allow_fallback=not request.open_jaw_required,
+        allow_fallback=bool(request.return_date and not request.open_jaw_required),
     )
 
 
@@ -194,6 +194,11 @@ def _plan_stage(
         return RoutePlan(entries=tuple(entries), coverage_state="planned")
 
     fallback_provider = str(fallback)
+    if fallback_provider not in CANONICAL_AUTOMATIC_FALLBACK_PROVIDERS:
+        return _unavailable(
+            f"{fallback_provider} has no canonical automatic fallback executor; provider metadata alone cannot create a RoutePlan entry",
+            state="invalid_contract",
+        )
     if not _canonical_backend_executable(fallback_provider, provider_registry):
         return _unavailable(
             f"{fallback_provider} is configured as automatic fallback but is not an integrated executable provider",
