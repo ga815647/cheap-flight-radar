@@ -6,6 +6,35 @@ project:
     and then by current complete airfare, while retaining weaker promotional observations separately as Signals.
   currency: TWD
   timezone: Asia/Taipei
+capability_state:
+  ssot_semantics:
+    product_intent_authority: PRODUCT_INTENT.md
+    operational_policy_authority: flight-radar.yaml
+    current_runtime_fields_do_not_define_product_ceiling: true
+    accepted_target_capability_does_not_authorize_runtime_execution: true
+    legacy_search_contracts_are_product_intent: false
+    search_paths_and_provider_adapters_are_replaceable_implementation: true
+  current_runtime:
+    destination_scope: asia_oceania
+    destination_scope_semantics: implemented_filter_preserved_until_separate_qualification
+    destination_free_discovery_adapter: gflights_google_flight_deals
+    exact_flexible_open_jaw_adapter: gflights_google_exact
+    automatic_executable_fallback: none
+  accepted_qualified_future:
+    destination_scope: substrate_native_worldwide_non_exhaustive
+    priority_markets:
+    - JP
+    - KR
+    - CN
+    commodity_search: borrow_qualified_external_substrate
+    provider_access_adapters: replaceable_after_qualification
+    current_runtime_expansion: forbidden_without_separate_qualification
+  qualification_gates:
+  - CFR-SR-B_gflights_qualification
+  - CFR-SR-C_scoped_native_window_BORROW_bakeoff
+  - CFR-SR-D_executable_TWD0_redundancy
+  - CFR-SR-E_blind_spot_schema
+  - CFR-SR-F_crawler_simplification
 search:
   horizon_days: 120
   origin_country: TW
