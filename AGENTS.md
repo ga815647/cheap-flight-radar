@@ -8,6 +8,7 @@ This file is the required first entry for any ChatGPT/Codex/agent session workin
 - `flight-radar.yaml` is the **single machine-readable operational source of truth (SSOT)**. It records current implemented travel-search policy and may also record accepted qualified-future capability only when that capability is explicitly state-labelled. A target/future entry does not authorize runtime execution or broader coverage until its qualification gate is completed and the current-runtime state is changed.
 - The operational SSOT must evolve to conform to `PRODUCT_INTENT.md`; implementation details must not silently redefine product intent.
 - When `PRODUCT_INTENT.md` and current `flight-radar.yaml` conflict, treat that as an explicit policy inconsistency to reconcile in a policy-change branch/PR. Do not silently reinterpret the product intent to preserve legacy behavior, and do not silently bypass the current SSOT at runtime before the policy change is made.
+- Chat/Web consumer travel-surface execution policy is owned by `flight-radar.yaml` under `source_routing.chat_web_execution_contract`; this file only points to that authority.
 - `docs/*.md` explains reasoning, evidence, and edge cases behind current policy.
 - Code implements policy; code must not silently redefine policy.
 - Chat history, prompts, and external notes are not authoritative when they conflict with the durable repository sources above.
