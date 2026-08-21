@@ -719,7 +719,7 @@ class ScopedSSOTDriftTest(unittest.TestCase):
         self.assertEqual(contract["mode"], "scoped_search")
         self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["enabled"])
         self.assertEqual(policy["ftr_handoff"]["canonical_activation"]["activated_by_package"], "RP-04")
-        self.assertFalse(policy["ftr_handoff"]["canonical_activation"]["readiness"]["final_ftr_readiness"])
+        self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["readiness"]["final_ftr_readiness"])
         self.assertEqual(contract["acquisition"]["broad_horizon_then_post_filter"], "forbidden")
         self.assertFalse(contract["bounded_execution"]["search_horizon_days_is_scoped_budget"])
         self.assertEqual(

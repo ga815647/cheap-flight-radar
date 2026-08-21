@@ -145,9 +145,9 @@ def validate_absolute_low_policy(policy: Mapping[str, Any]) -> Mapping[str, Any]
     active_repair = _mapping(canonical.get("active_repair"))
     if canonical.get("enabled") is not True or str(canonical.get("activated_by_package") or "") != "RP-04":
         raise FTRAbsoluteLowPolicyError("RP-04 canonical FTR activation contract drifted")
-    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not False:
+    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not True:
         raise FTRAbsoluteLowPolicyError("RP-04 readiness boundary drifted")
-    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "pending":
+    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "implemented_active":
         raise FTRAbsoluteLowPolicyError("RP-05 recovery boundary drifted")
     return producer
 
