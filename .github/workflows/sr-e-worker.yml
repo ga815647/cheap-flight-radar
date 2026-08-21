@@ -1,0 +1,305 @@
+name: SR-E blind-spot worker
+
+on:
+  push:
+    branches:
+      - feat/cfr-sr-e-access-blind-spots
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cfr-sr-e-access-blind-spots
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Implement bounded SR-E schema
+        run: |
+          cat > src/cheap_flight_radar/access_blind_spots.py <<'PY'
+          """Typed CFR access-blind-spot coverage evidence.
+
+          Blind spots describe known access limitations.  They never manufacture a
+          hidden fare, price, route, date or formal candidate.  The initial registry
+          is policy-backed static evidence; future collectors may add observations
+          only after preserving the same typed distinctions.
+          """
+          from __future__ import annotations
+
+          from typing import Any, Mapping
+
+
+          VALID_FARE_EXISTENCE = frozenset({"known_exists", "unknown"})
+          VALID_SURFACE_CLASS_EXISTENCE = frozenset({"known", "unknown"})
+          VALID_VISIBILITY = frozenset({"public", "restricted", "unknown"})
+          VALID_ACCESS = frozenset({"available", "unavailable", "unknown"})
+          VALID_TRUTH = frozenset({"eligible", "ineligible", "unknown"})
+          VALID_PRICE_OBSERVABILITY = frozenset({"available", "unavailable", "unknown"})
+          FORBIDDEN_HIDDEN_PRICE_KEYS = frozenset({
+              "price", "price_twd", "fare", "fare_twd", "amount", "current_price_twd",
+              "typical_price_twd", "discount_percent",
+          })
+
+
+          class AccessBlindSpotError(ValueError):
+              """Raised when blind-spot evidence would blur or fabricate access truth."""
+
+
+          def _enum(item: Mapping[str, Any], key: str, allowed: frozenset[str]) -> str:
+              value = str(item.get(key) or "")
+              if value not in allowed:
+                  raise AccessBlindSpotError(f"{key} must be one of {sorted(allowed)}")
+              return value
+
+
+          def normalize_access_blind_spots(policy: Mapping[str, Any]) -> Mapping[str, Any]:
+              config = policy.get("access_blind_spots") or {}
+              schema_version = int(config.get("schema_version", 0))
+              if schema_version != 1:
+                  raise AccessBlindSpotError("access_blind_spots.schema_version must be 1")
+              registry = config.get("registry") or []
+              if not isinstance(registry, list):
+                  raise AccessBlindSpotError("access_blind_spots.registry must be a list")
+
+              normalized: list[dict[str, Any]] = []
+              seen: set[str] = set()
+              for raw in registry:
+                  if not isinstance(raw, Mapping):
+                      raise AccessBlindSpotError("blind-spot registry entries must be mappings")
+                  spot_id = str(raw.get("id") or "")
+                  if not spot_id or spot_id in seen:
+                      raise AccessBlindSpotError("blind-spot id must be unique and non-empty")
+                  seen.add(spot_id)
+                  forbidden = FORBIDDEN_HIDDEN_PRICE_KEYS.intersection(raw)
+                  if forbidden:
+                      raise AccessBlindSpotError(
+                          f"blind spot {spot_id} must not contain hidden fare/price fields: {sorted(forbidden)}"
+                      )
+                  source_class = str(raw.get("source_class") or "")
+                  access_gate = str(raw.get("access_gate") or "")
+                  evidence_reference = str(raw.get("evidence_reference") or "")
+                  if not source_class or not access_gate or not evidence_reference:
+                      raise AccessBlindSpotError(
+                          f"blind spot {spot_id} requires source_class, access_gate and evidence_reference"
+                      )
+                  item = {
+                      "id": spot_id,
+                      "source_class": source_class,
+                      "surface_class_existence": _enum(raw, "surface_class_existence", VALID_SURFACE_CLASS_EXISTENCE),
+                      "specific_fare_existence": _enum(raw, "specific_fare_existence", VALID_FARE_EXISTENCE),
+                      "visibility": _enum(raw, "visibility", VALID_VISIBILITY),
+                      "access_gate": access_gate,
+                      "automatic_observation": _enum(raw, "automatic_observation", VALID_ACCESS),
+                      "exact_reproducibility": _enum(raw, "exact_reproducibility", VALID_ACCESS),
+                      "formal_truth_eligibility": _enum(raw, "formal_truth_eligibility", VALID_TRUTH),
+                      "price_observability": _enum(raw, "price_observability", VALID_PRICE_OBSERVABILITY),
+                      "evidence_reference": evidence_reference,
+                      "coverage_semantics": str(raw.get("coverage_semantics") or "known_access_blind_spot_not_market_absence"),
+                  }
+                  if (
+                      item["price_observability"] != "available"
+                      and item["formal_truth_eligibility"] == "eligible"
+                  ):
+                      raise AccessBlindSpotError(
+                          f"blind spot {spot_id} cannot be formal truth when exact price is not observable"
+                      )
+                  if (
+                      item["specific_fare_existence"] == "unknown"
+                      and item["coverage_semantics"] == "fare_exists"
+                  ):
+                      raise AccessBlindSpotError(
+                          f"blind spot {spot_id} cannot claim fare existence while existence is unknown"
+                      )
+                  normalized.append(item)
+
+              normalized.sort(key=lambda item: item["id"])
+              return {
+                  "schema_version": 1,
+                  "health_role": "informational_non_required",
+                  "affects_provider_health": False,
+                  "items": normalized,
+              }
+          PY
+
+          cat > docs/access-blind-spots-2026-08-21.md <<'MD'
+          # CFR-SR-E — typed access-blind-spot evidence (2026-08-21)
+
+          ## Purpose
+
+          CFR must never convert an access limitation into a market claim. `Radar cannot access a fare` does not mean `the fare does not exist`, and a known restricted surface does not prove that a particular hidden fare currently exists.
+
+          SR-E adds a small CFR-side coverage schema that keeps those propositions separate without creating prices or candidates.
+
+          ## Typed distinctions
+
+          Each registered blind spot records independently:
+
+          - `surface_class_existence`: whether the restricted surface/source class itself is known;
+          - `specific_fare_existence`: whether a particular fare is actually known to exist, or remains unknown;
+          - `visibility`: public/restricted/unknown;
+          - `access_gate`: the restriction class such as app-only or member login;
+          - `automatic_observation`: whether CFR can automatically observe the fare class;
+          - `exact_reproducibility`: whether CFR can reproduce an exact fare;
+          - `formal_truth_eligibility`: whether the evidence may become Deal/exact absolute-low truth;
+          - `price_observability`: whether a current price is observable;
+          - `evidence_reference`: durable provenance for why the blind spot is known.
+
+          Hidden price fields are forbidden in blind-spot registry entries. If the price is inaccessible, the schema carries no amount.
+
+          ## Initial evidence-backed registry entry
+
+          Phase-1 Travel Stack Reassessment established Expedia's app-only Flight Deals surface as a restricted benchmark/blind spot rather than a public automatic fallback. SR-E therefore registers only the **surface class**, with:
+
+          - surface class: known;
+          - specific current fare existence: unknown;
+          - visibility: restricted;
+          - access gate: app-only;
+          - automatic observation: unavailable;
+          - exact reproducibility: unavailable;
+          - formal truth eligibility: ineligible;
+          - price observability: unavailable.
+
+          This entry does not claim any Expedia app fare exists for a specific route/date and contains no hidden price.
+
+          ## Runtime behavior
+
+          Canonical runs serialize the normalized registry under `coverage.access_blind_spots`. Because the current registry is informational and no restricted surface is a required coverage slice, it does not change provider health, Deal count, candidate selection, or acquisition behavior.
+
+          The immutable publication/run evidence already serializes `coverage`, so no parallel artifact or new FTR schema is required. SR-E changes no FTR code and does not promote blind spots into Signals, Deals or exact absolute-low candidates.
+          MD
+
+          cat > tests/test_sr_e_access_blind_spots.py <<'PY'
+          from __future__ import annotations
+
+          from copy import deepcopy
+          from pathlib import Path
+          import unittest
+
+          import yaml
+
+          from cheap_flight_radar.access_blind_spots import AccessBlindSpotError, normalize_access_blind_spots
+          from cheap_flight_radar.production_radar import RadarRunResult, build_run_artifacts
+          from cheap_flight_radar.production_runtime import attach_access_blind_spot_truth
+
+
+          ROOT = Path(__file__).resolve().parents[1]
+
+
+          class SREAccessBlindSpotTests(unittest.TestCase):
+              @classmethod
+              def setUpClass(cls):
+                  cls.policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
+
+              def base_result(self):
+                  return RadarRunResult(
+                      radar_run_id="production-radar-20260821T230000+0800",
+                      run_at="2026-08-21T23:00:00+08:00",
+                      deals=(),
+                      signals=(),
+                      coverage={"provider_health": {"status": "healthy"}},
+                      provider_failures=(),
+                  )
+
+              def test_initial_registry_separates_surface_from_specific_fare_existence(self):
+                  truth = normalize_access_blind_spots(self.policy)
+                  self.assertEqual(truth["schema_version"], 1)
+                  self.assertFalse(truth["affects_provider_health"])
+                  self.assertEqual(len(truth["items"]), 1)
+                  item = truth["items"][0]
+                  self.assertEqual(item["id"], "expedia_flight_deals_app")
+                  self.assertEqual(item["surface_class_existence"], "known")
+                  self.assertEqual(item["specific_fare_existence"], "unknown")
+                  self.assertEqual(item["visibility"], "restricted")
+                  self.assertEqual(item["automatic_observation"], "unavailable")
+                  self.assertEqual(item["exact_reproducibility"], "unavailable")
+                  self.assertEqual(item["formal_truth_eligibility"], "ineligible")
+                  self.assertEqual(item["price_observability"], "unavailable")
+
+              def test_inaccessible_registry_cannot_contain_hidden_price(self):
+                  policy = deepcopy(self.policy)
+                  policy["access_blind_spots"]["registry"][0]["current_price_twd"] = 1234
+                  with self.assertRaisesRegex(AccessBlindSpotError, "must not contain hidden fare/price"):
+                      normalize_access_blind_spots(policy)
+
+              def test_unknown_fare_existence_cannot_be_relabelled_as_known_fare(self):
+                  policy = deepcopy(self.policy)
+                  policy["access_blind_spots"]["registry"][0]["coverage_semantics"] = "fare_exists"
+                  with self.assertRaisesRegex(AccessBlindSpotError, "cannot claim fare existence"):
+                      normalize_access_blind_spots(policy)
+
+              def test_attached_blind_spots_do_not_change_candidates_or_health(self):
+                  base = self.base_result()
+                  result = attach_access_blind_spot_truth(base, policy=self.policy)
+                  self.assertEqual(result.deals, ())
+                  self.assertEqual(result.signals, ())
+                  self.assertEqual(result.exact_non_deal_candidates, ())
+                  self.assertEqual(result.ftr_absolute_low_non_deals, ())
+                  self.assertEqual(result.provider_failures, ())
+                  self.assertEqual(result.coverage["provider_health"], base.coverage["provider_health"])
+                  self.assertEqual(result.coverage["access_blind_spots"]["health_role"], "informational_non_required")
+
+              def test_immutable_publication_evidence_carries_typed_coverage_without_price(self):
+                  result = attach_access_blind_spot_truth(self.base_result(), policy=self.policy)
+                  _, manifest = build_run_artifacts(result, policy=self.policy)
+                  blind = manifest["coverage"]["access_blind_spots"]
+                  raw = repr(blind).lower()
+                  self.assertIn("expedia_flight_deals_app", raw)
+                  self.assertNotIn("current_price_twd", raw)
+                  self.assertNotIn("price_twd", raw)
+                  self.assertFalse(blind["affects_provider_health"])
+
+              def test_sr_e_does_not_modify_ftr_contract_files(self):
+                  doc = (ROOT / "docs" / "access-blind-spots-2026-08-21.md").read_text(encoding="utf-8")
+                  self.assertIn("changes no FTR code", doc)
+                  self.assertIn("contains no hidden price", doc)
+
+
+          if __name__ == "__main__":
+              unittest.main()
+          PY
+
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path('src/cheap_flight_radar/production_runtime.py')
+          text = runtime.read_text(encoding='utf-8')
+          old = 'from .airfare import AirfareRecord, ProviderResult, is_international_asia_oceania\n'
+          new = old + 'from .access_blind_spots import normalize_access_blind_spots\n'
+          if text.count(old) != 1:
+              raise SystemExit('production_runtime airfare import anchor drift')
+          text = text.replace(old, new)
+          anchor = '\n\nasync def run_once(\n'
+          helper = '''\n\ndef attach_access_blind_spot_truth(\n    result: RadarRunResult,\n    *,\n    policy: Mapping[str, Any],\n) -> RadarRunResult:\n    """Persist typed known access limitations without altering health/candidates."""\n\n    coverage = dict(result.coverage)\n    coverage["access_blind_spots"] = normalize_access_blind_spots(policy)\n    return RadarRunResult(\n        radar_run_id=result.radar_run_id,\n        run_at=result.run_at,\n        deals=result.deals,\n        signals=result.signals,\n        coverage=coverage,\n        provider_failures=result.provider_failures,\n        exact_non_deal_candidates=result.exact_non_deal_candidates,\n        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,\n    )\n'''
+          if text.count(anchor) != 1:
+              raise SystemExit('production_runtime run_once anchor drift')
+          text = text.replace(anchor, helper + anchor)
+          old_return = '    selected = apply_absolute_low_selection(converged, policy=policy)\n    return attach_access_redundancy_truth(selected, adapter=adapter)\n'
+          new_return = '    selected = apply_absolute_low_selection(converged, policy=policy)\n    redundancy = attach_access_redundancy_truth(selected, adapter=adapter)\n    return attach_access_blind_spot_truth(redundancy, policy=policy)\n'
+          if text.count(old_return) != 1:
+              raise SystemExit('production_runtime result anchor drift')
+          runtime.write_text(text.replace(old_return, new_return), encoding='utf-8')
+
+          policy = Path('flight-radar.yaml')
+          text = policy.read_text(encoding='utf-8')
+          anchor = 'public_intelligence:\n'
+          block = '''access_blind_spots:\n  status: typed_schema_v1\n  schema_version: 1\n  semantics:\n    access_failure_does_not_prove_fare_absence: true\n    hidden_price_inference: forbidden\n    blind_spot_is_candidate: false\n    blind_spot_affects_provider_health_by_default: false\n  registry:\n  - id: expedia_flight_deals_app\n    source_class: ota_app_only_deal_surface\n    surface_class_existence: known\n    specific_fare_existence: unknown\n    visibility: restricted\n    access_gate: app_only\n    automatic_observation: unavailable\n    exact_reproducibility: unavailable\n    formal_truth_eligibility: ineligible\n    price_observability: unavailable\n    evidence_reference: docs/substrate-reassessment-2026-08-21.md\n    coverage_semantics: known_access_blind_spot_not_market_absence\n'''
+          if text.count(anchor) != 1:
+              raise SystemExit('flight-radar public_intelligence anchor drift')
+          policy.write_text(text.replace(anchor, block + anchor), encoding='utf-8')
+          PY
+
+      - name: Run deterministic gate
+        run: python -m pip install -e . && python -m unittest discover -s tests -v
+      - name: Commit bounded worker result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/cheap_flight_radar/access_blind_spots.py src/cheap_flight_radar/production_runtime.py \
+            flight-radar.yaml docs/access-blind-spots-2026-08-21.md tests/test_sr_e_access_blind_spots.py
+          git commit -m "Implement typed CFR access blind-spot evidence"
+          git push origin HEAD:feat/cfr-sr-e-access-blind-spots
