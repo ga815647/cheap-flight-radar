@@ -786,6 +786,27 @@ verification:
   record_source_url_or_source_id: true
   record_fare_conditions_when_available: true
   never_invent_missing_components: true
+access_blind_spots:
+  status: typed_schema_v1
+  schema_version: 1
+  semantics:
+    access_failure_does_not_prove_fare_absence: true
+    hidden_price_inference: forbidden
+    blind_spot_is_candidate: false
+    blind_spot_affects_provider_health_by_default: false
+  registry:
+  - id: expedia_flight_deals_app
+    source_class: ota_app_only_deal_surface
+    surface_class_existence: known
+    specific_fare_existence: unknown
+    visibility: restricted
+    access_gate: app_only
+    automatic_observation: unavailable
+    exact_reproducibility: unavailable
+    formal_truth_eligibility: ineligible
+    price_observability: unavailable
+    evidence_reference: docs/substrate-reassessment-2026-08-21.md
+    coverage_semantics: known_access_blind_spot_not_market_absence
 public_intelligence:
   status: evidence_backed_registry_v1
   roles:

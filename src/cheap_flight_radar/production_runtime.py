@@ -35,6 +35,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from .airfare import AirfareRecord, ProviderResult, is_international_asia_oceania
+from .access_blind_spots import normalize_access_blind_spots
 from .ftr_absolute_low import apply_absolute_low_selection, select_absolute_low_non_deals
 from .models import TAIWAN_MAIN_ISLAND_PUBLIC_PASSENGER_AIRPORTS
 from .production_radar import (
@@ -581,6 +582,27 @@ def attach_access_redundancy_truth(result: RadarRunResult, *, adapter: Any) -> R
     )
 
 
+def attach_access_blind_spot_truth(
+    result: RadarRunResult,
+    *,
+    policy: Mapping[str, Any],
+) -> RadarRunResult:
+    """Persist typed known access limitations without altering health/candidates."""
+
+    coverage = dict(result.coverage)
+    coverage["access_blind_spots"] = normalize_access_blind_spots(policy)
+    return RadarRunResult(
+        radar_run_id=result.radar_run_id,
+        run_at=result.run_at,
+        deals=result.deals,
+        signals=result.signals,
+        coverage=coverage,
+        provider_failures=result.provider_failures,
+        exact_non_deal_candidates=result.exact_non_deal_candidates,
+        ftr_absolute_low_non_deals=result.ftr_absolute_low_non_deals,
+    )
+
+
 async def run_once(
     *,
     policy: Mapping[str, Any],
@@ -606,7 +628,8 @@ async def run_once(
         discovery_records=recorder.discovery_records,
     )
     selected = apply_absolute_low_selection(converged, policy=policy)
-    return attach_access_redundancy_truth(selected, adapter=adapter)
+    redundancy = attach_access_redundancy_truth(selected, adapter=adapter)
+    return attach_access_blind_spot_truth(redundancy, policy=policy)
 
 
 def write_run_artifacts(
