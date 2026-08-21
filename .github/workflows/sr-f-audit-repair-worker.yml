@@ -1,0 +1,70 @@
+name: SR-F audit repair worker
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.head_ref == 'feat/cfr-sr-f-public-intelligence-simplification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cfr-sr-f-public-intelligence-simplification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Remove Worker-generated build/cache residue
+        shell: bash
+        run: |
+          find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find src tests -type f -name '*.pyc' -delete
+          rm -rf src/cheap_flight_radar.egg-info
+      - name: Verify bounded SR-F tree before gate
+        shell: bash
+        run: |
+          test ! -e .github/workflows/fixed-watch-run.yml
+          test ! -e src/cheap_flight_radar/fixed_watch_runner.py
+          test ! -e src/cheap_flight_radar/fixed_watch_state.py
+          test ! -e src/cheap_flight_radar/public_sources.py
+          ! grep -qiE 'Scrapy|scrapy-playwright' pyproject.toml
+          ! git grep -n -I 'policy\["public_intelligence"\]\["fixed_watch_registry"\]' -- src tests
+          test -e src/cheap_flight_radar/secondary_recall.py
+          test -e src/cheap_flight_radar/access_blind_spots.py
+          test -e src/cheap_flight_radar/providers/kiwi_mcp.py
+      - name: Install and run full deterministic gate
+        shell: bash
+        run: |
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+      - name: Clean generated files and dispatch scaffold after gate
+        shell: bash
+        run: |
+          find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find src tests -type f -name '*.pyc' -delete
+          rm -rf src/cheap_flight_radar.egg-info
+          rm -f .github/workflows/sr-f-audit-repair-worker.yml
+      - name: Final diff hygiene
+        shell: bash
+        run: |
+          git diff --check
+          if git status --short | grep -E '__pycache__|\.pyc|egg-info|sr-f-.*worker'; then
+            bad=$(git status --short | grep -E '__pycache__|\.pyc|egg-info|sr-f-.*worker' || true)
+            echo "Expected removals/scaffold cleanup in worktree:"
+            echo "$bad"
+          fi
+      - name: Commit audit repair
+        shell: bash
+        run: |
+          git config user.name 'CFR SR-F Audit Repair Worker'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Clean SR-F worker residue'
+          git push origin HEAD:feat/cfr-sr-f-public-intelligence-simplification
