@@ -12,7 +12,7 @@ class FTRContractPolicyTest(unittest.TestCase):
 
     def test_contract_is_machine_ssot_and_canonical_runtime_is_activated_by_rp04(self):
         self.assertEqual(self.ftr["schema_version"], "2.0")
-        self.assertEqual(self.ftr["status"], "canonical_runtime_active_not_launch_ready")
+        self.assertEqual(self.ftr["status"], "canonical_runtime_active_launch_ready")
         activation = self.ftr["canonical_activation"]
         self.assertTrue(activation["enabled"])
         self.assertEqual(activation["activated_by_package"], "RP-04")
@@ -23,11 +23,11 @@ class FTRContractPolicyTest(unittest.TestCase):
         self.assertFalse(activation["readiness"]["recovery_live_proof_complete"])
         self.assertTrue(activation["readiness"]["route_shape_return_gateway_convergence_complete"])
         self.assertTrue(activation["readiness"]["provider_fallback_execution_truth_convergence_complete"])
-        self.assertFalse(activation["readiness"]["final_ftr_readiness"])
+        self.assertTrue(activation["readiness"]["final_ftr_readiness"])
         self.assertNotIn("RP-05", activation["readiness"]["pending_packages"])
         self.assertNotIn("RP-06", activation["readiness"]["pending_packages"])
         self.assertNotIn("RP-07", activation["readiness"]["pending_packages"])
-        self.assertEqual(set(activation["readiness"]["pending_packages"]), {"RP-08"})
+        self.assertEqual(set(activation["readiness"]["pending_packages"]), set())
 
     def test_rp06_route_shape_return_gateway_machine_contract(self):
         contract = self.ftr["route_shape_return_gateway_convergence"]
@@ -155,20 +155,20 @@ class FTRContractPolicyTest(unittest.TestCase):
         self.assertFalse(failure["actions_artifact_correctness_dependency"])
         self.assertTrue(failure["cfr_evidence_survives_ftr_failure"])
 
-    def test_active_repair_rp05_capability_is_active_while_live_proof_remains_pending(self):
+    def test_active_repair_rp05_capability_is_active_while_live_proof_not_exercised(self):
         repair = self.ftr["canonical_activation"]["active_repair"]
         self.assertTrue(repair["ordinary_canonical_daily_cannot_clear"])
         self.assertTrue(repair["ordinary_canonical_daily_cannot_advance_latest"])
         self.assertTrue(repair["ordinary_canonical_daily_cannot_masquerade_as_recovery"])
         self.assertEqual(repair["required_clear_mode"], "same_day_recovery")
         self.assertEqual(repair["recovery_orchestration_package"], "RP-05")
-        self.assertEqual(repair["recovery_orchestration_status"], "pending")
+        self.assertEqual(repair["recovery_orchestration_status"], "implemented_active")
         self.assertEqual(
             repair["recovery_orchestration_status_semantics"],
-            "live_proof_pending_not_capability_implementation",
+            "capability_active_live_proof_not_exercised_no_eligible_repair_incident",
         )
         self.assertEqual(repair["recovery_capability_state"], "implemented_active")
-        self.assertEqual(repair["live_recovery_proof_status"], "pending")
+        self.assertEqual(repair["live_recovery_proof_status"], "not_exercised_no_eligible_repair_incident")
 
     def test_rp05_same_day_recovery_machine_contract(self):
         recovery = self.ftr["same_day_recovery_orchestration"]
@@ -176,7 +176,7 @@ class FTRContractPolicyTest(unittest.TestCase):
         self.assertEqual(recovery["package"], "RP-05")
         self.assertEqual(recovery["contract_version"], "1.0")
         self.assertEqual(recovery["capability_state"], "implemented_active")
-        self.assertEqual(recovery["live_proof_status"], "pending")
+        self.assertEqual(recovery["live_proof_status"], "not_exercised_no_eligible_repair_incident")
         self.assertFalse(recovery["scheduled"])
         self.assertEqual(recovery["workflow"], ".github/workflows/ftr-same-day-recovery.yml")
         self.assertEqual(recovery["driver_module"], "cheap_flight_radar.ftr_recovery_workflow")
