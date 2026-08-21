@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: cheap-flight-radar
+Version: 0.1.0
+Summary: Policy and scoring primitives for a Taiwan-origin cheap flight radar
+Requires-Python: >=3.11
+Requires-Dist: PyYAML<7,>=6.0
+Requires-Dist: gflights==0.3.1
+Requires-Dist: mcp<2,>=1.29

@@ -341,15 +341,17 @@ def _coverage_strip_html(manifest: Mapping[str, Any]) -> str:
     origins, fixed, china = _coverage_data(manifest)
     origin_values = [str(value) for value in origins.values()]
     origin_status = "complete" if origin_values and all(_status_tone(value) == "good" for value in origin_values) else "partial"
-    fixed_status = str(fixed.get("status", "unknown"))
     china_status = str(china.get("status", "unknown"))
-    return (
-        '<div class="coverage-strip" aria-label="Radar coverage summary">'
-        f'<div class="coverage-pill"><span>Origins</span>{_status_badge(origin_status)}</div>'
-        f'<div class="coverage-pill"><span>Fixed watch</span>{_status_badge(fixed_status)}</div>'
-        f'<div class="coverage-pill"><span>China mode</span>{_status_badge(china_status)}</div>'
-        '</div>'
-    )
+    pills = [f'<div class="coverage-pill"><span>Origins</span>{_status_badge(origin_status)}</div>']
+    # SR-F retired fixed-watch acquisition. Preserve an old immutable run's
+    # historical fixed-watch evidence when present, but do not synthesize a
+    # current fixed-watch status for new runs.
+    if fixed:
+        pills.append(
+            f'<div class="coverage-pill"><span>Historical fixed watch</span>{_status_badge(str(fixed.get("status", "unknown")))}</div>'
+        )
+    pills.append(f'<div class="coverage-pill"><span>China mode</span>{_status_badge(china_status)}</div>')
+    return '<div class="coverage-strip" aria-label="Radar coverage summary">' + "".join(pills) + '</div>'
 
 
 def _coverage_html(manifest: Mapping[str, Any], policy: Mapping[str, Any]) -> str:
@@ -358,15 +360,20 @@ def _coverage_html(manifest: Mapping[str, Any], policy: Mapping[str, Any]) -> st
         f'<li><span>{escape(str(origin))}</span>{_status_badge(str(state))}</li>'
         for origin, state in sorted(origins.items())
     )
-    registry = policy["public_intelligence"]["fixed_watch_registry"]
-    cadence = {str(item["id"]): item["cadence_hours"] for item in registry}
+    # Historical immutable manifests may contain fixed-watch evidence from the
+    # retired subsystem. Render that evidence from the manifest itself; current
+    # SSOT intentionally has no fixed-watch registry/cadence contract.
     source_rows = []
     for item in fixed.get("sources", []):
         source_id = str(item.get("id", "unknown"))
         state = str(item.get("state", "unknown"))
-        threshold = cadence.get(source_id)
-        label = source_id + (f" · {threshold}h" if threshold is not None else "")
-        source_rows.append(f'<li><span>{escape(label)}</span>{_status_badge(state)}</li>')
+        source_rows.append(f'<li><span>{escape(source_id)}</span>{_status_badge(state)}</li>')
+    fixed_block = ""
+    if fixed:
+        fixed_block = (
+            f'<div class="ops-block"><h3>Historical fixed-watch evidence: {escape(str(fixed.get("status", "unknown")))}</h3>'
+            '<ul class="ops-list">' + "".join(source_rows) + '</ul></div>'
+        )
     china_rows = []
     modes = china.get("modes", {})
     if isinstance(modes, Mapping):
@@ -378,9 +385,9 @@ def _coverage_html(manifest: Mapping[str, Any], policy: Mapping[str, Any]) -> st
         '<section class="ops-card"><div class="section-heading"><div><h2>Coverage &amp; Freshness</h2>'
         '<p>Operational completeness for this immutable run.</p></div></div><div class="ops-grid">'
         '<div class="ops-block"><h3>Origin coverage</h3><ul class="ops-list">' + origin_rows + '</ul></div>'
-        f'<div class="ops-block"><h3>Fixed-watch coverage: {escape(str(fixed.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(source_rows) + '</ul></div>'
-        f'<div class="ops-block"><h3>China-mode coverage: {escape(str(china.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(china_rows) + '</ul></div>'
-        '</div></section>'
+        + fixed_block
+        + f'<div class="ops-block"><h3>China-mode coverage: {escape(str(china.get("status", "unknown")))}</h3><ul class="ops-list">' + "".join(china_rows) + '</ul></div>'
+        + '</div></section>'
     )
 
 

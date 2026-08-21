@@ -713,7 +713,6 @@ publication:
   required_operational_sections:
   - failed_non_converged_cheap_seeds
   - origin_coverage
-  - fixed_watch_coverage_and_freshness
   - china_mode_coverage
   historical_display:
     derive_from_evidence_ref: true
@@ -808,11 +807,8 @@ access_blind_spots:
     evidence_reference: docs/substrate-reassessment-2026-08-21.md
     coverage_semantics: known_access_blind_spot_not_market_absence
 public_intelligence:
-  status: evidence_backed_registry_v1
+  status: simplified_opportunistic_signal_lane_v2
   roles:
-    fixed_watch:
-      definition: optional_recurring_signal_source_not_deal_truth_authority
-      failure_affects_coverage: false
     opportunistic:
       definition: best_effort_open_web_or_public_social_signal
       failure_affects_coverage: false
@@ -821,53 +817,21 @@ public_intelligence:
       failure_affects_discovery_coverage: false
   orchestration:
     primary_scheduler: chatgpt_scheduled_radar_run
-    github_actions_role: on_demand_deterministic_execution_crawler_and_gate_backend
+    github_actions_role: disposable_execution_gate_backend_not_public_intelligence_crawler
     independent_github_cron: false
-    cadence_semantics: freshness_reuse_window_and_due_threshold_not_actions_schedule
-    due_clock_source: latest_successful_fixed_watch_attempt
-    no_successful_attempt_action: due_now
-    expired_success_action: due_now
-    fresh_success_action: may_reference_prior_success_without_new_attempt
-    failed_attempt_refreshes_due_clock: false
     chatgpt_run_sequence:
-    - load_registry_and_prior_success_state
-    - determine_due_fixed_watches
-    - trigger_required_github_execution
-    - read_normalized_observations_and_attempt_manifest
     - perform_opportunistic_web_discovery
     - perform_deep_search_and_revalidation
     - persist_immutable_price_history_snapshot
     - derive_historical_metrics_from_persisted_history
     - append_publication_manifest
     - publish_static_report
-  runtime:
-    selected: scrapy
-    http_runtime: scrapy
-    js_fallback: scrapy_playwright_opt_in_only
-    js_browser_install_only_when_required: true
-    anti_bot_evasion:
-      captcha_bypass: forbidden
-      stealth_fingerprint: forbidden
-      fingerprint_spoofing: forbidden
-      proxy_rotation: forbidden
-      residential_proxy: forbidden
-      rotating_browser_user_agent: forbidden_for_production
-      ordinary_fixed_user_agent_header: allowed
   coverage:
-    fixed_watch_attempts_are_coverage_authority: false
-    cadence_is_maximum_age_of_latest_successful_attempt_hours: true
-    fresh_prior_success_within_cadence_may_satisfy_run_coverage: true
-    failed_attempt_never_refreshes_freshness: true
-    referenced_prior_success_must_include_attempt_id: true
-    attempt_statuses:
-    - success
-    - unavailable
-    - blocked
-    - fetch_failed
-    - parse_failed
-    failed_fixed_watch_must_be_reported: true
-    opportunistic_source_cannot_substitute_fixed_watch_coverage: false
-    fixed_registry_does_not_claim_market_exhaustiveness: true
+    public_intelligence_is_required_coverage_authority: false
+    opportunistic_source_failure_affects_provider_health: false
+    verification_only_failure_affects_discovery_coverage: false
+    no_public_intelligence_observation_does_not_mean_market_absence: true
+    no_public_intelligence_observation_does_not_mean_no_cheaper_restricted_fare: true
   provenance:
     first_seen_immutable: true
     discovery_sources_append_only: true
@@ -894,41 +858,11 @@ public_intelligence:
     - promo_code_when_known
     fare_observations_append_to_existing_candidate: true
     never_count_duplicate_sightings_as_separate_deals: true
-  fixed_watch_registry:
-  - id: china_airlines_official
-    markets:
-    - japan
-    - korea
-    - china
-    - world
-    source_type: official_airline
-    acquisition: direct_http
-    entry_url: https://www.china-airlines.com/tw/zh/index.html
-    cadence_hours: 24
-    carrier_scope: china_airlines_and_mandarin_promotions_only
-    taiwan_origin_evidence:
-    - TPE
-    - TSA
-    - RMQ
-    - KHH
-    lcc_coverage: false
-    fsc_coverage: true
-    coverage_claim: source_attempt_only
-    role: signal_only
-  fixed_watch_research_exclusions:
-    tigerair_tw_official:
-      role: opportunistic
-      reason: no_stable_public_promotion_dom_from_current_homepage_on_ubuntu_runner
-      evidence:
-      - direct_http_200_but_parser_contract_absent
-      - vanilla_playwright_200_but_parser_contract_absent
-      preferred_discovery: public_web_indexed_official_news_and_static_event_pages
-      anti_bot_evasion_allowed: false
   opportunistic_policy:
     include_public_search_engine_results: true
     include_public_social_posts_when_indexed_without_login_bypass: true
     include_news_and_forums: true
-    include_public_airline_promotion_pages_not_in_fixed_registry: true
+    include_public_airline_promotion_pages: true
     preserve_source_url_or_post_identity: true
     public_social_seed_contract:
       public_indexed_without_login_required: true
@@ -941,6 +875,7 @@ public_intelligence:
       can_establish_verified_fare: false
       serious_candidate_requires_separate_exact_fare_probe: true
     examples_researched_not_required_coverage:
+    - china_airlines_official_promotions
     - tigerair_tw_official_news_and_static_events
     - taiwan_airfare_editor_facebook_pages
     - peach_official_promotions
@@ -965,6 +900,11 @@ public_intelligence:
     - baggage_scope
     - fare_family
     unknown_components_remain_unknown: true
+  retired_fixed_watch_subsystem:
+    status: retired_by_CFR_SR_F
+    reason: optional_signal_recall_value_did_not_justify_crawler_cadence_state_browser_and_artifact_maintenance
+    durable_evidence: docs/public-intelligence-simplification-2026-08-21.md
+    historical_manifests_are_not_current_runtime_input: true
 source_routing:
   status: provider_execution_truth_converged_v4
   strict_no_silent_degradation: true

@@ -1,5 +1,9 @@
 # Current search policy — 2026-08-13 substrate convergence
 
+## Current public-intelligence contract (SR-F, 2026-08-21)
+
+The fixed-watch crawler/cadence/state subsystem is retired. Public intelligence is now a best-effort opportunistic/verification-only Signal lane operated directly by the ChatGPT orchestrator when useful; it is not Deal/anomaly/backend coverage authority and has no independent GitHub schedule or crawler runtime. Generic provenance/campaign/itinerary dedupe helpers remain. Older fixed-watch/crawler sections below are historical design evidence only and do not override `PRODUCT_INTENT.md` or `flight-radar.yaml`.
+
 
 ## Current executable provider contract (SR-D, 2026-08-21)
 

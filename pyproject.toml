@@ -9,15 +9,10 @@ description = "Policy and scoring primitives for a Taiwan-origin cheap flight ra
 requires-python = ">=3.11"
 dependencies = [
   "PyYAML>=6.0,<7",
-  "Scrapy>=2.17,<3",
   "gflights==0.3.1",
   "mcp>=1.29,<2",
 ]
 
-[project.optional-dependencies]
-browser = [
-  "scrapy-playwright>=0.0.48,<0.1",
-]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
