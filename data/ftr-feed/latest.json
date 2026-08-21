@@ -1,0 +1,13 @@
+{
+  "coverage_state": "complete",
+  "freshness_state": "fresh",
+  "generated_at": "2026-08-21T09:25:01+08:00",
+  "mode": "canonical_daily",
+  "observed_at": "2026-08-21T08:32:44.388235+08:00",
+  "producer_commit_sha": "a4147c4e3a76d2707ecb31d48e7e37c95de23128",
+  "run_id": "production-radar-20260821T083244+0800",
+  "schema_version": "2.0",
+  "snapshot_path": "data/ftr-feed/2026/08/21/production-radar-20260821T083244-0800.json",
+  "snapshot_sha256": "6c7bd0ea427a766545a262a2be344a4f4b44385f8159ec5aab08e5249f650ef2",
+  "terminal_state": "success"
+}

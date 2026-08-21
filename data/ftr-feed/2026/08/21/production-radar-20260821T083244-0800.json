@@ -1,0 +1,754 @@
+{
+  "candidate_counts": {
+    "absolute_low_non_deals": 0,
+    "deals": 10,
+    "opportunities": 10,
+    "variants": 10
+  },
+  "coverage": {
+    "markets": {
+      "china": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 1,
+          "discovered": 86,
+          "qualified": 2,
+          "revalidated": 1
+        },
+        "status": "succeeded"
+      },
+      "japan": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 10,
+          "discovered": 66,
+          "qualified": 27,
+          "revalidated": 10
+        },
+        "status": "succeeded"
+      },
+      "korea": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 1,
+          "discovered": 15,
+          "qualified": 11,
+          "revalidated": 2
+        },
+        "status": "succeeded"
+      },
+      "other_asia_oceania": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 9,
+          "discovered": 278,
+          "qualified": 31,
+          "revalidated": 9
+        },
+        "status": "succeeded"
+      }
+    },
+    "origins": {
+      "KHH": {
+        "errors": [],
+        "explore_seeds": 98,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "RMQ": {
+        "errors": [],
+        "explore_seeds": 95,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TPE": {
+        "errors": [],
+        "explore_seeds": 73,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TSA": {
+        "errors": [],
+        "explore_seeds": 92,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      }
+    },
+    "overall_state": "complete",
+    "provider_failures": [],
+    "provider_health": {
+      "coverage_collapse": false,
+      "deal_count_is_health_signal": false,
+      "degraded_origins": [],
+      "failed_origins": [],
+      "reasons": [],
+      "status": "healthy",
+      "suppressed_request_count": 0,
+      "technical_failure_count": 0
+    },
+    "providers": {
+      "gflights": {
+        "health_status": "healthy",
+        "reasons": [],
+        "status": "succeeded",
+        "surfaces": [
+          "conventional_exact",
+          "explore",
+          "flexible_dates",
+          "flight_deals",
+          "mixed_taiwan_return",
+          "open_jaw"
+        ]
+      }
+    },
+    "semantics": "execution_and_coverage_evidence_not_candidate_or_deal_count",
+    "surfaces": {
+      "conventional_exact": {
+        "execution": {
+          "attempts": 20,
+          "empty": 0,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 20,
+          "successes": 20,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "explore": {
+        "execution": {
+          "attempts": 4,
+          "empty": 0,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 417,
+          "successes": 4,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flexible_dates": {
+        "execution": {
+          "attempts": 20,
+          "empty": 0,
+          "exact_attempts": 20,
+          "exact_empty": 1,
+          "exact_failures": 0,
+          "exact_provider_calls": 20,
+          "exact_successes": 19,
+          "exact_suppressed": 0,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 2165,
+          "successes": 20,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flight_deals": {
+        "execution": {
+          "attempts": 12,
+          "empty": 0,
+          "failures": 0,
+          "provider_calls": 12,
+          "records": 360,
+          "successes": 12,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "mixed_taiwan_return": {
+        "execution": {
+          "attempts": 4,
+          "empty": 1,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 3,
+          "successes": 3,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "open_jaw": {
+        "execution": {
+          "attempts": 4,
+          "empty": 3,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 1,
+          "successes": 1,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      }
+    }
+  },
+  "coverage_state": "complete",
+  "freshness_state": "fresh",
+  "generated_at": "2026-08-21T09:25:01+08:00",
+  "mode": "canonical_daily",
+  "observed_at": "2026-08-21T08:32:44.388235+08:00",
+  "opportunities": [
+    {
+      "destination_route_shape": {
+        "arrival_airport": "ATQ",
+        "departure_airport": "ATQ"
+      },
+      "opportunity_id": "air-atq-atq",
+      "variants": [
+        {
+          "airlines": [
+            "TR",
+            "Scoot"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 12202,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "ATQ",
+            "departure_airport": "ATQ"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-atq-2026-09-15-2026-09-23-57571827e0",
+            "provider": "gflights",
+            "record_id": "gf-57571827e0de9c66367d",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "04:15",
+              "date": "2026-09-15",
+              "departure_time": "23:50",
+              "destination": "SIN",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "09:05",
+              "date": "2026-09-16",
+              "departure_time": "05:35",
+              "destination": "ATQ",
+              "origin": "SIN"
+            }
+          ],
+          "observed_at": "2026-08-21T01:12:09.652272+00:00",
+          "outbound_date": "2026-09-15",
+          "return_date": "2026-09-23",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-57571827e0de9c66367d",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "BWN",
+        "departure_airport": "BWN"
+      },
+      "opportunity_id": "air-bwn-bwn",
+      "variants": [
+        {
+          "airlines": [
+            "BI",
+            "Royal Brunei"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6001,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "BWN",
+            "departure_airport": "BWN"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-bwn-2026-09-06-2026-09-13-e362a4c970",
+            "provider": "gflights",
+            "record_id": "gf-e362a4c97094cff3a366",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://book-royalbrunei.crane.aero/ibe/availability?tripType=ROUND_TRIP&depPort=TPE&arrPort=BWN&departureDate=06.09.2026&returnDate=13.09.2026&passengerQuantities%5B0%5D%5BpassengerType%5D=ADLT&passengerQuantities%5B0%5D%5Bquantity%5D=1&passengerQuantities%5B1%5D%5BpassengerType%5D=CHLD&passengerQuantities%5B1%5D%5Bquantity%5D=0&passengerQuantities%5B2%5D%5BpassengerType%5D=INFT&passengerQuantities%5B2%5D%5Bquantity%5D=0&currency=BND&lang=en&cabinClass=ECONOMY&gclid=ADowPOLI_s5Hdtg97EmFwGeqK3woWEtg5mWSWZZQqe5cTpdGbyABbBp6qQ9sNyscM8kMCQbheiunHlwfg7FcaszLEL7wgbE_bNqSuQa9lrPRAKLeJSAu&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "16:45",
+              "date": "2026-09-06",
+              "departure_time": "13:10",
+              "destination": "BWN",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T00:33:51.254938+00:00",
+          "outbound_date": "2026-09-06",
+          "return_date": "2026-09-13",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-e362a4c97094cff3a366",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "DRP",
+        "departure_airport": "DRP"
+      },
+      "opportunity_id": "air-drp-drp",
+      "variants": [
+        {
+          "airlines": [
+            "5J"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6104,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "DRP",
+            "departure_airport": "DRP"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-khh-drp-2026-12-03-2026-12-10-fa90d54535",
+            "provider": "gflights",
+            "record_id": "gf-fa90d545357c71138ee6",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "22:00",
+              "date": "2026-12-03",
+              "departure_time": "20:00",
+              "destination": "MNL",
+              "origin": "KHH"
+            },
+            {
+              "arrival_time": "04:55",
+              "date": "2026-12-04",
+              "departure_time": "03:40",
+              "destination": "DRP",
+              "origin": "MNL"
+            }
+          ],
+          "observed_at": "2026-08-21T00:36:30.623893+00:00",
+          "outbound_date": "2026-12-03",
+          "return_date": "2026-12-10",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "KHH",
+          "taiwan_return_gateway": "KHH",
+          "variant_id": "gf-fa90d545357c71138ee6",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "FKS",
+        "departure_airport": "FKS"
+      },
+      "opportunity_id": "air-fks-fks",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 9897,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "FKS",
+            "departure_airport": "FKS"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-fks-2026-09-04-2026-09-11-53bb303632",
+            "provider": "gflights",
+            "record_id": "gf-53bb30363290b2e4fd99",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-FKS&departureDate=2026-09-04&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=FKS-TPE&returnDate=2026-09-11&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOJlxh48FNuXd8rgoBHNMNJ0AYO_QwweMuVt91151EkSjrLCwvhehEMWMh0ERVdir5YCKo9CMD1rUvRH-mwfI_NFG3gydQNdN9aPbySQmTeOHxrm&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "14:30",
+              "date": "2026-09-04",
+              "departure_time": "10:30",
+              "destination": "FKS",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T00:33:33.944213+00:00",
+          "outbound_date": "2026-09-04",
+          "return_date": "2026-09-11",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-53bb30363290b2e4fd99",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HNA",
+        "departure_airport": "HNA"
+      },
+      "opportunity_id": "air-hna-hna",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 8897,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HNA",
+            "departure_airport": "HNA"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-hna-2026-09-02-2026-09-09-c36dabb53b",
+            "provider": "gflights",
+            "record_id": "gf-c36dabb53b3dcb5d2637",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-HNA&departureDate=2026-09-02&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=HNA-TPE&returnDate=2026-09-09&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOLx724az5FBkJ0aQ-PtV8IVyjhBfU-f4L_Prj3wrDi-ypOZe29fmdJgOLscnughZF8eKIETuRCdfLBmH8iCFAXoa-QQOJ5QxnqxMclWFEIPBHiM&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "17:00",
+              "date": "2026-09-02",
+              "departure_time": "12:25",
+              "destination": "HNA",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T01:03:31.628519+00:00",
+          "outbound_date": "2026-09-02",
+          "return_date": "2026-09-09",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-c36dabb53b3dcb5d2637",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HSG",
+        "departure_airport": "HSG"
+      },
+      "opportunity_id": "air-hsg-hsg",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 5897,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HSG",
+            "departure_airport": "HSG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-hsg-2026-09-01-2026-09-08-3923d4c833",
+            "provider": "gflights",
+            "record_id": "gf-3923d4c83373b3a1d1c6",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-HSG&departureDate=2026-09-01&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=HSG-TPE&returnDate=2026-09-08&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOILqf4yKX2AfADqnL67AW76G3vuCBrnXW9J9csYjAexXjgnTGr2TUmwpyH9vo2o7tAdpFksZ15Pi6ICMfbuMykmaTY3lYrKqq9nirNS-ILtvBrr&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "10:35",
+              "date": "2026-09-01",
+              "departure_time": "06:55",
+              "destination": "HSG",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T01:08:45.261860+00:00",
+          "outbound_date": "2026-09-01",
+          "return_date": "2026-09-08",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-3923d4c83373b3a1d1c6",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "ISG",
+        "departure_airport": "ISG"
+      },
+      "opportunity_id": "air-isg-isg",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6197,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "ISG",
+            "departure_airport": "ISG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-isg-2026-12-12-2026-12-18-4979b5655c",
+            "provider": "gflights",
+            "record_id": "gf-4979b5655cf60a96db8f",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-ISG&departureDate=2026-12-12&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=ISG-TPE&returnDate=2026-12-18&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOK6Z1pC1HQt7WBFueSRKSv8o6Lf6FgtO9FPsAMZeGMY6CPZ3bzY97U8Y6PxqGWZS5JwdtExh8-G18HtkNf6k-0yljNuO5H6DtK66UbEbfRGcuyc&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "08:35",
+              "date": "2026-12-12",
+              "departure_time": "06:35",
+              "destination": "ISG",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T00:33:45.129304+00:00",
+          "outbound_date": "2026-12-12",
+          "return_date": "2026-12-18",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-4979b5655cf60a96db8f",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "MDC",
+        "departure_airport": "MDC"
+      },
+      "opportunity_id": "air-mdc-mdc",
+      "variants": [
+        {
+          "airlines": [
+            "TR",
+            "Scoot"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 8482,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "MDC",
+            "departure_airport": "MDC"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-mdc-2026-09-06-2026-09-13-47fed3c42c",
+            "provider": "gflights",
+            "record_id": "gf-47fed3c42c8652603caa",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "04:15",
+              "date": "2026-09-06",
+              "departure_time": "23:50",
+              "destination": "SIN",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "13:00",
+              "date": "2026-09-07",
+              "departure_time": "09:20",
+              "destination": "MDC",
+              "origin": "SIN"
+            }
+          ],
+          "observed_at": "2026-08-21T00:33:54.195951+00:00",
+          "outbound_date": "2026-09-06",
+          "return_date": "2026-09-13",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-47fed3c42c8652603caa",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "PNK",
+        "departure_airport": "PNK"
+      },
+      "opportunity_id": "air-pnk-pnk",
+      "variants": [
+        {
+          "airlines": [
+            "TR",
+            "Scoot"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 7062,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "PNK",
+            "departure_airport": "PNK"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-pnk-2026-09-05-2026-09-12-b47fd130c4",
+            "provider": "gflights",
+            "record_id": "gf-b47fd130c4d43f51af6a",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.flyscoot.com/book/flight/return/TPE/2026-09-05/PNK/PNK/2026-09-12/TPE?adult=1&child=0&infant=0&orgToken=VEUtiuQY/mW09sQ6I0betQ%3D%3D&utm_source=GoogleFlights&utm_medium=Referral&utm_campaign=GoogleFlights_deeplink&gclid=ADowPOIz6ORKGbrw8Zx0YhyBji06gKXSJNdvPwIUZIJd8OQPI3tms4b_0gWRU_ugDGv0BqNazTW_0ibLp9UfR26zdRaqWLlsgDrtiBCLIBp7j079T73N&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "06:00",
+              "date": "2026-09-05",
+              "departure_time": "01:35",
+              "destination": "SIN",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "12:00",
+              "date": "2026-09-05",
+              "departure_time": "11:25",
+              "destination": "PNK",
+              "origin": "SIN"
+            }
+          ],
+          "observed_at": "2026-08-21T00:33:59.305927+00:00",
+          "outbound_date": "2026-09-05",
+          "return_date": "2026-09-12",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-b47fd130c4d43f51af6a",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "YGJ",
+        "departure_airport": "YGJ"
+      },
+      "opportunity_id": "air-ygj-ygj",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 7897,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "YGJ",
+            "departure_airport": "YGJ"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260821t083244+0800-tpe-ygj-2026-11-30-2026-12-07-ae3068e92d",
+            "provider": "gflights",
+            "record_id": "gf-ae3068e92dacb513a717",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-YGJ&departureDate=2026-11-30&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=YGJ-TPE&returnDate=2026-12-07&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOL_v_E6g647KWajnqmIkZQklBwfm4NnqQhLvl4wijlXPbQBsWFOzKmg4KvZEwhQebVcdWoL_oamWXcedjaAl2j9oPp_BnO8fsOMBSgxm3l-V0Vd&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "12:00",
+              "date": "2026-11-30",
+              "departure_time": "08:40",
+              "destination": "YGJ",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-08-21T00:55:45.722369+00:00",
+          "outbound_date": "2026-11-30",
+          "return_date": "2026-12-07",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-ae3068e92dacb513a717",
+          "verification_state": "revalidated"
+        }
+      ]
+    }
+  ],
+  "producer_commit_sha": "a4147c4e3a76d2707ecb31d48e7e37c95de23128",
+  "run_id": "production-radar-20260821T083244+0800",
+  "schema_version": "2.0",
+  "terminal_state": "success"
+}

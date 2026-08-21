@@ -1,0 +1,28 @@
+{
+  "clearing_contract": {
+    "operator_reacquisition_cannot_clear": true,
+    "publication_recovery_cannot_clear": true,
+    "required_mode": "same_day_recovery",
+    "requires_complete_coverage": true,
+    "requires_fresh_snapshot": true,
+    "requires_manifest_snapshot_checksum_match": true,
+    "requires_supported_schema": true,
+    "requires_terminal_success": true,
+    "scoped_search_cannot_clear": true
+  },
+  "current_freshness_state": "fresh",
+  "last_good": {
+    "manifest_path": "data/ftr-feed/latest.json",
+    "run_id": "production-radar-20260821T083244+0800",
+    "schema_version": "2.0",
+    "snapshot_freshness_at_generation": "fresh",
+    "snapshot_path": "data/ftr-feed/2026/08/21/production-radar-20260821T083244-0800.json",
+    "snapshot_sha256": "6c7bd0ea427a766545a262a2be344a4f4b44385f8159ec5aab08e5249f650ef2"
+  },
+  "producer_health_status": "healthy",
+  "producer_status": "healthy",
+  "repair_incident": null,
+  "repair_required": false,
+  "schema_version": "2.0",
+  "updated_at": "2026-08-21T09:25:01+08:00"
+}
