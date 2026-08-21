@@ -20,7 +20,7 @@ RUN_AT = datetime.fromisoformat("2026-08-20T09:00:00+08:00")
 
 
 class FailingGFlightsOnlyAdapter:
-    """Deterministic primary failure fixture; there is intentionally no fallback adapter."""
+    """Deterministic discovery-primary failure fixture; no known route is reached."""
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
@@ -58,7 +58,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
 
     def test_machine_ssot_has_no_legacy_executable_fallback_claim(self):
         routing = self.policy["source_routing"]
-        self.assertEqual(routing["status"], "provider_execution_truth_converged_v3")
+        self.assertEqual(routing["status"], "provider_execution_truth_converged_v4")
         contract = routing["route_plan_execution_contract"]
         self.assertTrue(contract["entry_means_current_execution_plane_can_invoke_provider"])
         self.assertEqual(contract["legacy_fallback_provider_field"], "forbidden")
@@ -74,7 +74,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("fallback_provider", set(keys(routing["selected_routes"])))
 
-    def test_current_plans_are_gflights_only_and_fallback_is_none(self):
+    def test_current_destination_free_is_gflights_only_and_known_route_has_qualified_fallback(self):
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-20"),
             self.policy,
@@ -94,12 +94,12 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
             {},
         )
         self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])
-        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact"])
+        self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
         shared = self.policy["source_routing"]["selected_routes"]["shared"]
         self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])
-        self.assertIsNone(shared["broad_discovery"]["automatic_executable_fallback"])
+        self.assertEqual(shared["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")
         self.assertEqual(shared["origin_wide_discovery"]["primary_failure_action"], "fail_closed")
-        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "fail_closed")
+        self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
 
     def test_expedia_is_external_recall_candidate_not_anomaly_or_backend_coverage(self):
         routing = self.policy["source_routing"]
@@ -122,6 +122,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(fli["current_production_adapter"], "absent")
         self.assertEqual(fli["current_project_dependency"], "absent")
         self.assertFalse(fli["automatic_execution_supported"])
+        self.assertEqual(fli["qualification_disposition"], "not_selected_for_redundancy")
         self.assertEqual(fli["distinct_from_provider"], "flyai")
         self.assertEqual(FlyAIAdapter.provider, "flyai")
         self.assertNotEqual(FlyAIAdapter.provider, "fli_google_exact")
@@ -131,7 +132,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(any(value.startswith("flights") for value in dependencies))
         self.assertFalse(any(value.startswith("click") for value in dependencies))
 
-    async def test_primary_failure_has_zero_fake_fallback_calls_or_success_evidence(self):
+    async def test_destination_free_failure_has_zero_fake_fallback_calls_or_success_evidence(self):
         adapter = FailingGFlightsOnlyAdapter()
         result = await ProductionRadar(policy=deepcopy(self.policy), adapter=adapter).run(run_at=RUN_AT)
 
@@ -152,8 +153,9 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
         strategy = (ROOT / "docs" / "search-strategy.md").read_text(encoding="utf-8")
         bakeoff = (ROOT / "docs" / "substrate-bakeoff-2026-08-13.md").read_text(encoding="utf-8")
         self.assertIn("automatic executable fallback is **none**", strategy)
-        self.assertIn("Expedia airport-origin public Web remains an external", strategy)
-        self.assertIn("no fli production adapter", strategy)
+        self.assertIn("kiwi_mcp_exact", strategy)
+        self.assertIn("Expedia airport-origin public Web remains external", strategy)
+        self.assertIn("safe-transport protocol/parser proof succeeded in SR-D", strategy)
         self.assertIn("preserves the 2026-08-13 live bake-off evidence", bakeoff)
         self.assertIn("FlyAI is a distinct provider contract and is not fli", bakeoff)
 

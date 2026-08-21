@@ -28,15 +28,20 @@ class SRBGFlightsQualificationTests(unittest.TestCase):
         ):
             self.assertEqual(providers[provider]["library"], "gflights==0.3.1")
 
-    def test_sr_b_does_not_change_replaceable_fail_closed_architecture(self):
+    def test_sr_b_adapter_remains_replaceable_and_fail_closed_after_later_qualification(self):
         state = self.policy["capability_state"]
         self.assertTrue(state["ssot_semantics"]["search_paths_and_provider_adapters_are_replaceable_implementation"])
-        self.assertEqual(state["current_runtime"]["automatic_executable_fallback"], "none")
+        self.assertEqual(state["current_runtime"]["destination_free_automatic_executable_fallback"], "none")
+        self.assertEqual(
+            state["current_runtime"]["known_route_exact_flexible_automatic_executable_fallback"],
+            "kiwi_mcp_exact",
+        )
         routing = self.policy["source_routing"]
         self.assertTrue(routing["strict_no_silent_degradation"])
         shared = routing["selected_routes"]["shared"]
         self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])
-        self.assertIsNone(shared["broad_discovery"]["automatic_executable_fallback"])
+        self.assertEqual(shared["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(routing["providers"]["gflights_google_exact"]["library"], "gflights==0.3.1")
 
     def test_qualification_document_is_durable_and_bounded(self):
         text = (ROOT / "docs" / "gflights-qualification-2026-08-21.md").read_text(encoding="utf-8")

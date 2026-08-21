@@ -1,15 +1,16 @@
 # Current search policy — 2026-08-13 substrate convergence
 
 
-## Current executable provider contract (RP-07, 2026-08-20)
+## Current executable provider contract (SR-D, 2026-08-21)
 
-The short-lived canonical backend currently executes only the integrated `gflights==0.3.0` substrate. `RoutePlan.entries` is an execution contract: every listed provider must be invokable by that backend for the represented request shape.
+`RoutePlan.entries` is an execution contract: every listed provider must be invokable by the canonical backend for the represented request shape.
 
-- Destination-free canonical discovery: `gflights_google_flight_deals` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.
-- Known-route exact/flexible/open-jaw completion: `gflights_google_exact` is the executable primary; automatic executable fallback is **none**. A primary failure fails closed.
-- Expedia airport-origin public Web remains an external ChatGPT-Web/direct destination-recall/fallback **candidate**. It is seed/recall evidence only, is not anomaly authority, is not canonical backend execution coverage, and cannot silently repair a gflights failure.
-- `fli` / `flights==0.9.0` remains historical bake-off evidence for an exact/flexible comparator/fallback candidate. The current repo has no fli production adapter and no `flights`/`click` dependency, so fli is not a current executable RoutePlan entry.
-- FlyAI is a different legacy adapter/provider contract (`flyai`), not fli and not a substitute for the researched fli candidate.
+- Destination-free canonical discovery/anomaly acquisition: qualified `gflights==0.3.1` / `gflights_google_flight_deals` remains the executable primary and automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.
+- Known-route exact/flexible completion: `gflights_google_exact` is primary; the qualified official Kiwi.com remote MCP (`kiwi_mcp_exact`) is a one-attempt automatic fallback after primary technical failure. Primary degradation remains visible even when fallback succeeds.
+- Open-jaw/multi-city remains `gflights_google_exact` only; Kiwi MCP is not claimed as open-jaw or anomaly coverage.
+- Expedia airport-origin public Web remains external ChatGPT-Web/direct recall only and cannot silently repair canonical coverage.
+- `fli` / `flights==0.9.0` safe-transport protocol/parser proof succeeded in SR-D, but it is not selected because stock transport uses browser impersonation/retries and it shares the Google upstream with gflights.
+- FlyAI remains a different legacy adapter/provider contract and is not part of SR-D redundancy.
 
 The historical routing and bake-off material below is retained as research history. Older uses of “fallback” describe candidate/external surfaces unless a section explicitly states current canonical-backend integration; they do not override this current execution contract.
 

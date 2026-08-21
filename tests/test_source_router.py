@@ -51,12 +51,12 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(provider["proxy"], "forbidden")
         self.assertEqual(provider["user_agent"], "fixed_explicit_project_identity_required")
 
-    def test_known_route_completion_has_no_automatic_fli_fallback(self):
+    def test_known_route_completion_has_qualified_kiwi_fallback_not_fli(self):
         routing = self.policy["source_routing"]
         broad = routing["selected_routes"]["shared"]["broad_discovery"]
         self.assertEqual(broad["primary_provider"], "gflights_google_exact")
-        self.assertIsNone(broad["automatic_executable_fallback"])
-        self.assertEqual(broad["primary_failure_action"], "fail_closed")
+        self.assertEqual(broad["automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(broad["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
         self.assertNotIn("fallback_provider", broad)
         self.assertIn("fli_google_exact", broad["researched_not_integrated_candidates"])
         self.assertEqual(broad["query_scope"], "known_route_exact_or_flexible_completion")
@@ -104,31 +104,47 @@ class SourceRouterTests(unittest.TestCase):
             "fli_google_exact"
         )
         plan = build_source_plan(
-            self.request(profile="world", search_stage="outbound_probe", origin="TPE", destination="ICN", return_date=None),
+            self.request(
+                profile="world",
+                search_stage="round_trip_benchmark",
+                origin="TPE",
+                destination="ICN",
+                outbound_date="2026-10-05",
+                return_date="2026-10-09",
+            ),
             policy,
             {},
         )
         self.assertEqual(plan.coverage_state, "invalid_contract")
         self.assertEqual(plan.entries, ())
-        self.assertIn("fallback executor is absent", plan.fallback_reason)
+        self.assertIn("no canonical automatic fallback executor", plan.fallback_reason)
 
-    def test_integrated_fallback_metadata_alone_cannot_create_second_entry(self):
+    def test_integrated_metadata_without_dispatcher_cannot_create_second_entry(self):
         policy = deepcopy(self.policy)
         routing = policy["source_routing"]
         routing["providers"]["fake_provider_b"] = {
             "execution_plane": "canonical_backend",
             "current_integration_state": "integrated",
             "automatic_execution_supported": True,
+            "execution_mode": "keyless_http_client",
+            "credential_required": False,
         }
         routing["selected_routes"]["shared"]["broad_discovery"]["automatic_executable_fallback"] = "fake_provider_b"
         plan = build_source_plan(
-            self.request(profile="world", search_stage="outbound_probe", origin="TPE", destination="ICN", return_date=None),
+            self.request(
+                profile="world",
+                search_stage="round_trip_benchmark",
+                origin="TPE",
+                destination="ICN",
+                outbound_date="2026-10-05",
+                return_date="2026-10-09",
+            ),
             policy,
             {},
         )
         self.assertEqual(plan.coverage_state, "invalid_contract")
         self.assertEqual(plan.entries, ())
-        self.assertIn("fallback executor is absent", plan.fallback_reason)
+        self.assertIn("no canonical automatic fallback executor", plan.fallback_reason)
         self.assertIn("metadata alone", plan.fallback_reason)
 
     def test_preselected_destination_cannot_claim_destination_free_coverage(self):
@@ -148,7 +164,7 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(plan.entries, ())
         self.assertIn("destination-free origin coverage", plan.fallback_reason)
 
-    def test_seed_can_continue_to_known_route_outbound_probe(self):
+    def test_one_way_outbound_probe_does_not_claim_round_trip_fallback(self):
         plan = build_source_plan(
             self.request(
                 profile="world",
@@ -180,19 +196,19 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(plan.coverage_state, "unsupported")
         self.assertIn("exact return date", plan.fallback_reason)
 
-    def test_china_deep_uses_shared_google_exact_without_credentials(self):
+    def test_china_deep_has_qualified_kiwi_fallback_without_credentials(self):
         routing = self.policy["source_routing"]
         deep = routing["selected_routes"]["china"]["deep_search"]
         self.assertEqual(deep["primary_provider"], "gflights_google_exact")
-        self.assertIsNone(deep["automatic_executable_fallback"])
-        self.assertEqual(deep["primary_failure_action"], "fail_closed")
+        self.assertEqual(deep["automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(deep["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
         self.assertFalse(deep["credential_required"])
         self.assertFalse(deep["specialist_pipeline_required"])
         plan = build_source_plan(self.request(), self.policy, {})
         self.assertEqual(plan.coverage_state, "planned")
-        self.assertEqual([entry.provider for entry in plan.entries], ["gflights_google_exact"])
+        self.assertEqual([entry.provider for entry in plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
 
-    def test_combined_open_jaw_is_supported_by_selected_exact_substrate(self):
+    def test_combined_open_jaw_is_supported_only_by_selected_primary_substrate(self):
         plan = build_source_plan(self.request(open_jaw_required=True), self.policy, {})
         self.assertEqual(plan.coverage_state, "planned")
         self.assertEqual([entry.provider for entry in plan.entries], ["gflights_google_exact"])
