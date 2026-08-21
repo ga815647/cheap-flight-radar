@@ -1,0 +1,44 @@
+name: SR-F bounded worker via PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: github.head_ref == 'feat/cfr-sr-f-public-intelligence-simplification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/cfr-sr-f-public-intelligence-simplification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute bounded worker
+        run: python tools/sr_f_worker.py
+      - name: Install simplified project
+        run: python -m pip install -e .
+      - name: Full deterministic gate
+        run: python -m unittest discover -s tests -v
+      - name: Verify no executable crawler residue
+        shell: bash
+        run: |
+          if git grep -n -I -E 'from cheap_flight_radar\.(fixed_watch_runner|fixed_watch_state|public_sources)|Scrapy>=|scrapy-playwright|fixed-watch-run\.yml' -- pyproject.toml src tests .github/workflows flight-radar.yaml; then
+            echo 'Executable fixed-watch/crawler residue remains' >&2
+            exit 1
+          fi
+      - name: Commit Worker result
+        shell: bash
+        run: |
+          git config user.name 'CFR SR-F Worker'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Simplify CFR public-intelligence signal lane'
+          git push origin HEAD:feat/cfr-sr-f-public-intelligence-simplification
