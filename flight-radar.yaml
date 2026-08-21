@@ -1116,7 +1116,7 @@ return_windows_policy:
   formal_deal_minimum_away_hours: 24
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
-  status: canonical_runtime_active_not_launch_ready
+  status: canonical_runtime_active_launch_ready
   route_shape_return_gateway_convergence:
     enabled: true
     package: RP-06
@@ -1148,7 +1148,7 @@ ftr_handoff:
     package: RP-05
     contract_version: "1.0"
     capability_state: implemented_active
-    live_proof_status: pending
+    live_proof_status: not_exercised_no_eligible_repair_incident
     workflow: .github/workflows/ftr-same-day-recovery.yml
     driver_module: cheap_flight_radar.ftr_recovery_workflow
     transaction_module: cheap_flight_radar.ftr_recovery
@@ -1432,19 +1432,18 @@ ftr_handoff:
       ordinary_canonical_daily_cannot_masquerade_as_recovery: true
       required_clear_mode: same_day_recovery
       recovery_orchestration_package: RP-05
-      recovery_orchestration_status: pending
-      recovery_orchestration_status_semantics: live_proof_pending_not_capability_implementation
+      recovery_orchestration_status: implemented_active
+      recovery_orchestration_status_semantics: capability_active_live_proof_not_exercised_no_eligible_repair_incident
       recovery_capability_state: implemented_active
-      live_recovery_proof_status: pending
+      live_recovery_proof_status: not_exercised_no_eligible_repair_incident
     readiness:
       canonical_producer_active: true
       recovery_capability_active: true
       recovery_live_proof_complete: false
       route_shape_return_gateway_convergence_complete: true
       provider_fallback_execution_truth_convergence_complete: true
-      final_ftr_readiness: false
-      pending_packages:
-      - RP-08
+      final_ftr_readiness: true
+      pending_packages: []
   schema_version: "2.0"
   schema_versioning:
     format: MAJOR.MINOR
