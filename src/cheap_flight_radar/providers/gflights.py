@@ -1,4 +1,4 @@
-"""Production adapter for the pinned ``gflights==0.3.0`` substrate.
+"""Production adapter for the qualified ``gflights==0.3.1`` substrate.
 
 The adapter is the only layer allowed to see gflights result objects. Core Radar
 code receives immutable normalized airfare records instead.
@@ -118,7 +118,7 @@ def _airlines(*values: Any) -> tuple[str, ...]:
 
 
 class GFlightsAdapter:
-    """Typed normalization boundary around gflights 0.3.0.
+    """Typed normalization boundary around gflights 0.3.1.
 
     Production construction always supplies the project identity explicitly and
     always disables proxying. Tests may inject a fake client without importing

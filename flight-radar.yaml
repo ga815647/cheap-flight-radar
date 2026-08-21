@@ -1063,7 +1063,7 @@ source_routing:
       current_integration_state: integrated
       automatic_execution_supported: true
       truth_source: google_flight_deals
-      library: gflights==0.3.0
+      library: gflights==0.3.1
       license: MIT
       execution: disposable_github_runner_or_local
       credential_required: false
@@ -1078,7 +1078,7 @@ source_routing:
       current_integration_state: integrated
       automatic_execution_supported: true
       truth_source: google_flights_explore
-      library: gflights==0.3.0
+      library: gflights==0.3.1
       credential_required: false
       selected_roles:
       - secondary_destination_free_seed_discovery
@@ -1088,7 +1088,7 @@ source_routing:
       current_integration_state: integrated
       automatic_execution_supported: true
       truth_source: google_flights_exact_search
-      library: gflights==0.3.0
+      library: gflights==0.3.1
       credential_required: false
       selected_roles:
       - exact_completion
