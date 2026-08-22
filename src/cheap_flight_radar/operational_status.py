@@ -10,6 +10,17 @@ from typing import Any, Mapping, Sequence
 
 HEALTH_STATES = ("healthy", "degraded", "provider_failed")
 
+# Source-routing identifiers describe provider roles while normalized airfare
+# records retain the adapter's runtime provider identity. FTR coverage is keyed
+# by the latter, so executable fallback events need one explicit, bounded alias
+# normalization before they become per-provider execution truth.
+_PROVIDER_EXECUTION_ID_ALIASES = {
+    "gflights_google_exact": "gflights",
+    "gflights_google_flight_deals": "gflights",
+    "gflights_google_explore": "gflights",
+    "kiwi_mcp_exact": "kiwi_mcp",
+}
+
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
@@ -110,10 +121,84 @@ def _discovery_collapse(coverage: Mapping[str, Any]) -> bool:
     return bool(coverage.get("all_origins_attempted") and attempts > 0 and records == 0)
 
 
+def _runtime_provider_id(value: Any) -> str:
+    provider = str(value or "")
+    return _PROVIDER_EXECUTION_ID_ALIASES.get(provider, provider)
+
+
+def _fallback_provider_execution(coverage: Mapping[str, Any]) -> Mapping[str, Mapping[str, Any]]:
+    """Promote explicit executable-fallback events to provider slice truth.
+
+    The production adapter records one access-redundancy event for every actual
+    known-route fallback invocation. Those rows already contain the primary and
+    fallback provider identities, terminal states, request-sent truth, surfaces,
+    and errors. When both provider identities are unambiguous, this function
+    converts only that existing evidence into the top-level provider dimension
+    required by the FTR handoff. Unknown/inconsistent evidence intentionally
+    returns no synthesized map so the downstream contract continues to fail
+    closed instead of inferring provider success.
+    """
+
+    lane = _mapping(_mapping(coverage.get("access_redundancy")).get("known_route_exact_flexible"))
+    raw_events = lane.get("events")
+    if not isinstance(raw_events, Sequence) or isinstance(raw_events, (str, bytes)) or not raw_events:
+        return {}
+    events = [item for item in raw_events if isinstance(item, Mapping)]
+    if len(events) != len(raw_events):
+        return {}
+
+    primary_ids = {_runtime_provider_id(item.get("primary_provider")) for item in events}
+    fallback_ids = {_runtime_provider_id(item.get("fallback_provider")) for item in events}
+    if "" in primary_ids or "" in fallback_ids or len(primary_ids) != 1 or len(fallback_ids) != 1:
+        return {}
+    primary_provider = next(iter(primary_ids))
+    fallback_provider = next(iter(fallback_ids))
+    if primary_provider == fallback_provider:
+        return {}
+
+    declared_primary = _runtime_provider_id(lane.get("primary"))
+    declared_fallback = _runtime_provider_id(lane.get("automatic_executable_fallback"))
+    if declared_primary and declared_primary != primary_provider:
+        return {}
+    if declared_fallback and declared_fallback != fallback_provider:
+        return {}
+
+    valid_states = {"complete", "failed"}
+    primary_states = [str(item.get("primary_state") or "") for item in events]
+    fallback_states = [str(item.get("fallback_state") or "") for item in events]
+    if any(state not in valid_states for state in (*primary_states, *fallback_states)):
+        return {}
+
+    surfaces = sorted({str(item.get("surface") or "") for item in events if str(item.get("surface") or "")})
+    primary_errors = sorted({str(item.get("primary_error")) for item in events if item.get("primary_error")})
+    fallback_errors = sorted({str(item.get("fallback_error")) for item in events if item.get("fallback_error")})
+    return {
+        primary_provider: {
+            "status": "failed" if "failed" in primary_states else "succeeded",
+            "surfaces": surfaces,
+            "reasons": primary_errors,
+        },
+        fallback_provider: {
+            "status": "failed" if "failed" in fallback_states else "succeeded",
+            "surfaces": surfaces,
+            "reasons": fallback_errors,
+        },
+    }
+
+
 def derive_provider_health(
     coverage: Mapping[str, Any],
     provider_failures: Sequence[Mapping[str, Any]] = (),
 ) -> Mapping[str, Any]:
+    # ``attach_access_redundancy_truth`` inserts the executable fallback events
+    # immediately before calling this function. Preserve their already-explicit
+    # provider execution truth on the same mutable coverage object so FTR does
+    # not have to infer provider success from fare records or global health.
+    if isinstance(coverage, dict) and "provider_execution" not in coverage:
+        provider_execution = _fallback_provider_execution(coverage)
+        if provider_execution:
+            coverage["provider_execution"] = provider_execution
+
     failed_origins, degraded_origins = _origin_gaps(coverage)
     technical_failures = technical_failure_count(coverage)
     suppressed_requests = suppressed_request_count(coverage)
