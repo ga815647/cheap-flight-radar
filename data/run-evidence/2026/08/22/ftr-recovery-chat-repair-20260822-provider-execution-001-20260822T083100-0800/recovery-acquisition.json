@@ -1,0 +1,21 @@
+{
+  "application_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
+  "claim_path": "data/ftr-recovery-attempts/2026/08/22/chat-repair-20260822-provider-execution-001.json",
+  "mode": "same_day_recovery",
+  "price_history_path": "data/price-history/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800.json",
+  "publication_manifest_evidence_path": "data/run-evidence/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800/publication-manifest.json",
+  "repair_trigger_attempt": {
+    "attempt_state": "invalid",
+    "evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500-0800/ftr-failed-attempt.json",
+    "mode": "canonical_daily",
+    "producer_health_status": "degraded",
+    "run_id": "production-radar-20260822T080500+0800"
+  },
+  "request_id": "chat-repair-20260822-provider-execution-001",
+  "requested_date": "2026-08-22",
+  "run_id": "ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100+0800",
+  "run_result_path": "data/run-evidence/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800/run-result.json",
+  "schema_version": 1,
+  "semantics": "durable_cfr_recovery_evidence_precedes_ftr_recovery_transaction",
+  "terminal_acquisition_truth": "success"
+}
