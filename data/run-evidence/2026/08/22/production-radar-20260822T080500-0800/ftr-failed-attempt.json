@@ -1,0 +1,12 @@
+{
+  "attempt_state": "invalid",
+  "failed_at": "2026-08-22T08:13:54+08:00",
+  "failure_stage": "canonical_ftr_staging",
+  "mode": "canonical_daily",
+  "producer_commit_sha": "82102a2fab2fc4c71d43b3cb70e7fb5348319199",
+  "reason": "FTRHandoffError: multiple providers require explicit per-provider execution evidence",
+  "run_id": "production-radar-20260822T080500+0800",
+  "run_result_evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500+0800/run-result.json",
+  "schema_version": 1,
+  "semantics": "durable_canonical_ftr_failed_attempt_not_actions_artifact"
+}
