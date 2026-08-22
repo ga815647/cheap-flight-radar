@@ -1,13 +1,13 @@
 {
   "coverage_state": "complete",
   "freshness_state": "fresh",
-  "generated_at": "2026-08-21T09:25:01+08:00",
-  "mode": "canonical_daily",
-  "observed_at": "2026-08-21T08:32:44.388235+08:00",
-  "producer_commit_sha": "a4147c4e3a76d2707ecb31d48e7e37c95de23128",
-  "run_id": "production-radar-20260821T083244+0800",
+  "generated_at": "2026-08-22T09:26:20.063781+08:00",
+  "mode": "same_day_recovery",
+  "observed_at": "2026-08-22T08:31:00.124815+08:00",
+  "producer_commit_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
+  "run_id": "ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100+0800",
   "schema_version": "2.0",
-  "snapshot_path": "data/ftr-feed/2026/08/21/production-radar-20260821T083244-0800.json",
-  "snapshot_sha256": "6c7bd0ea427a766545a262a2be344a4f4b44385f8159ec5aab08e5249f650ef2",
+  "snapshot_path": "data/ftr-feed/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800.json",
+  "snapshot_sha256": "669222d70bb11d7676bfba9b409407a0bce1e33a554e7cafd0291d7614707b59",
   "terminal_state": "success"
 }
