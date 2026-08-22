@@ -1,0 +1,38 @@
+{
+  "application_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
+  "claimed_at": "2026-08-22T08:30:57.656825+08:00",
+  "control_trigger_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
+  "mode": "same_day_recovery",
+  "prior_last_good": {
+    "manifest_path": "data/ftr-feed/latest.json",
+    "run_id": "production-radar-20260821T083244+0800",
+    "schema_version": "2.0",
+    "snapshot_freshness_at_generation": "fresh",
+    "snapshot_path": "data/ftr-feed/2026/08/21/production-radar-20260821T083244-0800.json",
+    "snapshot_sha256": "6c7bd0ea427a766545a262a2be344a4f4b44385f8159ec5aab08e5249f650ef2"
+  },
+  "repair_incident": {
+    "latest_failed_attempt_at_claim": {
+      "attempt_state": "invalid",
+      "evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500-0800/ftr-failed-attempt.json",
+      "mode": "canonical_daily",
+      "producer_health_status": "degraded",
+      "run_id": "production-radar-20260822T080500+0800"
+    },
+    "set_at": "2026-08-22T08:13:54+08:00",
+    "trigger_attempt": {
+      "attempt_state": "invalid",
+      "evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500-0800/ftr-failed-attempt.json",
+      "mode": "canonical_daily",
+      "producer_health_status": "degraded",
+      "run_id": "production-radar-20260822T080500+0800"
+    }
+  },
+  "request_id": "chat-repair-20260822-provider-execution-001",
+  "requested_date": "2026-08-22",
+  "run_prefix": "ftr-recovery-chat-repair-20260822-provider-execution-001-",
+  "schema_version": 1,
+  "semantics": "one_explicit_same_day_recovery_acquisition_per_request_id",
+  "workflow_run_id": "32540581372",
+  "workflow_run_url": "https://github.com/ga815647/cheap-flight-radar/actions/runs/32540581372"
+}
