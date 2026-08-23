@@ -140,10 +140,10 @@ Exact head: `3c233d97571d57302667dcc0e5b8e19f253e790f`
 - Returned `ItineraryMulticity` rows: **0**
 - Exact combined airfare evidence: **none**
 
-### 5. High-availability mixed-Taiwan-gateway control
+### 5. Broader mixed-Taiwan-gateway control
 
-A final bounded control was used to distinguish DRP-specific inventory weakness
-from generally usable multi-city execution.
+A final bounded control used a different market to test whether the candidate
+could produce any positive combined fare evidence outside the DRP shapes.
 
 Exact head: `4a0fd6890fdbb6da9662bbfdf6e0b998651bc7f5`
 
@@ -158,9 +158,10 @@ Exact head: `4a0fd6890fdbb6da9662bbfdf6e0b998651bc7f5`
 - Exact combined airfare evidence: **none**
 - Exact-head repository CI run `32616459090`: success
 
-This removed the strongest inventory-specific explanation for the two DRP
-zeros. No additional probing was justified under the bounded qualification
-contract.
+This broader control also returned zero. It supplied no positive multi-city fare
+execution evidence beyond the DRP shapes; it does not establish why the endpoint
+returned zero. No additional probing was justified under the bounded
+qualification contract.
 
 ## Durable decision
 
