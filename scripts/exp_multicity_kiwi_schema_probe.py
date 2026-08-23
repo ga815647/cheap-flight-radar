@@ -1,4 +1,4 @@
-"""One-shot live Kiwi multi-city fare proof for a real CFR mixed-return shape.
+"""One-shot live Kiwi multi-city fare proof for a CFR mixed-return shape.
 
 Experiment-only. One direct request, fixed CFR UA, no credentials/cookies,
 proxy, retry, session mutation, browser impersonation, or rate-limit reset.
@@ -12,8 +12,8 @@ import urllib.request
 ENDPOINT = "https://api.skypicker.com/umbrella/v2/graphql?featureName=SearchMulticityItinerariesQuery"
 USER_AGENT = "CheapFlightRadar/0.1 (+public-research; no-proxy)"
 REQUESTED_LEGS = [
-    ("KHH", "DRP", "2026-10-11"),
-    ("DRP", "TPE", "2026-10-19"),
+    ("TPE", "NRT", "2026-10-05"),
+    ("NRT", "KHH", "2026-10-09"),
 ]
 
 QUERY = r"""
