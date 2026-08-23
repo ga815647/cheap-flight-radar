@@ -10,43 +10,19 @@
     "requires_terminal_success": true,
     "scoped_search_cannot_clear": true
   },
-  "current_freshness_state": "fresh",
+  "current_freshness_state": "degraded",
   "last_good": {
     "manifest_path": "data/ftr-feed/latest.json",
-    "run_id": "ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100+0800",
+    "run_id": "production-radar-20260823T081129+0800",
     "schema_version": "2.0",
-    "snapshot_freshness_at_generation": "fresh",
-    "snapshot_path": "data/ftr-feed/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800.json",
-    "snapshot_sha256": "669222d70bb11d7676bfba9b409407a0bce1e33a554e7cafd0291d7614707b59"
+    "snapshot_freshness_at_generation": "degraded",
+    "snapshot_path": "data/ftr-feed/2026/08/23/production-radar-20260823T081129-0800.json",
+    "snapshot_sha256": "76343f6aabd43f03d9f5f38f1391ccf2db05b20ebfd02f136aa63bbee82775d0"
   },
-  "producer_health_status": "healthy",
-  "producer_status": "healthy",
-  "repair_incident": {
-    "cleared_at": "2026-08-22T09:26:20.063781+08:00",
-    "cleared_by": {
-      "mode": "same_day_recovery",
-      "run_id": "ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100+0800",
-      "snapshot_path": "data/ftr-feed/2026/08/22/ftr-recovery-chat-repair-20260822-provider-execution-001-20260822T083100-0800.json",
-      "snapshot_sha256": "669222d70bb11d7676bfba9b409407a0bce1e33a554e7cafd0291d7614707b59"
-    },
-    "latest_failed_attempt": {
-      "attempt_state": "invalid",
-      "evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500-0800/ftr-failed-attempt.json",
-      "mode": "canonical_daily",
-      "producer_health_status": "degraded",
-      "run_id": "production-radar-20260822T080500+0800"
-    },
-    "set_at": "2026-08-22T08:13:54+08:00",
-    "state": "cleared",
-    "trigger_attempt": {
-      "attempt_state": "invalid",
-      "evidence_ref": "data/run-evidence/2026/08/22/production-radar-20260822T080500-0800/ftr-failed-attempt.json",
-      "mode": "canonical_daily",
-      "producer_health_status": "degraded",
-      "run_id": "production-radar-20260822T080500+0800"
-    }
-  },
+  "producer_health_status": "degraded",
+  "producer_status": "degraded",
+  "repair_incident": null,
   "repair_required": false,
   "schema_version": "2.0",
-  "updated_at": "2026-08-22T09:26:20.063781+08:00"
+  "updated_at": "2026-08-23T08:19:08+08:00"
 }
