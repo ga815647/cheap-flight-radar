@@ -1,0 +1,26 @@
+name: EXP multi-city redundancy probe
+
+on:
+  push:
+    branches:
+      - exp/multicity-redundancy-20260823
+    paths:
+      - "scripts/exp_multicity_kiwi_schema_probe.py"
+      - ".github/workflows/exp-multicity-redundancy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run one-shot direct GraphQL schema capability probe
+        run: python scripts/exp_multicity_kiwi_schema_probe.py
