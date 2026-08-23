@@ -7,6 +7,12 @@ on:
     paths:
       - "scripts/exp_multicity_kiwi_schema_probe.py"
       - ".github/workflows/exp-multicity-redundancy.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/exp_multicity_kiwi_schema_probe.py"
+      - ".github/workflows/exp-multicity-redundancy.yml"
 
 permissions:
   contents: read
@@ -18,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
