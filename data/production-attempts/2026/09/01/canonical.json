@@ -1,0 +1,9 @@
+{
+  "claimed_at": "2026-09-01T08:30:45+08:00",
+  "requested_date": "2026-09-01",
+  "schema_version": 1,
+  "semantics": "one_canonical_live_acquisition_attempt_per_asia_taipei_day",
+  "trigger_sha": "788782377d84efcf7330665c9f9f0a81d972174a",
+  "workflow_run_id": "33455019071",
+  "workflow_run_url": "https://github.com/ga815647/cheap-flight-radar/actions/runs/33455019071"
+}
