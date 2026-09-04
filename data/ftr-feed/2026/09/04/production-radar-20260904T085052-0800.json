@@ -1,0 +1,1017 @@
+{
+  "candidate_counts": {
+    "absolute_low_non_deals": 0,
+    "deals": 10,
+    "opportunities": 10,
+    "variants": 10
+  },
+  "coverage": {
+    "markets": {
+      "china": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 2,
+          "discovered": 65,
+          "qualified": 7,
+          "revalidated": 2
+        },
+        "status": "succeeded"
+      },
+      "japan": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 12,
+          "discovered": 76,
+          "qualified": 27,
+          "revalidated": 12
+        },
+        "status": "succeeded"
+      },
+      "korea": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 1,
+          "discovered": 14,
+          "qualified": 10,
+          "revalidated": 1
+        },
+        "status": "succeeded"
+      },
+      "other_asia_oceania": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 7,
+          "discovered": 256,
+          "qualified": 31,
+          "revalidated": 7
+        },
+        "status": "succeeded"
+      }
+    },
+    "origins": {
+      "KHH": {
+        "errors": [],
+        "explore_seeds": 83,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "RMQ": {
+        "errors": [],
+        "explore_seeds": 79,
+        "returned_flight_deals": 30,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TPE": {
+        "errors": [],
+        "explore_seeds": 77,
+        "returned_flight_deals": 30,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TSA": {
+        "errors": [],
+        "explore_seeds": 72,
+        "returned_flight_deals": 60,
+        "source_status": "attempted",
+        "status": "succeeded"
+      }
+    },
+    "overall_state": "degraded",
+    "provider_failures": [
+      {
+        "error": "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+        "origin": "KHH",
+        "route": "KHH-ISG-TPE",
+        "surface": "mixed_taiwan_return"
+      },
+      {
+        "error": "gflights primary failed (GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "cheapest_dates"
+      },
+      {
+        "error": "gflights primary failed (circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume); kiwi_mcp fallback=complete",
+        "kind": "primary_failure_recovered_by_fallback",
+        "origin": "known_route",
+        "surface": "exact"
+      }
+    ],
+    "provider_health": {
+      "coverage_collapse": false,
+      "deal_count_is_health_signal": false,
+      "degraded_origins": [],
+      "failed_origins": [],
+      "reasons": [
+        "1 technical provider execution failure(s) recorded",
+        "7 provider request(s) circuit-suppressed after sticky rate-limit state",
+        "33 provider/operational failure evidence item(s) recorded"
+      ],
+      "status": "degraded",
+      "suppressed_request_count": 7,
+      "technical_failure_count": 1
+    },
+    "providers": {
+      "gflights": {
+        "health_status": "degraded",
+        "reasons": [
+          "GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume",
+          "circuit_open: primary gflights client is already locally blocked after sticky HTTP 429; no provider request sent; trigger=GFlightsError: Google Flights returned HTTP 429 Too Many Requests — all further requests on this client are blocked; call ApiClient::reset_rate_limit() to resume"
+        ],
+        "status": "failed",
+        "surfaces": [
+          "cheapest_dates",
+          "exact"
+        ]
+      },
+      "kiwi_mcp": {
+        "health_status": "degraded",
+        "reasons": [
+          "1 technical provider execution failure(s) recorded",
+          "7 provider request(s) circuit-suppressed after sticky rate-limit state",
+          "33 provider/operational failure evidence item(s) recorded"
+        ],
+        "status": "succeeded",
+        "surfaces": [
+          "cheapest_dates",
+          "exact"
+        ]
+      }
+    },
+    "semantics": "execution_and_coverage_evidence_not_candidate_or_deal_count",
+    "surfaces": {
+      "conventional_exact": {
+        "execution": {
+          "attempts": 20,
+          "empty": 4,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 16,
+          "successes": 16,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "explore": {
+        "execution": {
+          "attempts": 4,
+          "empty": 0,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 349,
+          "successes": 4,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flexible_dates": {
+        "execution": {
+          "attempts": 20,
+          "empty": 2,
+          "exact_attempts": 18,
+          "exact_empty": 0,
+          "exact_failures": 0,
+          "exact_provider_calls": 18,
+          "exact_successes": 18,
+          "exact_suppressed": 0,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 367,
+          "successes": 18,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flight_deals": {
+        "execution": {
+          "attempts": 12,
+          "empty": 5,
+          "failures": 0,
+          "provider_calls": 12,
+          "records": 210,
+          "successes": 7,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "mixed_taiwan_return": {
+        "execution": {
+          "attempts": 4,
+          "empty": 0,
+          "failures": 1,
+          "provider_calls": 1,
+          "records": 0,
+          "successes": 0,
+          "suppressed": 3,
+          "unsupported": 0
+        },
+        "status": "failed"
+      },
+      "open_jaw": {
+        "execution": {
+          "attempts": 4,
+          "empty": 0,
+          "failures": 0,
+          "provider_calls": 0,
+          "records": 0,
+          "successes": 0,
+          "suppressed": 4,
+          "unsupported": 0
+        },
+        "status": "failed"
+      }
+    }
+  },
+  "coverage_state": "degraded",
+  "freshness_state": "degraded",
+  "generated_at": "2026-09-04T08:59:44+08:00",
+  "mode": "canonical_daily",
+  "observed_at": "2026-09-04T08:50:52.536632+08:00",
+  "opportunities": [
+    {
+      "destination_route_shape": {
+        "arrival_airport": "BWN",
+        "departure_airport": "BWN"
+      },
+      "opportunity_id": "air-bwn-bwn",
+      "variants": [
+        {
+          "airlines": [
+            "BI",
+            "Royal Brunei"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6250,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "BWN",
+            "departure_airport": "BWN"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-bwn-2026-09-20-2026-09-27-f69725abca",
+            "provider": "gflights",
+            "record_id": "gf-f69725abca76190bc31b",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://book-royalbrunei.crane.aero/ibe/availability?tripType=ROUND_TRIP&depPort=TPE&arrPort=BWN&departureDate=20.09.2026&returnDate=27.09.2026&passengerQuantities%5B0%5D%5BpassengerType%5D=ADLT&passengerQuantities%5B0%5D%5Bquantity%5D=1&passengerQuantities%5B1%5D%5BpassengerType%5D=CHLD&passengerQuantities%5B1%5D%5Bquantity%5D=0&passengerQuantities%5B2%5D%5BpassengerType%5D=INFT&passengerQuantities%5B2%5D%5Bquantity%5D=0&currency=BND&lang=en&cabinClass=ECONOMY&gclid=ADowPOJaTJxCdq5THz-nNpHdtFY39E8AK50eJiXVGmOU1R9Ei03n-_l6C4HDiOn_F9ayrwal_jrAO9YqZ1iC7cX4iJ6lKYNc7u3FkAfQSDGaRV7V1M1n&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "16:45",
+              "date": "2026-09-20",
+              "departure_time": "13:10",
+              "destination": "BWN",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-04T00:51:56.644202+00:00",
+          "outbound_date": "2026-09-20",
+          "return_date": "2026-09-27",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-f69725abca76190bc31b",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "FKS",
+        "departure_airport": "FKS"
+      },
+      "opportunity_id": "air-fks-fks",
+      "variants": [
+        {
+          "airlines": [
+            "Jetstar Japan",
+            "Ibex Airlines",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 12980,
+          "destination": {
+            "city": "Fukushima",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "FKS",
+            "departure_airport": "FKS"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-fks-2026-09-08-2026-09-15-kiwi-6bb03",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-6bb036e5cadbbe821e35",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-09-08T22:00:00",
+              "date": "2026-09-08",
+              "departure_time": "2026-09-08T18:20:00",
+              "destination": "KIX",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-09-09T18:00:00",
+              "date": "2026-09-09",
+              "departure_time": "2026-09-09T16:55:00",
+              "destination": "FKS",
+              "origin": "ITM"
+            },
+            {
+              "arrival_time": "2026-09-15T19:10:00",
+              "date": "2026-09-15",
+              "departure_time": "2026-09-15T16:00:00",
+              "destination": "TPE",
+              "origin": "FKS"
+            }
+          ],
+          "observed_at": "2026-09-04T00:57:23.210775+00:00",
+          "outbound_date": "2026-09-08",
+          "return_date": "2026-09-15",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-6bb036e5cadbbe821e35",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HNA",
+        "departure_airport": "HNA"
+      },
+      "opportunity_id": "air-hna-hna",
+      "variants": [
+        {
+          "airlines": [
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 8778,
+          "destination": {
+            "city": "Hanamaki",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HNA",
+            "departure_airport": "HNA"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-hna-2026-09-16-2026-09-23-kiwi-9b4b9",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-9b4b9f31b6d5a455dd5a",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-09-16T17:00:00",
+              "date": "2026-09-16",
+              "departure_time": "2026-09-16T12:25:00",
+              "destination": "HNA",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-09-23T21:00:00",
+              "date": "2026-09-23",
+              "departure_time": "2026-09-23T18:00:00",
+              "destination": "TPE",
+              "origin": "HNA"
+            }
+          ],
+          "observed_at": "2026-09-04T00:57:35.725214+00:00",
+          "outbound_date": "2026-09-16",
+          "return_date": "2026-09-23",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-9b4b9f31b6d5a455dd5a",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HRB",
+        "departure_airport": "HRB"
+      },
+      "opportunity_id": "air-hrb-hrb",
+      "variants": [
+        {
+          "airlines": [
+            "Shandong Airlines",
+            "Air China",
+            "VietJet Air"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 14223,
+          "destination": {
+            "city": "Harbin",
+            "country": "China"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HRB",
+            "departure_airport": "HRB"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-rmq-hrb-2026-11-12-2026-11-19-kiwi-9f492",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-9f492b88c6b054d50d6f",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-11-12T13:50:00",
+              "date": "2026-11-12",
+              "departure_time": "2026-11-12T11:20:00",
+              "destination": "TAO",
+              "origin": "RMQ"
+            },
+            {
+              "arrival_time": "2026-11-12T20:20:00",
+              "date": "2026-11-12",
+              "departure_time": "2026-11-12T18:10:00",
+              "destination": "HRB",
+              "origin": "TAO"
+            },
+            {
+              "arrival_time": "2026-11-19T18:15:00",
+              "date": "2026-11-19",
+              "departure_time": "2026-11-19T16:10:00",
+              "destination": "PEK",
+              "origin": "HRB"
+            },
+            {
+              "arrival_time": "2026-11-20T03:15:00",
+              "date": "2026-11-20",
+              "departure_time": "2026-11-20T00:10:00",
+              "destination": "HAN",
+              "origin": "PEK"
+            },
+            {
+              "arrival_time": "2026-11-20T10:30:00",
+              "date": "2026-11-20",
+              "departure_time": "2026-11-20T07:00:00",
+              "destination": "RMQ",
+              "origin": "HAN"
+            }
+          ],
+          "observed_at": "2026-09-04T00:59:28.778912+00:00",
+          "outbound_date": "2026-11-12",
+          "return_date": "2026-11-19",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taichung",
+          "taiwan_origin_gateway": "RMQ",
+          "taiwan_return_gateway": "RMQ",
+          "variant_id": "kiwi-9f492b88c6b054d50d6f",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HSG",
+        "departure_airport": "HSG"
+      },
+      "opportunity_id": "air-hsg-hsg",
+      "variants": [
+        {
+          "airlines": [
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6066,
+          "destination": {
+            "city": "Saga",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HSG",
+            "departure_airport": "HSG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-hsg-2026-09-17-2026-09-24-kiwi-26a27",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-26a27e063e3066aa6461",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-09-17T10:35:00",
+              "date": "2026-09-17",
+              "departure_time": "2026-09-17T07:10:00",
+              "destination": "HSG",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-09-24T13:05:00",
+              "date": "2026-09-24",
+              "departure_time": "2026-09-24T11:35:00",
+              "destination": "TPE",
+              "origin": "HSG"
+            }
+          ],
+          "observed_at": "2026-09-04T00:57:15.720917+00:00",
+          "outbound_date": "2026-09-17",
+          "return_date": "2026-09-24",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-26a27e063e3066aa6461",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "ISG",
+        "departure_airport": "ISG"
+      },
+      "opportunity_id": "air-isg-isg",
+      "variants": [
+        {
+          "airlines": [
+            "IT"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6647,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "ISG",
+            "departure_airport": "ISG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-isg-2026-11-21-2026-11-27-b7732921c1",
+            "provider": "gflights",
+            "record_id": "gf-b7732921c150d3900df5",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "08:35",
+              "date": "2026-11-21",
+              "departure_time": "06:35",
+              "destination": "ISG",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-04T00:51:57.056797+00:00",
+          "outbound_date": "2026-11-21",
+          "return_date": "2026-11-27",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-b7732921c150d3900df5",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "KMG",
+        "departure_airport": "KMG"
+      },
+      "opportunity_id": "air-kmg-kmg",
+      "variants": [
+        {
+          "airlines": [
+            "SC",
+            "Shandong"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 13555,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "KMG",
+            "departure_airport": "KMG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-rmq-kmg-2026-10-01-2026-10-07-126a9bc56d",
+            "provider": "gflights",
+            "record_id": "gf-126a9bc56de0b1c0a916",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "13:50",
+              "date": "2026-10-01",
+              "departure_time": "11:20",
+              "destination": "TAO",
+              "origin": "RMQ"
+            },
+            {
+              "arrival_time": "20:10",
+              "date": "2026-10-01",
+              "departure_time": "16:25",
+              "destination": "KMG",
+              "origin": "TAO"
+            }
+          ],
+          "observed_at": "2026-09-04T00:51:39.420976+00:00",
+          "outbound_date": "2026-10-01",
+          "return_date": "2026-10-07",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "RMQ",
+          "taiwan_return_gateway": "RMQ",
+          "variant_id": "gf-126a9bc56de0b1c0a916",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "OIT",
+        "departure_airport": "OIT"
+      },
+      "opportunity_id": "air-oit-oit",
+      "variants": [
+        {
+          "airlines": [
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6146,
+          "destination": {
+            "city": "Oita",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "OIT",
+            "departure_airport": "OIT"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-oit-2026-09-05-2026-09-12-kiwi-a3341",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-a33410c90ed6a699ffb8",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-09-05T15:00:00",
+              "date": "2026-09-05",
+              "departure_time": "2026-09-05T12:00:00",
+              "destination": "OIT",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-09-12T17:55:00",
+              "date": "2026-09-12",
+              "departure_time": "2026-09-12T16:30:00",
+              "destination": "TPE",
+              "origin": "OIT"
+            }
+          ],
+          "observed_at": "2026-09-04T00:59:11.759635+00:00",
+          "outbound_date": "2026-09-05",
+          "return_date": "2026-09-12",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-a33410c90ed6a699ffb8",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "PNK",
+        "departure_airport": "PNK"
+      },
+      "opportunity_id": "air-pnk-pnk",
+      "variants": [
+        {
+          "airlines": [
+            "TR",
+            "Scoot"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 7234,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "PNK",
+            "departure_airport": "PNK"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-pnk-2026-10-04-2026-10-10-c660b350d3",
+            "provider": "gflights",
+            "record_id": "gf-c660b350d3e46161e511",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.flyscoot.com/book/flight/return/TPE/2026-10-04/PNK/PNK/2026-10-10/TPE?adult=1&child=0&infant=0&orgToken=VEUtiuQY/mW09sQ6I0betQ%3D%3D&utm_source=GoogleFlights&utm_medium=Referral&utm_campaign=GoogleFlights_deeplink&gclid=ADowPOIMTTs6FJA62pfbZTaZiutm2u_-Q8ytJFVcl9XL1enHuuwj-j5koRl03vMTZ-Odhuv-Z2wKEKHwIrTQTUZxqes2V2I1ikVGXytT98SCXpuJIeBf&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "04:15",
+              "date": "2026-10-04",
+              "departure_time": "23:50",
+              "destination": "SIN",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "06:30",
+              "date": "2026-10-05",
+              "departure_time": "05:55",
+              "destination": "PNK",
+              "origin": "SIN"
+            }
+          ],
+          "observed_at": "2026-09-04T00:51:53.021666+00:00",
+          "outbound_date": "2026-10-04",
+          "return_date": "2026-10-10",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-c660b350d3e46161e511",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "YGJ",
+        "departure_airport": "YGJ"
+      },
+      "opportunity_id": "air-ygj-ygj",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 9147,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "YGJ",
+            "departure_airport": "YGJ"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260904t085052+0800-tpe-ygj-2026-09-28-2026-10-05-33ab2549a2",
+            "provider": "gflights",
+            "record_id": "gf-33ab2549a240f3dd0dfa",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-YGJ&departureDate=2026-09-28&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=YGJ-TPE&returnDate=2026-10-05&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOJOi84oWxs1r00_xUQTnP3wUO7kvMCjEJyolJNLgs-rztDXpl4LlTgsOI3D6SuY4Yy_vGWpNoCfWgbf0Uij-sIUza_GsICb53JFaD7o509x0EE_&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "12:00",
+              "date": "2026-09-28",
+              "departure_time": "08:35",
+              "destination": "YGJ",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-04T00:51:40.447092+00:00",
+          "outbound_date": "2026-09-28",
+          "return_date": "2026-10-05",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-33ab2549a240f3dd0dfa",
+          "verification_state": "revalidated"
+        }
+      ]
+    }
+  ],
+  "producer_commit_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
+  "run_id": "production-radar-20260904T085052+0800",
+  "schema_version": "2.0",
+  "terminal_state": "success"
+}
