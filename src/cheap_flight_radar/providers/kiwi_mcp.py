@@ -1,13 +1,14 @@
-"""Qualified TWD-0 Kiwi.com MCP adapter for known-route fallback execution.
+"""Qualified TWD-0 Kiwi.com MCP adapter for known-route execution.
 
-This adapter is intentionally narrow.  It does not provide destination-free
-Deal/anomaly discovery and it does not replace Google Flight Deals truth.  It
-borrows Kiwi.com's official public remote MCP ``search-flight`` surface only
-for known-route exact/flexible completion when the primary gflights access
-lane fails.
+This adapter is intentionally narrow. It does not provide destination-free
+Deal/anomaly discovery and it does not replace Google Flight Deals truth. The
+canonical runtime uses Kiwi.com's official public remote MCP ``search-flight``
+surface as the primary flexible-date/calendar completion lane and as the
+one-attempt fallback for conventional known-route exact completion after a
+technical gflights failure. Open-jaw/multi-city remains outside this adapter.
 
 Production calls use one MCP tool invocation, no credential, no proxy, no
-browser/TLS impersonation and no CFR retry loop.  The normalized records below
+browser/TLS impersonation and no CFR retry loop. The normalized records below
 are provider-independent CFR evidence.
 """
 from __future__ import annotations

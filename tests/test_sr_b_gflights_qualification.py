@@ -33,8 +33,12 @@ class SRBGFlightsQualificationTests(unittest.TestCase):
         self.assertTrue(state["ssot_semantics"]["search_paths_and_provider_adapters_are_replaceable_implementation"])
         self.assertEqual(state["current_runtime"]["destination_free_automatic_executable_fallback"], "none")
         self.assertEqual(
-            state["current_runtime"]["known_route_exact_flexible_automatic_executable_fallback"],
+            state["current_runtime"]["known_route_exact_automatic_executable_fallback"],
             "kiwi_mcp_exact",
+        )
+        self.assertEqual(
+            state["current_runtime"]["known_route_flexible_automatic_executable_fallback"],
+            "none",
         )
         routing = self.policy["source_routing"]
         self.assertTrue(routing["strict_no_silent_degradation"])

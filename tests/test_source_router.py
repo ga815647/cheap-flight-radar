@@ -59,9 +59,15 @@ class SourceRouterTests(unittest.TestCase):
         self.assertEqual(broad["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
         self.assertNotIn("fallback_provider", broad)
         self.assertIn("fli_google_exact", broad["researched_not_integrated_candidates"])
-        self.assertEqual(broad["query_scope"], "known_route_exact_or_flexible_completion")
+        self.assertEqual(broad["query_scope"], "known_route_exact_completion")
         self.assertEqual(broad["combined_open_jaw"], "supported")
         self.assertTrue(broad["revalidation_required"])
+        flexible = routing["selected_routes"]["shared"]["flexible_completion"]
+        self.assertEqual(flexible["primary_provider"], "kiwi_mcp_exact")
+        self.assertIsNone(flexible["automatic_executable_fallback"])
+        self.assertEqual(flexible["primary_failure_action"], "fail_closed")
+        self.assertEqual(flexible["query_scope"], "known_route_flexible_completion")
+        self.assertEqual(flexible["combined_open_jaw"], "unsupported")
 
     def test_destination_free_origin_sweep_plans_only_current_backend_provider(self):
         request = OriginSweepRequest(origin="TPE", horizon_start="2026-08-13")

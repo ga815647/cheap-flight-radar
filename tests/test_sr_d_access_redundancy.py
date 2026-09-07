@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from pathlib import Path
 import tomllib
 import unittest
@@ -100,7 +99,7 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
     def setUpClass(cls):
         cls.policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
 
-    def test_policy_routes_only_known_route_exact_flexible_to_kiwi_fallback(self):
+    def test_policy_splits_conventional_exact_and_flexible_provider_lanes(self):
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-21"),
             self.policy,
@@ -110,6 +109,19 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
             SearchRequest(
                 profile="world",
                 search_stage="round_trip_benchmark",
+                origin="TPE",
+                destination="NRT",
+                outbound_date="2026-10-05",
+                return_date="2026-10-09",
+                destination_country="JP",
+            ),
+            self.policy,
+            {},
+        )
+        flexible_plan = build_source_plan(
+            SearchRequest(
+                profile="world",
+                search_stage="flexible_dates",
                 origin="TPE",
                 destination="NRT",
                 outbound_date="2026-10-05",
@@ -138,13 +150,14 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
             [entry.provider for entry in exact_plan.entries],
             ["gflights_google_exact", "kiwi_mcp_exact"],
         )
+        self.assertEqual([entry.provider for entry in flexible_plan.entries], ["kiwi_mcp_exact"])
         self.assertEqual([entry.provider for entry in open_jaw_plan.entries], ["gflights_google_exact"])
 
-    def test_dependency_and_ssot_mark_kiwi_as_qualified_credential_free_fallback(self):
+    def test_dependency_and_ssot_mark_kiwi_as_qualified_credential_free_flexible_primary(self):
         dependencies = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["dependencies"]
         self.assertTrue(any(str(value).startswith("mcp>=1.29") for value in dependencies))
         routing = self.policy["source_routing"]
-        self.assertEqual(routing["status"], "provider_execution_truth_converged_v4")
+        self.assertEqual(routing["status"], "provider_execution_truth_converged_v5")
         provider = routing["providers"]["kiwi_mcp_exact"]
         self.assertEqual(provider["execution_plane"], "canonical_backend")
         self.assertEqual(provider["current_integration_state"], "integrated")
@@ -152,6 +165,8 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(provider["credential_required"])
         self.assertFalse(provider["anomaly_authority"])
         self.assertEqual(provider["endpoint"], "https://mcp.kiwi.com")
+        self.assertIn("flexible_dates_primary", provider["selected_roles"])
+        self.assertIn("flexible_exact_completion_primary", provider["selected_roles"])
 
     async def test_kiwi_adapter_normalizes_exact_complete_twd_itinerary(self):
         calls = []
@@ -202,7 +217,7 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls[0]["nights_in_dst_to"], 4)
         self.assertEqual(result.records[0].current_price_twd, 8800)
 
-    async def test_primary_failure_invokes_exact_fallback_once_and_records_truth(self):
+    async def test_primary_failure_invokes_conventional_exact_fallback_once_and_records_truth(self):
         primary = FakePrimary(ProviderResult("gflights", "exact", "failed", error="primary down"))
         fallback = FakeFallback(ProviderResult("kiwi_mcp", "exact", "complete", ()))
         adapter = ProductionExecutionAdapter(primary=primary, multi_city=primary, known_route_fallback=fallback)
@@ -213,6 +228,59 @@ class SRDAccessRedundancyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(adapter.fallback_events), 1)
         self.assertEqual(adapter.fallback_events[0]["primary_state"], "failed")
         self.assertEqual(adapter.fallback_events[0]["fallback_state"], "complete")
+
+    async def test_flexible_calendar_uses_kiwi_primary_without_touching_google(self):
+        primary = FakePrimary(ProviderResult("gflights", "cheapest_dates", "complete", ()))
+        kiwi = FakeFallback(ProviderResult("kiwi_mcp", "cheapest_dates", "complete", ()))
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=primary, known_route_fallback=kiwi)
+
+        result = await adapter.cheapest_dates(
+            origin="TPE",
+            destination="NRT",
+            start_date="2026-10-01",
+            months=1,
+            trip_duration_days=4,
+        )
+
+        self.assertEqual(result.provider, "kiwi_mcp")
+        self.assertEqual(primary.calls, 0)
+        self.assertEqual(kiwi.calls, 1)
+        self.assertEqual(adapter.fallback_events, [])
+
+    async def test_flexible_exact_uses_kiwi_primary_without_touching_google(self):
+        primary = FakePrimary(ProviderResult("gflights", "exact", "complete", ()))
+        kiwi = FakeFallback(ProviderResult("kiwi_mcp", "exact", "complete", ()))
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=primary, known_route_fallback=kiwi)
+
+        result = await adapter.flexible_exact(
+            origin="TPE",
+            destination="NRT",
+            departure_date="2026-10-05",
+            return_date="2026-10-09",
+        )
+
+        self.assertEqual(result.provider, "kiwi_mcp")
+        self.assertEqual(primary.calls, 0)
+        self.assertEqual(kiwi.calls, 1)
+        self.assertEqual(adapter.fallback_events, [])
+
+    async def test_kiwi_flexible_failure_fails_closed_without_google_fallback(self):
+        primary = FakePrimary(ProviderResult("gflights", "cheapest_dates", "complete", ()))
+        kiwi = FakeFallback(ProviderResult("kiwi_mcp", "cheapest_dates", "failed", error="kiwi unavailable"))
+        adapter = ProductionExecutionAdapter(primary=primary, multi_city=primary, known_route_fallback=kiwi)
+
+        result = await adapter.cheapest_dates(
+            origin="TPE",
+            destination="NRT",
+            start_date="2026-10-01",
+            months=1,
+            trip_duration_days=4,
+        )
+
+        self.assertEqual(result.coverage_state, "failed")
+        self.assertEqual(result.provider, "kiwi_mcp")
+        self.assertEqual(primary.calls, 0)
+        self.assertEqual(kiwi.calls, 1)
 
     async def test_complete_empty_primary_does_not_silently_fallback(self):
         primary = FakePrimary(ProviderResult("gflights", "exact", "complete", ()))

@@ -70,6 +70,19 @@ class FakeAdapter:
         )
         return ProviderResult("gflights", "exact", "complete", (exact,))
 
+    async def flexible_exact(self, *, origin, destination, departure_date, return_date=None, **kwargs):
+        self.exact_calls.append((origin, destination))
+        exact = AirfareRecord(
+            record_id=f"flex-exact-{origin}-{destination}", provider="kiwi_mcp", surface="exact",
+            origin=AirportIdentity(origin), destination=AirportIdentity(destination),
+            legs=(AirfareLeg(origin, destination, departure_date, "06:00", "09:00"),),
+            current_price_twd=5200 if destination == "ICN" else 6900,
+            observed_at=RUN_AT.isoformat(), verification_state="revalidated",
+            evidence_class="exact_revalidated_candidate", complete_airfare=True, booking_token="token",
+            reproducible_search={"origin": origin, "destination": destination, "date": departure_date, "return_date": return_date},
+        )
+        return ProviderResult("kiwi_mcp", "exact", "complete", (exact,))
+
     async def open_jaw(self, *, legs):
         return ProviderResult("gflights", "open_jaw", "empty")
 

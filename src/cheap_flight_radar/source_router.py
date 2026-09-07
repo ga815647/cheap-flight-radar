@@ -8,7 +8,7 @@ from typing import Any
 from .models import OriginSweepRequest, ProviderPlanEntry, ProviderState, RoutePlan, SearchRequest
 
 
-KNOWN_ROUTE_WEB_STAGES = {"outbound_probe", "return_expansion", "round_trip_benchmark"}
+KNOWN_ROUTE_WEB_STAGES = {"outbound_probe", "return_expansion", "round_trip_benchmark", "flexible_dates"}
 KEYLESS_EXECUTION_MODES = {"chatgpt_web_direct", "keyless_http_client", "agent_mcp_remote"}
 CANONICAL_BACKEND_EXECUTION_PLANE = "canonical_backend"
 INTEGRATED_PROVIDER_STATE = "integrated"
@@ -45,10 +45,25 @@ def _shared_known_route_config(
     return shared
 
 
+def _shared_flexible_config(
+    profiles: tuple[str, ...],
+    selected: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    shared = (selected.get("shared") or {}).get("flexible_completion")
+    if not shared:
+        return None
+    applies = set(shared.get("applies_to_profiles") or ())
+    if applies and any(profile not in applies for profile in profiles):
+        return None
+    return shared
+
+
 def _selected_stage_config(
     request: SearchRequest,
     selected: Mapping[str, Any],
 ) -> Mapping[str, Any] | None:
+    if request.search_stage == "flexible_dates":
+        return _shared_flexible_config((request.profile,), selected)
     profile_config = selected.get(request.profile) or {}
     stage_config = profile_config.get(request.search_stage)
     if stage_config:

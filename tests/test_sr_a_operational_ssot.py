@@ -39,13 +39,15 @@ class SRAOperationalSSOTTests(unittest.TestCase):
         self.assertTrue(is_international_asia_oceania("Japan"))
         self.assertFalse(is_international_asia_oceania("France"))
 
-    def test_current_executable_provider_plan_is_unchanged_and_replaceable(self):
+    def test_current_executable_provider_plan_is_replaceable_and_lane_split(self):
         state = self.policy["capability_state"]
         current = state["current_runtime"]
         self.assertEqual(current["destination_free_discovery_adapter"], "gflights_google_flight_deals")
-        self.assertEqual(current["exact_flexible_open_jaw_adapter"], "gflights_google_exact")
+        self.assertEqual(current["exact_open_jaw_adapter"], "gflights_google_exact")
+        self.assertEqual(current["flexible_known_route_adapter"], "kiwi_mcp_exact")
         self.assertEqual(current["destination_free_automatic_executable_fallback"], "none")
-        self.assertEqual(current["known_route_exact_flexible_automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(current["known_route_exact_automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(current["known_route_flexible_automatic_executable_fallback"], "none")
 
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-21"),
@@ -65,8 +67,22 @@ class SRAOperationalSSOTTests(unittest.TestCase):
             self.policy,
             {},
         )
+        flexible_plan = build_source_plan(
+            SearchRequest(
+                profile="world",
+                search_stage="flexible_dates",
+                origin="TPE",
+                destination="NRT",
+                outbound_date="2026-10-05",
+                return_date="2026-10-09",
+                destination_country="JP",
+            ),
+            self.policy,
+            {},
+        )
         self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])
         self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
+        self.assertEqual([entry.provider for entry in flexible_plan.entries], ["kiwi_mcp_exact"])
 
     def test_preserved_product_truth_contracts_remain_active(self):
         self.assertEqual(
