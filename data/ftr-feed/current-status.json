@@ -13,16 +13,16 @@
   "current_freshness_state": "degraded",
   "last_good": {
     "manifest_path": "data/ftr-feed/latest.json",
-    "run_id": "production-radar-20260906T080837+0800",
+    "run_id": "production-radar-20260907T084207+0800",
     "schema_version": "2.0",
     "snapshot_freshness_at_generation": "degraded",
-    "snapshot_path": "data/ftr-feed/2026/09/06/production-radar-20260906T080837-0800.json",
-    "snapshot_sha256": "c9c03e187419088424da30208c6b903465de2b407b7fa6b2b385a7795896ddc8"
+    "snapshot_path": "data/ftr-feed/2026/09/07/production-radar-20260907T084207-0800.json",
+    "snapshot_sha256": "0549a45596f3ba2a3ceef8c3b64a141ad4fee69b12e71339bc49f9b3232d7ba7"
   },
   "producer_health_status": "degraded",
   "producer_status": "degraded",
   "repair_incident": null,
   "repair_required": false,
   "schema_version": "2.0",
-  "updated_at": "2026-09-06T08:16:31+08:00"
+  "updated_at": "2026-09-07T08:49:04+08:00"
 }
