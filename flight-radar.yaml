@@ -18,9 +18,11 @@ capability_state:
     destination_scope: asia_oceania
     destination_scope_semantics: implemented_filter_preserved_until_separate_qualification
     destination_free_discovery_adapter: gflights_google_flight_deals
-    exact_flexible_open_jaw_adapter: gflights_google_exact
+    exact_open_jaw_adapter: gflights_google_exact
+    flexible_known_route_adapter: kiwi_mcp_exact
     destination_free_automatic_executable_fallback: none
-    known_route_exact_flexible_automatic_executable_fallback: kiwi_mcp_exact
+    known_route_exact_automatic_executable_fallback: kiwi_mcp_exact
+    known_route_flexible_automatic_executable_fallback: none
   accepted_qualified_future:
     destination_scope: substrate_native_worldwide_non_exhaustive
     priority_markets:
@@ -924,7 +926,7 @@ public_intelligence:
     durable_evidence: docs/public-intelligence-simplification-2026-08-21.md
     historical_manifests_are_not_current_runtime_input: true
 source_routing:
-  status: provider_execution_truth_converged_v4
+  status: provider_execution_truth_converged_v5
   strict_no_silent_degradation: true
   execution_planes:
     machine_backend:
@@ -1043,8 +1045,10 @@ source_routing:
       crawler_subsystem: forbidden
     routing_invariants:
       machine_destination_free_primary: gflights_google_flight_deals
-      machine_known_route_primary: gflights_google_exact
-      machine_known_route_fallback: kiwi_mcp_exact
+      machine_known_route_exact_primary: gflights_google_exact
+      machine_known_route_exact_fallback: kiwi_mcp_exact
+      machine_known_route_flexible_primary: kiwi_mcp_exact
+      machine_known_route_flexible_fallback: null
       web_surface_never_becomes_automatic_fallback_by_observation: true
       current_geography_unchanged: true
       ftr_handoff_semantics_unchanged: true
@@ -1088,12 +1092,12 @@ source_routing:
         primary_provider: gflights_google_exact
         automatic_executable_fallback: kiwi_mcp_exact
         primary_failure_action: try_automatic_executable_fallback_then_fail_closed
-        fallback_capability_scope: exact_and_flexible_known_route_only_no_open_jaw
+        fallback_capability_scope: conventional_exact_only_no_open_jaw
         researched_not_integrated_candidates:
         - fli_google_exact
         execution_mode: keyless_http_client
         credential_required: false
-        query_scope: known_route_exact_or_flexible_completion
+        query_scope: known_route_exact_completion
         role: complete_selected_seed_and_revalidate_current_airfare
         applies_to_profiles:
         - world
@@ -1103,6 +1107,23 @@ source_routing:
         shared_across_profiles: true
         combined_open_jaw: supported
         revalidation_required: true
+      flexible_completion:
+        primary_provider: kiwi_mcp_exact
+        automatic_executable_fallback: null
+        primary_failure_action: fail_closed
+        execution_mode: agent_mcp_remote
+        credential_required: false
+        query_scope: known_route_flexible_completion
+        role: select_flexible_dates_and_revalidate_calendar_selected_exact_airfare
+        applies_to_profiles:
+        - world
+        - japan
+        - korea
+        - china
+        shared_across_profiles: true
+        combined_open_jaw: unsupported
+        revalidation_required: true
+        google_fallback_on_kiwi_failure: forbidden
     china:
       deep_search:
         primary_provider: gflights_google_exact
@@ -1110,7 +1131,7 @@ source_routing:
         primary_failure_action: try_automatic_executable_fallback_then_fail_closed
         execution_mode: keyless_http_client
         credential_required: false
-        query_scope: known_route_exact_or_flexible_completion
+        query_scope: known_route_exact_completion
         combined_open_jaw: supported
         specialist_pipeline_required: false
   providers:
@@ -1195,7 +1216,6 @@ source_routing:
       credential_required: false
       selected_roles:
       - exact_completion
-      - flexible_dates
       - open_jaw
       - booking_offer_revalidation
       verification_state: current_search_evidence_revalidate_before_publish
@@ -1212,7 +1232,8 @@ source_routing:
       anomaly_authority: false
       selected_roles:
       - exact_completion_fallback
-      - flexible_dates_fallback
+      - flexible_dates_primary
+      - flexible_exact_completion_primary
       excluded_roles:
       - destination_free_deal_discovery
       - anomaly_truth

@@ -9,8 +9,9 @@ The fixed-watch crawler/cadence/state subsystem is retired. Public intelligence 
 
 `RoutePlan.entries` is an execution contract: every listed provider must be invokable by the canonical backend for the represented request shape.
 
-- Destination-free canonical discovery/anomaly acquisition: qualified `gflights==0.3.1` / `gflights_google_flight_deals` remains the executable primary and automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.
-- Known-route exact/flexible completion: `gflights_google_exact` is primary; the qualified official Kiwi.com remote MCP (`kiwi_mcp_exact`) is a one-attempt automatic fallback after primary technical failure. Primary degradation remains visible even when fallback succeeds.
+- Destination-free canonical discovery/anomaly acquisition remains qualified `gflights==0.3.1` / `gflights_google_flight_deals`; destination-free automatic executable fallback is **none**. A primary failure fails closed and remains provider/coverage failure evidence.
+- Conventional known-route exact completion: `gflights_google_exact` remains primary; the qualified official Kiwi.com remote MCP (`kiwi_mcp_exact`) is a one-attempt automatic fallback only after primary technical failure. Primary degradation remains visible even when fallback succeeds.
+- Flexible calendar + flexible exact primary: `kiwi_mcp_exact`. Kiwi technical failure fails closed and does not automatically call Google.
 - Open-jaw/multi-city remains `gflights_google_exact` only; Kiwi MCP is not claimed as open-jaw or anomaly coverage.
 - Expedia airport-origin public Web remains external ChatGPT-Web/direct recall only and cannot silently repair canonical coverage.
 - `fli` / `flights==0.9.0` safe-transport protocol/parser proof succeeded in SR-D, but it is not selected because stock transport uses browser impersonation/retries and it shares the Google upstream with gflights.
@@ -27,7 +28,7 @@ Current search architecture:
 - primary surface is qualified Google Flight Deals, with Google Explore and public Expedia/Kiwi/Skyscanner surfaces as recall/fallback seeds;
 - direct complete round-trip Deal discovery is first-class and does not require reconstruction from a one-way fare;
 - cheap one-way/Explore/Signal observations may seed investigation, but only competitive endpoints receive flexible return/open-jaw expansion;
-- exact/flexible/multi-city Google Flights is the normal completion substrate; `fli` is a comparator/fallback;
+- conventional exact and multi-city remain on Google while flexible calendar/exact completion uses qualified Kiwi MCP; `fli` remains researched but not integrated;
 - do not brute-force every city × date × city combination; add specialist pipelines only after measured recall evidence justifies them;
 - 120 days is the normal compute budget, not a durable product boundary;
 - ferry gateways are outside the airfare-Deal product.

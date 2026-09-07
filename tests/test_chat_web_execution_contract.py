@@ -88,13 +88,17 @@ class ChatWebExecutionContractTests(unittest.TestCase):
 
         invariants = self.contract["routing_invariants"]
         self.assertEqual(invariants["machine_destination_free_primary"], "gflights_google_flight_deals")
-        self.assertEqual(invariants["machine_known_route_primary"], "gflights_google_exact")
-        self.assertEqual(invariants["machine_known_route_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(invariants["machine_known_route_exact_primary"], "gflights_google_exact")
+        self.assertEqual(invariants["machine_known_route_exact_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(invariants["machine_known_route_flexible_primary"], "kiwi_mcp_exact")
+        self.assertIsNone(invariants["machine_known_route_flexible_fallback"])
         selected = self.routing["selected_routes"]["shared"]
         self.assertEqual(selected["origin_wide_discovery"]["primary_provider"], "gflights_google_flight_deals")
         self.assertIsNone(selected["origin_wide_discovery"]["automatic_executable_fallback"])
         self.assertEqual(selected["broad_discovery"]["primary_provider"], "gflights_google_exact")
         self.assertEqual(selected["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertEqual(selected["flexible_completion"]["primary_provider"], "kiwi_mcp_exact")
+        self.assertIsNone(selected["flexible_completion"]["automatic_executable_fallback"])
 
     def test_web_provider_cannot_be_promoted_to_automatic_route_plan_fallback(self):
         policy = deepcopy(self.policy)

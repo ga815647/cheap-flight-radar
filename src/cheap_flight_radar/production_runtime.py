@@ -6,12 +6,15 @@ Flight Deals acquisition so every qualified anomaly candidate remains durable
 evidence even when it was not selected for exact completion in this run.
 
 It also owns narrowly operational provider hardening for the canonical daily
-execution path. Multi-city searches use a client created at process start that
-is separate from the high-volume discovery/exact/flexible client. Both clients
-retain the same explicit CheapFlightRadar User-Agent, direct connection
-(``proxy=None``), locale, and currency through :class:`GFlightsAdapter`; this is
-surface budget isolation, not UA/proxy/session rotation, retry, or rate-limit
-resetting. Provider failures still fail closed through the underlying adapter.
+execution path. Multi-city searches use a Google client created at process start
+that is separate from the discovery/conventional-exact Google client. Flexible
+calendar search and the exact completion of dates selected by that calendar use
+the qualified Kiwi MCP lane as primary, so high-burst flexible work does not
+consume the sticky Google client budget. All Google clients retain the same
+explicit CheapFlightRadar User-Agent, direct connection (``proxy=None``), locale,
+and currency through :class:`GFlightsAdapter`; this is surface budget isolation,
+not UA/proxy/session rotation, retry, or rate-limit resetting. Provider failures
+still fail closed through the underlying adapters.
 
 RP-06 additionally retains already-acquired multi-city exact results as a
 *dedicated* exact non-Deal candidate input. This never scans the Signal journal:
@@ -76,17 +79,23 @@ class ProductionExecutionAdapter:
 
     gflights marks an ``ApiClient`` sticky after an HTTP 429 and locally refuses
     every later call on that same client. Once Radar observes that exact sticky
-    error, later logical work on the same fixed lane is failed closed without
-    invoking the client again. The first sticky failure remains a real technical
-    provider call/failure; later work is circuit-suppressed evidence. No retry,
-    reset, new identity, proxy, or client rotation is performed.
+    error, later logical work on the same fixed Google lane is failed closed
+    without invoking the client again. The first sticky failure remains a real
+    technical provider call/failure; later work is circuit-suppressed evidence.
+
+    Conventional known-route exact completion stays Google-primary with one
+    qualified Kiwi fallback after a technical failure. Flexible calendar search
+    and the exact completion of a calendar-selected date pair are Kiwi-primary
+    and fail closed on Kiwi technical failure; they do not fall back to Google.
+    No retry, reset, new identity, proxy, or client rotation is performed.
     """
 
     def __init__(self, *, primary: Any, multi_city: Any, known_route_fallback: Any | None = None) -> None:
         self._primary = primary
         self._multi_city = multi_city
         self._known_route_fallback = known_route_fallback
-        self.known_route_fallback_provider = getattr(known_route_fallback, "provider", None)
+        self.known_route_fallback_provider = "kiwi_mcp_exact" if known_route_fallback is not None else None
+        self.flexible_primary_provider = "kiwi_mcp_exact" if known_route_fallback is not None else None
         self.fallback_events: list[dict[str, Any]] = []
         self._circuit_reason: dict[str, str | None] = {"primary": None, "multi_city": None}
 
@@ -164,13 +173,28 @@ class ProductionExecutionAdapter:
         )
 
     async def cheapest_dates(self, **kwargs: Any) -> ProviderResult:
-        fallback_method = getattr(self._known_route_fallback, "cheapest_dates", None)
-        return await self._known_route_call(
-            surface="cheapest_dates",
-            primary_method=self._primary.cheapest_dates,
-            fallback_method=fallback_method,
-            kwargs=kwargs,
-        )
+        flexible_method = getattr(self._known_route_fallback, "cheapest_dates", None)
+        if flexible_method is None:
+            return ProviderResult(
+                "source_router",
+                "cheapest_dates",
+                "unsupported",
+                error="Kiwi flexible primary is unavailable; Google flexible fallback is intentionally disabled",
+                request_sent=False,
+            )
+        return await flexible_method(**kwargs)
+
+    async def flexible_exact(self, **kwargs: Any) -> ProviderResult:
+        flexible_method = getattr(self._known_route_fallback, "exact", None)
+        if flexible_method is None:
+            return ProviderResult(
+                "source_router",
+                "flexible_exact",
+                "unsupported",
+                error="Kiwi flexible exact primary is unavailable; Google flexible fallback is intentionally disabled",
+                request_sent=False,
+            )
+        return await flexible_method(**kwargs)
 
     async def open_jaw(self, **kwargs: Any) -> ProviderResult:
         return await self._call(lane="multi_city", surface="open_jaw", method=self._multi_city.open_jaw, kwargs=kwargs)
@@ -536,24 +560,120 @@ def converge_rp06_route_variants(
     )
 
 
+def _provider_execution_truth(
+    result: RadarRunResult,
+    *,
+    events: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Mapping[str, Any]]:
+    execution = result.coverage.get("execution") or {}
+
+    google_surfaces = ("flight_deals", "explore", "conventional_exact", "mixed_taiwan_return", "open_jaw")
+    google_calls = 0
+    google_failed = False
+    google_used_surfaces: set[str] = set()
+    google_reasons: set[str] = set()
+    for surface in google_surfaces:
+        raw = execution.get(surface) or {}
+        provider_calls = int(raw.get("provider_calls") or 0)
+        attempts = int(raw.get("attempts") or 0)
+        if provider_calls or attempts:
+            google_used_surfaces.add(surface)
+        google_calls += provider_calls
+        if int(raw.get("failures") or 0) or int(raw.get("suppressed") or 0):
+            google_failed = True
+    for item in events:
+        if item.get("primary_request_sent"):
+            google_calls += 1
+            google_used_surfaces.add(str(item.get("surface") or "exact"))
+        if item.get("primary_state") == "failed":
+            google_failed = True
+        if item.get("primary_error"):
+            google_reasons.add(str(item["primary_error"]))
+
+    flexible = execution.get("flexible_dates") or {}
+    kiwi_calls = int(flexible.get("provider_calls") or 0) + int(flexible.get("exact_provider_calls") or 0)
+    kiwi_failed = bool(
+        int(flexible.get("failures") or 0)
+        or int(flexible.get("exact_failures") or 0)
+    )
+    kiwi_used_surfaces: set[str] = set()
+    if int(flexible.get("attempts") or 0):
+        kiwi_used_surfaces.add("flexible_dates")
+    if int(flexible.get("exact_attempts") or 0):
+        kiwi_used_surfaces.add("flexible_exact")
+    kiwi_reasons: set[str] = set()
+    for item in events:
+        if item.get("fallback_request_sent"):
+            kiwi_calls += 1
+            kiwi_used_surfaces.add(str(item.get("surface") or "exact"))
+        if item.get("fallback_state") == "failed":
+            kiwi_failed = True
+        if item.get("fallback_error"):
+            kiwi_reasons.add(str(item["fallback_error"]))
+
+    failures = tuple(result.provider_failures)
+    for item in failures:
+        surface = str(item.get("surface") or "")
+        error = str(item.get("error") or "")
+        if surface in {"flexible_dates", "flexible_exact"}:
+            if error:
+                kiwi_reasons.add(error)
+        elif surface in {"flight_deals", "explore", "exact", "mixed_taiwan_return", "open_jaw"}:
+            if error:
+                google_reasons.add(error)
+
+    def state(calls: int, failed: bool) -> str:
+        if failed:
+            return "failed"
+        if calls:
+            return "succeeded"
+        return "not_attempted"
+
+    return {
+        "gflights": {
+            "status": state(google_calls, google_failed),
+            "surfaces": sorted(google_used_surfaces),
+            "reasons": sorted(google_reasons),
+        },
+        "kiwi_mcp": {
+            "status": state(kiwi_calls, kiwi_failed),
+            "surfaces": sorted(kiwi_used_surfaces),
+            "reasons": sorted(kiwi_reasons),
+        },
+    }
+
+
 def attach_access_redundancy_truth(result: RadarRunResult, *, adapter: Any) -> RadarRunResult:
     events = [dict(item) for item in getattr(adapter, "fallback_events", ())]
     coverage = dict(result.coverage)
+    exact_lane = {
+        "primary": "gflights_google_exact",
+        "automatic_executable_fallback": getattr(adapter, "known_route_fallback_provider", None),
+        "fallback_scope": "conventional_exact_only_no_open_jaw",
+        "fallback_attempt_count": len(events),
+        "fallback_success_count": sum(1 for item in events if item.get("fallback_state") == "complete"),
+        "fallback_failure_count": sum(1 for item in events if item.get("fallback_state") == "failed"),
+        "events": events,
+    }
     coverage["access_redundancy"] = {
         "destination_free": {
             "automatic_executable_fallback": None,
             "semantics": "no_independent_destination_free_or_anomaly_fallback_qualified",
         },
+        "known_route_exact": exact_lane,
+        "known_route_flexible": {
+            "primary": getattr(adapter, "flexible_primary_provider", None),
+            "automatic_executable_fallback": None,
+            "scope": "flexible_calendar_and_calendar_selected_exact_completion",
+            "failure_action": "fail_closed_no_google_flexible_fallback",
+        },
         "known_route_exact_flexible": {
-            "primary": "gflights_google_exact",
-            "automatic_executable_fallback": getattr(adapter, "known_route_fallback_provider", None),
-            "fallback_scope": "exact_and_flexible_only_no_open_jaw",
-            "fallback_attempt_count": len(events),
-            "fallback_success_count": sum(1 for item in events if item.get("fallback_state") == "complete"),
-            "fallback_failure_count": sum(1 for item in events if item.get("fallback_state") == "failed"),
-            "events": events,
+            **exact_lane,
+            "schema_compatibility_alias": True,
+            "semantics": "legacy_key_retains_only_conventional_exact_fallback_events_after_flexible_lane_offload",
         },
     }
+    coverage["provider_execution"] = _provider_execution_truth(result, events=events)
     failures = list(result.provider_failures)
     for item in events:
         failures.append({

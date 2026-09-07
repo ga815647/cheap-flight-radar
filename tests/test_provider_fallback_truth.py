@@ -58,7 +58,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
 
     def test_machine_ssot_has_no_legacy_executable_fallback_claim(self):
         routing = self.policy["source_routing"]
-        self.assertEqual(routing["status"], "provider_execution_truth_converged_v4")
+        self.assertEqual(routing["status"], "provider_execution_truth_converged_v5")
         contract = routing["route_plan_execution_contract"]
         self.assertTrue(contract["entry_means_current_execution_plane_can_invoke_provider"])
         self.assertEqual(contract["legacy_fallback_provider_field"], "forbidden")
@@ -74,7 +74,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertNotIn("fallback_provider", set(keys(routing["selected_routes"])))
 
-    def test_current_destination_free_is_gflights_only_and_known_route_has_qualified_fallback(self):
+    def test_current_destination_free_exact_and_flexible_routes_are_explicit(self):
         origin_plan = build_source_plan(
             OriginSweepRequest(origin="TPE", horizon_start="2026-08-20"),
             self.policy,
@@ -93,13 +93,30 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
             self.policy,
             {},
         )
+        flexible_plan = build_source_plan(
+            SearchRequest(
+                profile="world",
+                search_stage="flexible_dates",
+                origin="TPE",
+                destination="NRT",
+                outbound_date="2026-10-05",
+                return_date="2026-10-09",
+                destination_country="JP",
+            ),
+            self.policy,
+            {},
+        )
         self.assertEqual([entry.provider for entry in origin_plan.entries], ["gflights_google_flight_deals"])
         self.assertEqual([entry.provider for entry in exact_plan.entries], ["gflights_google_exact", "kiwi_mcp_exact"])
+        self.assertEqual([entry.provider for entry in flexible_plan.entries], ["kiwi_mcp_exact"])
         shared = self.policy["source_routing"]["selected_routes"]["shared"]
         self.assertIsNone(shared["origin_wide_discovery"]["automatic_executable_fallback"])
         self.assertEqual(shared["broad_discovery"]["automatic_executable_fallback"], "kiwi_mcp_exact")
+        self.assertIsNone(shared["flexible_completion"]["automatic_executable_fallback"])
         self.assertEqual(shared["origin_wide_discovery"]["primary_failure_action"], "fail_closed")
         self.assertEqual(shared["broad_discovery"]["primary_failure_action"], "try_automatic_executable_fallback_then_fail_closed")
+        self.assertEqual(shared["flexible_completion"]["primary_failure_action"], "fail_closed")
+        self.assertEqual(shared["flexible_completion"]["google_fallback_on_kiwi_failure"], "forbidden")
 
     def test_expedia_is_external_recall_candidate_not_anomaly_or_backend_coverage(self):
         routing = self.policy["source_routing"]
@@ -152,8 +169,8 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
     def test_docs_distinguish_current_execution_from_historical_candidates(self):
         strategy = (ROOT / "docs" / "search-strategy.md").read_text(encoding="utf-8")
         bakeoff = (ROOT / "docs" / "substrate-bakeoff-2026-08-13.md").read_text(encoding="utf-8")
-        self.assertIn("automatic executable fallback is **none**", strategy)
-        self.assertIn("kiwi_mcp_exact", strategy)
+        self.assertIn("destination-free automatic executable fallback is **none**", strategy)
+        self.assertIn("flexible calendar + flexible exact primary: `kiwi_mcp_exact`", strategy)
         self.assertIn("Expedia airport-origin public Web remains external", strategy)
         self.assertIn("safe-transport protocol/parser proof succeeded in SR-D", strategy)
         self.assertIn("preserves the 2026-08-13 live bake-off evidence", bakeoff)

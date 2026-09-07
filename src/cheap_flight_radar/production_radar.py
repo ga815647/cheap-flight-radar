@@ -471,6 +471,32 @@ class ProductionRadar:
             and plan.entries[0].provider == "gflights_google_exact"
         )
 
+    def _flexible_plan(
+        self,
+        discovery: AirfareRecord,
+        departure_date: str,
+        return_date: str | None = None,
+    ) -> bool:
+        plan = build_source_plan(
+            SearchRequest(
+                profile=_profile_for_record(discovery),
+                search_stage="flexible_dates",
+                origin=discovery.origin.iata,
+                destination=discovery.destination.iata,
+                outbound_date=departure_date,
+                return_date=return_date,
+                destination_country=discovery.destination.country,
+            ),
+            self.policy,
+            {},
+        )
+        return bool(
+            plan.coverage_state == "planned"
+            and plan.entries
+            and plan.entries[0].provider == "kiwi_mcp_exact"
+            and len(plan.entries) == 1
+        )
+
     async def run(self, *, run_at: datetime | None = None) -> RadarRunResult:
         local_run_at = _local_datetime(run_at)
         run_id = _safe_run_id(local_run_at)
@@ -699,7 +725,7 @@ class ProductionRadar:
             seed_duration = _trip_duration_days(discovery)
             if seed_duration is not None and seed_duration <= 1:
                 seed_duration = None
-            if discovery.return_date and not self._exact_plan(discovery, discovery.outbound_date, discovery.return_date):
+            if not self._flexible_plan(discovery, discovery.outbound_date, discovery.return_date):
                 execution["flexible_dates"]["unsupported"] += 1
                 continue
             execution["flexible_dates"]["attempts"] += 1
@@ -722,7 +748,7 @@ class ProductionRadar:
             if best is None or not best.outbound_date or not best.return_date:
                 continue
             flexible_dates_by_seed[discovery.record_id] = (best.outbound_date, best.return_date)
-            if not self._exact_plan(discovery, best.outbound_date, best.return_date):
+            if not self._flexible_plan(discovery, best.outbound_date, best.return_date):
                 execution["flexible_dates"]["unsupported"] += 1
                 continue
             execution["flexible_dates"].setdefault("exact_attempts", 0)
@@ -732,12 +758,22 @@ class ProductionRadar:
             execution["flexible_dates"].setdefault("exact_failures", 0)
             execution["flexible_dates"].setdefault("exact_suppressed", 0)
             execution["flexible_dates"]["exact_attempts"] += 1
-            exact_result = await self.adapter.exact(
-                origin=discovery.origin.iata,
-                destination=discovery.destination.iata,
-                departure_date=best.outbound_date,
-                return_date=best.return_date,
-            )
+            flexible_exact_method = getattr(self.adapter, "flexible_exact", None)
+            if flexible_exact_method is None:
+                exact_result = ProviderResult(
+                    "source_router",
+                    "flexible_exact",
+                    "unsupported",
+                    error="adapter does not implement the SSOT-selected Kiwi flexible exact lane",
+                    request_sent=False,
+                )
+            else:
+                exact_result = await flexible_exact_method(
+                    origin=discovery.origin.iata,
+                    destination=discovery.destination.iata,
+                    departure_date=best.outbound_date,
+                    return_date=best.return_date,
+                )
             if exact_result.request_sent:
                 execution["flexible_dates"]["exact_provider_calls"] += 1
             else:
@@ -915,9 +951,12 @@ class ProductionRadar:
             "origin_attempt_required": True,
             "all_origins_attempted": all(origin in origin_coverage for origin in origins),
             "deal_acquisition_surface": "google_flight_deals",
-            "exact_completion_surface": "provider_routed_known_route_exact",
+            "exact_completion_surface": "provider_routed_known_route_conventional_exact",
             "exact_completion_primary": "gflights_google_exact",
             "exact_completion_fallback": "kiwi_mcp_exact",
+            "flexible_completion_surface": "provider_routed_known_route_flexible",
+            "flexible_completion_primary": "kiwi_mcp_exact",
+            "flexible_completion_fallback": None,
             "destination_scope": "asia_oceania",
             "anomaly_normalization": "exact_destination_airport_across_tpe_tsa_rmq_khh",
             "destination_representative_rule": "lowest_current_complete_airfare_per_destination",
