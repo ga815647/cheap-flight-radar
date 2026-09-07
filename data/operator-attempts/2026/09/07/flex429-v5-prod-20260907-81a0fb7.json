@@ -1,0 +1,11 @@
+{
+  "claimed_at": "2026-09-07T21:13:51+08:00",
+  "mode": "operator_reacquisition",
+  "request_id": "flex429-v5-prod-20260907-81a0fb7",
+  "requested_date": "2026-09-07",
+  "schema_version": 1,
+  "semantics": "explicit_operator_requested_live_reacquisition",
+  "trigger_sha": "caf94c36e295a8ebf2ad0e1de96b016ece58fe29",
+  "workflow_run_id": "34126189831",
+  "workflow_run_url": "https://github.com/ga815647/cheap-flight-radar/actions/runs/34126189831"
+}
