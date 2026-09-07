@@ -170,7 +170,7 @@ class ProviderFallbackTruthTests(unittest.IsolatedAsyncioTestCase):
         strategy = (ROOT / "docs" / "search-strategy.md").read_text(encoding="utf-8")
         bakeoff = (ROOT / "docs" / "substrate-bakeoff-2026-08-13.md").read_text(encoding="utf-8")
         self.assertIn("destination-free automatic executable fallback is **none**", strategy)
-        self.assertIn("flexible calendar + flexible exact primary: `kiwi_mcp_exact`", strategy)
+        self.assertIn("Flexible calendar + flexible exact primary: `kiwi_mcp_exact`", strategy)
         self.assertIn("Expedia airport-origin public Web remains external", strategy)
         self.assertIn("safe-transport protocol/parser proof succeeded in SR-D", strategy)
         self.assertIn("preserves the 2026-08-13 live bake-off evidence", bakeoff)
