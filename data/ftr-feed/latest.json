@@ -1,13 +1,13 @@
 {
-  "coverage_state": "degraded",
-  "freshness_state": "degraded",
-  "generated_at": "2026-09-07T08:49:04+08:00",
+  "coverage_state": "complete",
+  "freshness_state": "fresh",
+  "generated_at": "2026-09-08T08:43:59+08:00",
   "mode": "canonical_daily",
-  "observed_at": "2026-09-07T08:42:07.848412+08:00",
-  "producer_commit_sha": "96b8a0df824cbf1e44a3db38fe9b63b0d3c0267d",
-  "run_id": "production-radar-20260907T084207+0800",
+  "observed_at": "2026-09-08T08:38:47.613200+08:00",
+  "producer_commit_sha": "81a0fb74516b9aab385951a80949345e1dfa5b10",
+  "run_id": "production-radar-20260908T083847+0800",
   "schema_version": "2.0",
-  "snapshot_path": "data/ftr-feed/2026/09/07/production-radar-20260907T084207-0800.json",
-  "snapshot_sha256": "0549a45596f3ba2a3ceef8c3b64a141ad4fee69b12e71339bc49f9b3232d7ba7",
+  "snapshot_path": "data/ftr-feed/2026/09/08/production-radar-20260908T083847-0800.json",
+  "snapshot_sha256": "51b3be55de1fb5645a8e208fa981638da273cd89c75d4496abe0e5eb4a340163",
   "terminal_state": "success"
 }
