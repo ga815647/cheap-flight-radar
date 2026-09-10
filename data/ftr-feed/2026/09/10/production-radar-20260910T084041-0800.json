@@ -1,0 +1,809 @@
+{
+  "candidate_counts": {
+    "absolute_low_non_deals": 0,
+    "deals": 10,
+    "opportunities": 10,
+    "variants": 10
+  },
+  "coverage": {
+    "markets": {
+      "china": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 2,
+          "discovered": 34,
+          "qualified": 4,
+          "revalidated": 2
+        },
+        "status": "failed"
+      },
+      "japan": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 11,
+          "discovered": 36,
+          "qualified": 21,
+          "revalidated": 11
+        },
+        "status": "failed"
+      },
+      "korea": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 3,
+          "discovered": 8,
+          "qualified": 7,
+          "revalidated": 3
+        },
+        "status": "failed"
+      },
+      "other_asia_oceania": {
+        "basis": "shared_destination_free_origin_coverage",
+        "metrics": {
+          "deals": 5,
+          "discovered": 91,
+          "qualified": 19,
+          "revalidated": 6
+        },
+        "status": "failed"
+      }
+    },
+    "origins": {
+      "KHH": {
+        "errors": [],
+        "explore_seeds": 0,
+        "returned_flight_deals": 0,
+        "source_status": "failed",
+        "status": "failed"
+      },
+      "RMQ": {
+        "errors": [],
+        "explore_seeds": 94,
+        "returned_flight_deals": 89,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TPE": {
+        "errors": [],
+        "explore_seeds": 0,
+        "returned_flight_deals": 30,
+        "source_status": "attempted",
+        "status": "succeeded"
+      },
+      "TSA": {
+        "errors": [],
+        "explore_seeds": 0,
+        "returned_flight_deals": 90,
+        "source_status": "attempted",
+        "status": "succeeded"
+      }
+    },
+    "overall_state": "degraded",
+    "provider_failures": [],
+    "provider_health": {
+      "coverage_collapse": false,
+      "deal_count_is_health_signal": false,
+      "degraded_origins": [],
+      "failed_origins": [
+        "KHH"
+      ],
+      "reasons": [
+        "no usable Flight Deals or Explore coverage for: KHH"
+      ],
+      "status": "degraded",
+      "suppressed_request_count": 0,
+      "technical_failure_count": 0
+    },
+    "providers": {
+      "gflights": {
+        "health_status": "degraded",
+        "reasons": [
+          "no usable Flight Deals or Explore coverage for: KHH"
+        ],
+        "status": "succeeded",
+        "surfaces": [
+          "conventional_exact",
+          "explore",
+          "flight_deals",
+          "mixed_taiwan_return",
+          "open_jaw"
+        ]
+      },
+      "kiwi_mcp": {
+        "health_status": "degraded",
+        "reasons": [
+          "no usable Flight Deals or Explore coverage for: KHH"
+        ],
+        "status": "succeeded",
+        "surfaces": [
+          "flexible_dates",
+          "flexible_exact"
+        ]
+      }
+    },
+    "semantics": "execution_and_coverage_evidence_not_candidate_or_deal_count",
+    "surfaces": {
+      "conventional_exact": {
+        "execution": {
+          "attempts": 20,
+          "empty": 3,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 17,
+          "successes": 17,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "explore": {
+        "execution": {
+          "attempts": 4,
+          "empty": 3,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 109,
+          "successes": 1,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flexible_dates": {
+        "execution": {
+          "attempts": 20,
+          "empty": 0,
+          "exact_attempts": 20,
+          "exact_empty": 0,
+          "exact_failures": 0,
+          "exact_provider_calls": 20,
+          "exact_successes": 20,
+          "exact_suppressed": 0,
+          "failures": 0,
+          "provider_calls": 20,
+          "records": 299,
+          "successes": 20,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "flight_deals": {
+        "execution": {
+          "attempts": 12,
+          "empty": 5,
+          "failures": 0,
+          "provider_calls": 12,
+          "records": 209,
+          "successes": 7,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "mixed_taiwan_return": {
+        "execution": {
+          "attempts": 4,
+          "empty": 4,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 0,
+          "successes": 0,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      },
+      "open_jaw": {
+        "execution": {
+          "attempts": 4,
+          "empty": 4,
+          "failures": 0,
+          "provider_calls": 4,
+          "records": 0,
+          "successes": 0,
+          "suppressed": 0,
+          "unsupported": 0
+        },
+        "status": "succeeded"
+      }
+    }
+  },
+  "coverage_state": "degraded",
+  "freshness_state": "degraded",
+  "generated_at": "2026-09-10T08:46:29+08:00",
+  "mode": "canonical_daily",
+  "observed_at": "2026-09-10T08:40:41.852573+08:00",
+  "opportunities": [
+    {
+      "destination_route_shape": {
+        "arrival_airport": "BWN",
+        "departure_airport": "BWN"
+      },
+      "opportunity_id": "air-bwn-bwn",
+      "variants": [
+        {
+          "airlines": [
+            "BI",
+            "Royal Brunei"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6249,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "BWN",
+            "departure_airport": "BWN"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-bwn-2026-09-17-2026-09-24-22569774c6",
+            "provider": "gflights",
+            "record_id": "gf-22569774c621c54527f8",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://book-royalbrunei.crane.aero/ibe/availability?tripType=ROUND_TRIP&depPort=TPE&arrPort=BWN&departureDate=17.09.2026&returnDate=24.09.2026&passengerQuantities%5B0%5D%5BpassengerType%5D=ADLT&passengerQuantities%5B0%5D%5Bquantity%5D=1&passengerQuantities%5B1%5D%5BpassengerType%5D=CHLD&passengerQuantities%5B1%5D%5Bquantity%5D=0&passengerQuantities%5B2%5D%5BpassengerType%5D=INFT&passengerQuantities%5B2%5D%5Bquantity%5D=0&currency=BND&lang=en&cabinClass=ECONOMY&gclid=ADowPOJPENQ6SvgmA1wTfIvTLVkkCOkBREbLbXtViNAV8KFG7nd9mH1SeW4PUr3bkx-4rCrd_21GP--HnAAVfQxVxh01esHuwOBxgNModUsSnfRh6x4l&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "17:50",
+              "date": "2026-09-17",
+              "departure_time": "14:15",
+              "destination": "BWN",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-10T00:41:35.915660+00:00",
+          "outbound_date": "2026-09-17",
+          "return_date": "2026-09-24",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-22569774c621c54527f8",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "FKS",
+        "departure_airport": "FKS"
+      },
+      "opportunity_id": "air-fks-fks",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 13337,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "FKS",
+            "departure_airport": "FKS"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-fks-2026-10-02-2026-10-09-a2b474e739",
+            "provider": "gflights",
+            "record_id": "gf-a2b474e739135e1b8cb5",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-FKS&departureDate=2026-10-02&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=FKS-TPE&returnDate=2026-10-09&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOLgMPQcUl_ROGtJtEN8S0yXPMVq8Zz7tItFyBvsnqO-SkQrL15jCP9AFqFwu2mf_KLDeqiYaWzap28ZQoQzWVSIrLN5cYWCYBDiHSrTW0vElLuu&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "14:30",
+              "date": "2026-10-02",
+              "departure_time": "10:30",
+              "destination": "FKS",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-10T00:41:38.251543+00:00",
+          "outbound_date": "2026-10-02",
+          "return_date": "2026-10-09",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-a2b474e739135e1b8cb5",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "HSG",
+        "departure_airport": "HSG"
+      },
+      "opportunity_id": "air-hsg-hsg",
+      "variants": [
+        {
+          "airlines": [
+            "IT"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 5737,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "HSG",
+            "departure_airport": "HSG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-hsg-2026-09-17-2026-09-24-f4aec180c8",
+            "provider": "gflights",
+            "record_id": "gf-f4aec180c8360f8671c1",
+            "state": "deal",
+            "surface": "exact",
+            "url": null
+          },
+          "legs": [
+            {
+              "arrival_time": "10:35",
+              "date": "2026-09-17",
+              "departure_time": "07:10",
+              "destination": "HSG",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-10T00:41:36.226027+00:00",
+          "outbound_date": "2026-09-17",
+          "return_date": "2026-09-24",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-f4aec180c8360f8671c1",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "ISG",
+        "departure_airport": "ISG"
+      },
+      "opportunity_id": "air-isg-isg",
+      "variants": [
+        {
+          "airlines": [
+            "IT",
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6637,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "ISG",
+            "departure_airport": "ISG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-isg-2027-01-08-2027-01-15-e4dd69817c",
+            "provider": "gflights",
+            "record_id": "gf-e4dd69817c98599c864d",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.tigerairtw.com/?type=roundTrip&outbound=TPE-ISG&departureDate=2027-01-08&adult=1&children=0&infant=0&languageCode=en&currencyCode=TWD&inbound=ISG-TPE&returnDate=2027-01-15&utm_source=GoogleFlights&utm_medium=website_metasearch&utm_campaign=GoogleFlights_deeplink&affiliateChannel=googleflight&gclid=ADowPOLHp2qVjUxWGxKd5y9eH-YBWdHci0ReUxp0oDi6gOTBZ4E3f5YuTGMgYWTb4wbP9qCT9t9hL9c7LZeCFC83gfY25ub54nO-_mZsb_7yI_dqOKnt&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "08:35",
+              "date": "2027-01-08",
+              "departure_time": "06:35",
+              "destination": "ISG",
+              "origin": "TPE"
+            }
+          ],
+          "observed_at": "2026-09-10T00:41:37.210874+00:00",
+          "outbound_date": "2027-01-08",
+          "return_date": "2027-01-15",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-e4dd69817c98599c864d",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "KMG",
+        "departure_airport": "KMG"
+      },
+      "opportunity_id": "air-kmg-kmg",
+      "variants": [
+        {
+          "airlines": [
+            "Hong Kong Express Airways",
+            "China Eastern Airlines"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 13498,
+          "destination": {
+            "city": "Kunming",
+            "country": "China"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "KMG",
+            "departure_airport": "KMG"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-rmq-kmg-2026-10-03-2026-10-09-kiwi-06def",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-06def191228ba21bc561",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-10-03T15:20:00",
+              "date": "2026-10-03",
+              "departure_time": "2026-10-03T13:35:00",
+              "destination": "HKG",
+              "origin": "RMQ"
+            },
+            {
+              "arrival_time": "2026-10-03T19:40:00",
+              "date": "2026-10-03",
+              "departure_time": "2026-10-03T17:05:00",
+              "destination": "KMG",
+              "origin": "HKG"
+            },
+            {
+              "arrival_time": "2026-10-09T10:25:00",
+              "date": "2026-10-09",
+              "departure_time": "2026-10-09T08:05:00",
+              "destination": "HKG",
+              "origin": "KMG"
+            },
+            {
+              "arrival_time": "2026-10-10T09:35:00",
+              "date": "2026-10-10",
+              "departure_time": "2026-10-10T07:55:00",
+              "destination": "RMQ",
+              "origin": "HKG"
+            }
+          ],
+          "observed_at": "2026-09-10T00:42:19.282430+00:00",
+          "outbound_date": "2026-10-03",
+          "return_date": "2026-10-09",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taichung",
+          "taiwan_origin_gateway": "RMQ",
+          "taiwan_return_gateway": "RMQ",
+          "variant_id": "kiwi-06def191228ba21bc561",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "KMI",
+        "departure_airport": "KMI"
+      },
+      "opportunity_id": "air-kmi-kmi",
+      "variants": [
+        {
+          "airlines": [
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 6667,
+          "destination": {
+            "city": "Miyazaki",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "KMI",
+            "departure_airport": "KMI"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-kmi-2026-09-14-2026-09-21-kiwi-4c414",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-4c41470a8b4863ab9692",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-09-14T09:20:00",
+              "date": "2026-09-14",
+              "departure_time": "2026-09-14T06:20:00",
+              "destination": "KMI",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-09-21T11:55:00",
+              "date": "2026-09-21",
+              "departure_time": "2026-09-21T10:30:00",
+              "destination": "TPE",
+              "origin": "KMI"
+            }
+          ],
+          "observed_at": "2026-09-10T00:44:40.204664+00:00",
+          "outbound_date": "2026-09-14",
+          "return_date": "2026-09-21",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-4c41470a8b4863ab9692",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "PEK",
+        "departure_airport": "PEK"
+      },
+      "opportunity_id": "air-pek-pek",
+      "variants": [
+        {
+          "airlines": [
+            "China Eastern Airlines",
+            "Air China"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 17213,
+          "destination": {
+            "city": "Beijing",
+            "country": "China"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "PEK",
+            "departure_airport": "PEK"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tsa-pek-2026-11-07-2026-11-14-kiwi-de408",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-de408e35fed5196ce062",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-11-07T18:50:00",
+              "date": "2026-11-07",
+              "departure_time": "2026-11-07T17:15:00",
+              "destination": "SHA",
+              "origin": "TSA"
+            },
+            {
+              "arrival_time": "2026-11-08T09:20:00",
+              "date": "2026-11-08",
+              "departure_time": "2026-11-08T07:00:00",
+              "destination": "PEK",
+              "origin": "SHA"
+            },
+            {
+              "arrival_time": "2026-11-14T10:15:00",
+              "date": "2026-11-14",
+              "departure_time": "2026-11-14T08:00:00",
+              "destination": "SHA",
+              "origin": "PEK"
+            },
+            {
+              "arrival_time": "2026-11-14T14:00:00",
+              "date": "2026-11-14",
+              "departure_time": "2026-11-14T12:00:00",
+              "destination": "TSA",
+              "origin": "SHA"
+            }
+          ],
+          "observed_at": "2026-09-10T00:42:46.186075+00:00",
+          "outbound_date": "2026-11-07",
+          "return_date": "2026-11-14",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TSA",
+          "taiwan_return_gateway": "TSA",
+          "variant_id": "kiwi-de408e35fed5196ce062",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "PNK",
+        "departure_airport": "PNK"
+      },
+      "opportunity_id": "air-pnk-pnk",
+      "variants": [
+        {
+          "airlines": [
+            "TR",
+            "Scoot"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 7329,
+          "destination": {
+            "city": null,
+            "country": null
+          },
+          "destination_route_shape": {
+            "arrival_airport": "PNK",
+            "departure_airport": "PNK"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-pnk-2026-10-26-2026-11-02-505bec6766",
+            "provider": "gflights",
+            "record_id": "gf-505bec6766af6f0ed85b",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://booking.flyscoot.com/book/flight/return/TPE/2026-10-26/PNK/PNK/2026-11-02/TPE?adult=1&child=0&infant=0&orgToken=VEUtiuQY/mW09sQ6I0betQ%3D%3D&utm_source=GoogleFlights&utm_medium=Referral&utm_campaign=GoogleFlights_deeplink&gclid=ADowPOL4qaDIAOvZFnJ4icRjT8Va1QSCwi6G9PsndCUsUtV6_yY_9htwhsrDBpu1kWuOtZSQISpfST8GFMdfekFoUxb6lPmGkBTyLdJK5sia4KFx9QVe&gclsrc=gf"
+          },
+          "legs": [
+            {
+              "arrival_time": "04:55",
+              "date": "2026-10-26",
+              "departure_time": "00:15",
+              "destination": "SIN",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "06:30",
+              "date": "2026-10-26",
+              "departure_time": "05:55",
+              "destination": "PNK",
+              "origin": "SIN"
+            }
+          ],
+          "observed_at": "2026-09-10T00:41:50.432888+00:00",
+          "outbound_date": "2026-10-26",
+          "return_date": "2026-11-02",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": null,
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "gf-505bec6766af6f0ed85b",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "TAE",
+        "departure_airport": "TAE"
+      },
+      "opportunity_id": "air-tae-tae",
+      "variants": [
+        {
+          "airlines": [
+            "Tway Airlines"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 4565,
+          "destination": {
+            "city": "Daegu",
+            "country": "South Korea"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "TAE",
+            "departure_airport": "TAE"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-tae-2026-10-03-2026-10-09-kiwi-0850b",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-0850b13a11458cb12aa2",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-10-03T05:25:00",
+              "date": "2026-10-03",
+              "departure_time": "2026-10-03T02:00:00",
+              "destination": "TAE",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-10-10T00:25:00",
+              "date": "2026-10-09",
+              "departure_time": "2026-10-09T22:50:00",
+              "destination": "TPE",
+              "origin": "TAE"
+            }
+          ],
+          "observed_at": "2026-09-10T00:45:46.966368+00:00",
+          "outbound_date": "2026-10-03",
+          "return_date": "2026-10-09",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-0850b13a11458cb12aa2",
+          "verification_state": "revalidated"
+        }
+      ]
+    },
+    {
+      "destination_route_shape": {
+        "arrival_airport": "YGJ",
+        "departure_airport": "YGJ"
+      },
+      "opportunity_id": "air-ygj-ygj",
+      "variants": [
+        {
+          "airlines": [
+            "Tigerair Taiwan"
+          ],
+          "candidate_kind": "deal",
+          "complete_airfare_twd": 8405,
+          "destination": {
+            "city": "Yonago",
+            "country": "Japan"
+          },
+          "destination_route_shape": {
+            "arrival_airport": "YGJ",
+            "departure_airport": "YGJ"
+          },
+          "evidence": {
+            "classification": "Deal",
+            "observation_id": "production-radar-20260910t084041+0800-tpe-ygj-2026-10-26-2026-11-02-kiwi-06581",
+            "provider": "kiwi_mcp",
+            "record_id": "kiwi-06581dd82595a5b22f17",
+            "state": "deal",
+            "surface": "exact",
+            "url": "https://mcp.kiwi.com"
+          },
+          "legs": [
+            {
+              "arrival_time": "2026-10-26T12:00:00",
+              "date": "2026-10-26",
+              "departure_time": "2026-10-26T08:40:00",
+              "destination": "YGJ",
+              "origin": "TPE"
+            },
+            {
+              "arrival_time": "2026-11-02T15:20:00",
+              "date": "2026-11-02",
+              "departure_time": "2026-11-02T13:00:00",
+              "destination": "TPE",
+              "origin": "YGJ"
+            }
+          ],
+          "observed_at": "2026-09-10T00:42:34.018857+00:00",
+          "outbound_date": "2026-10-26",
+          "return_date": "2026-11-02",
+          "source_type": "cfr_deal",
+          "taiwan_origin_city": "Taipei",
+          "taiwan_origin_gateway": "TPE",
+          "taiwan_return_gateway": "TPE",
+          "variant_id": "kiwi-06581dd82595a5b22f17",
+          "verification_state": "revalidated"
+        }
+      ]
+    }
+  ],
+  "producer_commit_sha": "81a0fb74516b9aab385951a80949345e1dfa5b10",
+  "run_id": "production-radar-20260910T084041+0800",
+  "schema_version": "2.0",
+  "terminal_state": "success"
+}

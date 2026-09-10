@@ -10,19 +10,19 @@
     "requires_terminal_success": true,
     "scoped_search_cannot_clear": true
   },
-  "current_freshness_state": "fresh",
+  "current_freshness_state": "degraded",
   "last_good": {
     "manifest_path": "data/ftr-feed/latest.json",
-    "run_id": "production-radar-20260909T082057+0800",
+    "run_id": "production-radar-20260910T084041+0800",
     "schema_version": "2.0",
-    "snapshot_freshness_at_generation": "fresh",
-    "snapshot_path": "data/ftr-feed/2026/09/09/production-radar-20260909T082057-0800.json",
-    "snapshot_sha256": "de7aa17e4e360c148f9f97a61272c3f5ee09ebf33f76fc6b46cc88e327d1d808"
+    "snapshot_freshness_at_generation": "degraded",
+    "snapshot_path": "data/ftr-feed/2026/09/10/production-radar-20260910T084041-0800.json",
+    "snapshot_sha256": "4c93fdcf400ac8664fc48e41ff04b82d4bb9cbad893a6615de0587dd68b79697"
   },
-  "producer_health_status": "healthy",
-  "producer_status": "healthy",
+  "producer_health_status": "degraded",
+  "producer_status": "degraded",
   "repair_incident": null,
   "repair_required": false,
   "schema_version": "2.0",
-  "updated_at": "2026-09-09T08:26:04+08:00"
+  "updated_at": "2026-09-10T08:46:29+08:00"
 }
