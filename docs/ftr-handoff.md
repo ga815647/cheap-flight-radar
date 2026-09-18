@@ -1,4 +1,12 @@
-# Family Trip Radar downstream handoff
+# Family Trip Radar downstream handoff — RETIRED
+
+> Retirement notice: the downstream FTR feed (canonical latest, current status,
+> repair orchestration) has been retired. CFR no longer produces
+> `data/ftr-feed/*`. The snapshot/manifest primitives in
+> `cheap_flight_radar.ftr_handoff` remain in use for CFR's own scoped-search
+> evidence under `data/scoped-search/`. The absolute-low non-Deal producer
+> (RP-02) and scoped search (RP-03) are retained as CFR-internal capability.
+> The material below is historical design evidence.
 
 This document defines the CFR-owned machine contract consumed by Family Trip Radar (FTR). It does **not** change CFR Deal qualification or ranking. `PRODUCT_INTENT.md` remains durable human intent and `flight-radar.yaml` remains the operational SSOT; this document explains the handoff mechanics.
 

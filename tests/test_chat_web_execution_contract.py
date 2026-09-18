@@ -123,7 +123,7 @@ class ChatWebExecutionContractTests(unittest.TestCase):
         self.assertEqual(self.policy["capability_state"]["current_runtime"]["destination_scope"], "asia_oceania")
         self.assertEqual(self.policy["search"]["destination_scope"], "asia_oceania")
         self.assertEqual(self.policy["search"]["origin_airports"], ["TPE", "TSA", "RMQ", "KHH"])
-        self.assertEqual(self.policy["ftr_handoff"]["status"], "canonical_runtime_active_launch_ready")
+        self.assertEqual(self.policy["ftr_handoff"]["status"], "downstream_feed_retired_absolute_low_and_scoped_retained")
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("source_routing.chat_web_execution_contract", agents)
 

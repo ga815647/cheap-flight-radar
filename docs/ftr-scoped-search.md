@@ -1,10 +1,11 @@
 # FTR scoped-search acquisition (RP-03)
 
-Status: implemented pre-activation. `ftr_handoff.canonical_activation.enabled` remains `false`.
+Status: implemented pre-activation. The downstream FTR feed is retired; scoped
+snapshots stage under `data/scoped-search/` and never touch canonical daily state.
 
 ## Purpose
 
-`scoped_search` is the on-demand CFR acquisition mode used by Family Trip Radar Search Mode when the user supplies one or more `availability_windows`. It is not a second airfare product, not a canonical daily run, not operator reacquisition, and not same-day recovery.
+`scoped_search` is the on-demand CFR acquisition mode used when the user supplies one or more `availability_windows`. It is not a second airfare product, not a canonical daily run, not operator reacquisition, and not same-day recovery.
 
 The runtime is `cheap_flight_radar.scoped_search`. It has no scheduler and this package adds no GitHub cron or production launch path.
 
@@ -64,13 +65,16 @@ A completed consumable run uses the existing RP-01 handoff primitives:
 2. attach scoped request/fingerprint/plan/window-execution metadata and normalized `coverage.windows`;
 3. validate every supplied window as terminal `succeeded`, then validate every published variant against one supplied window, optional duration, and optional request budget;
 4. write the immutable snapshot first;
-5. write `data/ftr-feed/scoped/{run_id}.json` last with the snapshot checksum;
+5. write `data/scoped-search/{run_id}.json` last with the snapshot checksum;
 6. reload through the checksum-validating consumer primitive and validate the scoped metadata/window truth again.
 
-Before execution, the runtime hashes the presence/content of `data/ftr-feed/latest.json` and `data/ftr-feed/current-status.json`. The same deterministic guard is asserted in a `finally` path after success or failure. Scoped execution never calls canonical claim, repair creation, repair clearing, or operator-reacquisition operations.
+Before execution, the runtime snapshots the presence/content of already-staged
+`data/scoped-search/` manifests. The same deterministic guard is asserted in a
+`finally` path after success or failure. Scoped execution never calls canonical
+claim or operator-reacquisition operations.
 
-Therefore RP-03 cannot create/replace/advance canonical latest, clear `repair_required`, replace a canonical incident, or masquerade as `same_day_recovery`.
+Therefore RP-03 cannot create/replace/advance canonical daily state or masquerade as `same_day_recovery`.
 
 ## Acceptance boundary
 
-All RP-03 acceptance uses deterministic fixtures/fake adapters and isolated temporary filesystems. No test invokes a live airfare provider. Production activation, production proof, FTR consumer orchestration, RP-04 canonical activation, RP-05 recovery orchestration, and RP-06 eligibility/route expansion remain out of scope.
+All RP-03 acceptance uses deterministic fixtures/fake adapters and isolated temporary filesystems. No test invokes a live airfare provider. Production activation, production proof, and RP-06 eligibility/route expansion remain out of scope.

@@ -1,7 +1,7 @@
-"""Bounded, deterministic FTR scoped-search acquisition.
+"""Bounded, deterministic scoped-search acquisition.
 
-The runtime reuses CFR source routing, provider adapter methods, Deal semantics,
-RP-02 absolute-low selection, and RP-01 handoff primitives. It has no scheduler,
+The runtime reuses CFR source routing, provider adapter methods, Deal semantics
+and RP-02 absolute-low selection. It has no scheduler,
 uses its own request identity, and never consumes canonical acquisition state.
 """
 from __future__ import annotations
@@ -18,8 +18,6 @@ from .airfare import AirfareRecord, ProviderResult, is_international_asia_oceani
 from .anomaly_truth import AnomalyEvidence, formal_deal_sort_key
 from .ftr_absolute_low import apply_absolute_low_selection
 from .ftr_handoff import (
-    CANONICAL_LATEST_PATH,
-    CURRENT_STATUS_PATH,
     FTRHandoffError,
     build_snapshot,
     load_manifest_snapshot,
@@ -313,19 +311,9 @@ def validate_scoped_search_policy(policy: Mapping[str, Any]) -> Mapping[str, Any
     ):
         if isolation.get(field) is not True:
             raise ScopedSearchError(f"scoped-search isolation flag drifted: {field}")
-
     activation = _mapping(contract.get("activation"))
-    if activation.get("canonical_runtime") != "active_via_RP-04" or activation.get("production_launch") != "out_of_scope":
+    if activation.get("downstream_feed") != "retired" or activation.get("production_launch") != "out_of_scope":
         raise ScopedSearchError("scoped-search activation boundary drifted")
-    canonical = _mapping(_mapping(policy.get("ftr_handoff")).get("canonical_activation"))
-    readiness = _mapping(canonical.get("readiness"))
-    active_repair = _mapping(canonical.get("active_repair"))
-    if canonical.get("enabled") is not True or canonical.get("activated_by_package") != "RP-04":
-        raise ScopedSearchError("RP-04 canonical FTR activation contract drifted")
-    if readiness.get("canonical_producer_active") is not True or readiness.get("final_ftr_readiness") is not True:
-        raise ScopedSearchError("RP-04 readiness boundary drifted")
-    if active_repair.get("recovery_orchestration_package") != "RP-05" or active_repair.get("recovery_orchestration_status") != "implemented_active":
-        raise ScopedSearchError("RP-05 recovery boundary drifted")
     return contract
 
 
@@ -639,20 +627,22 @@ def _provider_health(
     }
 
 
-def _canonical_guard(history_dir: Path) -> Mapping[str, tuple[bool, str]]:
+def _scoped_manifest_guard(history_dir: Path) -> Mapping[str, tuple[bool, str]]:
+    """Snapshot pre-existing scoped manifests so staging cannot rewrite history."""
     result: dict[str, tuple[bool, str]] = {}
-    for relative in (CANONICAL_LATEST_PATH, CURRENT_STATUS_PATH):
-        path = history_dir / relative
-        result[relative] = (
-            path.exists(),
-            hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "",
-        )
+    root = history_dir / "data" / "scoped-search"
+    if root.exists():
+        for path in sorted(root.rglob("*.json")):
+            relative = path.relative_to(history_dir).as_posix()
+            result[relative] = (True, hashlib.sha256(path.read_bytes()).hexdigest())
     return result
 
 
-def _assert_canonical_guard(history_dir: Path, before: Mapping[str, tuple[bool, str]]) -> None:
-    if dict(_canonical_guard(history_dir)) != dict(before):
-        raise FTRHandoffError("scoped_search mutated canonical latest/current-status isolation guard")
+def _assert_scoped_manifest_guard(history_dir: Path, before: Mapping[str, tuple[bool, str]]) -> None:
+    after = _scoped_manifest_guard(history_dir)
+    for relative, (existed, digest) in before.items():
+        if after.get(relative) != (existed, digest):
+            raise FTRHandoffError("scoped_search mutated a pre-existing staged manifest")
 
 
 def _scoped_metadata(plan: ScopedSearchPlan, *, execution: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
@@ -842,7 +832,7 @@ def _run_result_json(
 
 
 def _same_request_manifest(history_dir: Path, request_id: str) -> tuple[str, Mapping[str, Any], Mapping[str, Any]] | None:
-    root = history_dir / "data" / "ftr-feed" / "scoped"
+    root = history_dir / "data" / "scoped-search"
     if not root.exists():
         return None
     matches: list[tuple[str, Mapping[str, Any], Mapping[str, Any]]] = []
@@ -1271,7 +1261,7 @@ async def execute_scoped_search(
             replayed=True,
         )
 
-    guard = _canonical_guard(history_dir)
+    guard = _scoped_manifest_guard(history_dir)
     try:
         plan, result, scoped_execution = await acquire_scoped(
             request=request,
@@ -1313,4 +1303,4 @@ async def execute_scoped_search(
             replayed=False,
         )
     finally:
-        _assert_canonical_guard(history_dir, guard)
+        _assert_scoped_manifest_guard(history_dir, guard)

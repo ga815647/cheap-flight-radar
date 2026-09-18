@@ -108,12 +108,6 @@ class ScopedPartialWindowCoverageTest(unittest.IsolatedAsyncioTestCase):
     async def test_partial_window_failure_cannot_leave_consumable_scoped_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             history = Path(tmp)
-            latest = history / "data/ftr-feed/latest.json"
-            status = history / "data/ftr-feed/current-status.json"
-            latest.parent.mkdir(parents=True, exist_ok=True)
-            latest.write_bytes(b"canonical-latest-before\n")
-            status.write_bytes(b'{"repair_required":true,"fixture":"before"}\n')
-            before = (latest.read_bytes(), status.read_bytes())
 
             with self.assertRaisesRegex(FTRHandoffError, "not consumable"):
                 await execute_scoped_search(
@@ -126,8 +120,7 @@ class ScopedPartialWindowCoverageTest(unittest.IsolatedAsyncioTestCase):
                     generated_at=GENERATED_AT,
                 )
 
-            self.assertEqual((latest.read_bytes(), status.read_bytes()), before)
-            scoped_dir = history / "data/ftr-feed/scoped"
+            scoped_dir = history / "data/scoped-search"
             self.assertFalse(scoped_dir.exists() and any(scoped_dir.iterdir()))
 
     async def test_budget_unattempted_window_is_explicit_and_non_consumable(self):
@@ -153,12 +146,6 @@ class ScopedPartialWindowCoverageTest(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             history = Path(tmp)
-            latest = history / "data/ftr-feed/latest.json"
-            status = history / "data/ftr-feed/current-status.json"
-            latest.parent.mkdir(parents=True, exist_ok=True)
-            latest.write_bytes(b"canonical-budget-before\n")
-            status.write_bytes(b'{"repair_required":true,"fixture":"budget-before"}\n')
-            before = (latest.read_bytes(), status.read_bytes())
             with self.assertRaisesRegex(FTRHandoffError, "window coverage incomplete"):
                 await execute_scoped_search(
                     request=req,
@@ -169,8 +156,7 @@ class ScopedPartialWindowCoverageTest(unittest.IsolatedAsyncioTestCase):
                     run_at=RUN_AT,
                     generated_at=GENERATED_AT,
                 )
-            self.assertEqual((latest.read_bytes(), status.read_bytes()), before)
-            scoped_dir = history / "data/ftr-feed/scoped"
+            scoped_dir = history / "data/scoped-search"
             self.assertFalse(scoped_dir.exists() and any(scoped_dir.iterdir()))
 
     async def test_every_supplied_window_attempt_truth_is_persisted_and_reconstructable(self):
@@ -241,7 +227,7 @@ class ScopedPartialWindowCoverageTest(unittest.IsolatedAsyncioTestCase):
                     generated_at=GENERATED_AT,
                 )
             self.assertEqual(adapter.exact_calls, [])
-            scoped_dir = history / "data/ftr-feed/scoped"
+            scoped_dir = history / "data/scoped-search"
             self.assertFalse(scoped_dir.exists() and any(scoped_dir.iterdir()))
 
     async def test_complete_empty_provider_failure_and_budget_unattempted_are_distinct_truth(self):

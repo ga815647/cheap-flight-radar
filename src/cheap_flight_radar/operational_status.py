@@ -11,7 +11,7 @@ from typing import Any, Mapping, Sequence
 HEALTH_STATES = ("healthy", "degraded", "provider_failed")
 
 # Source-routing identifiers describe provider roles while normalized airfare
-# records retain the adapter's runtime provider identity. FTR coverage is keyed
+# records retain the adapter's runtime provider identity. CFR coverage is keyed
 # by the latter, so executable fallback events need one explicit, bounded alias
 # normalization before they become per-provider execution truth.
 _PROVIDER_EXECUTION_ID_ALIASES = {
@@ -134,8 +134,8 @@ def _fallback_provider_execution(coverage: Mapping[str, Any]) -> Mapping[str, Ma
     fallback provider identities, terminal states, request-sent truth, surfaces,
     and errors. When both provider identities are unambiguous, this function
     converts only that existing evidence into the top-level provider dimension
-    required by the FTR handoff. Unknown/inconsistent evidence intentionally
-    returns no synthesized map so the downstream contract continues to fail
+    required by CFR run results. Unknown/inconsistent evidence intentionally
+    returns no synthesized map so CFR coverage continues to fail
     closed instead of inferring provider success.
     """
 
@@ -192,8 +192,8 @@ def derive_provider_health(
 ) -> Mapping[str, Any]:
     # ``attach_access_redundancy_truth`` inserts the executable fallback events
     # immediately before calling this function. Preserve their already-explicit
-    # provider execution truth on the same mutable coverage object so FTR does
-    # not have to infer provider success from fare records or global health.
+    # provider execution truth on the same mutable coverage object so CFR run
+    # results do not have to infer provider success from fare records or global health.
     if isinstance(coverage, dict) and "provider_execution" not in coverage:
         provider_execution = _fallback_provider_execution(coverage)
         if provider_execution:

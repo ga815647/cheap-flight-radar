@@ -15,7 +15,7 @@ CFR has two legitimate product modes:
 - **Daily Radar** — autonomously discover unusually cheap airfare from Taiwan, roughly once per day, without requiring the user to supply a destination or manually search.
 - **Query / Scoped Mode** — given one or more user-supplied availability windows, autonomously find where airfare is cheap within those windows.
 
-The primary product is a set of current, concrete airfare Deals plus a separate daily Signal journal. Exact absolute-low airfare may also be retained as a separate non-Deal result class where useful, including for downstream FTR. It is not a generic trip planner and it is not a project for building airfare infrastructure for its own sake.
+The primary product is a set of current, concrete airfare Deals plus a separate daily Signal journal. Exact absolute-low airfare may also be retained as a separate CFR-internal non-Deal result class where useful. It is not a generic trip planner and it is not a project for building airfare infrastructure for its own sake.
 
 ## 2. Geographic scope
 
@@ -36,7 +36,7 @@ The project is primarily looking for **abnormally cheap airfare**, not merely th
 - Airports serving the same city may be treated as one city Deal for anomaly interpretation.
 - When anomaly strength is similar, lower actual total airfare is preferred.
 - A large percentage drop is more important than a merely low absolute fare. A normally cheap route that is only slightly cheaper than usual is less interesting than a materially discounted route.
-- **Absolute-low current airfare remains useful even when it is not anomaly-qualified.** Keep it semantically separate from a formal Deal rather than weakening Deal truth; bounded exact/revalidated absolute-low non-Deals may be surfaced where useful and may be handed to FTR.
+- **Absolute-low current airfare remains useful even when it is not anomaly-qualified.** Keep it semantically separate from a formal Deal rather than weakening Deal truth; bounded exact/revalidated absolute-low non-Deals may be surfaced alongside Deals where useful.
 - Do not invent a universal fixed percentage threshold before evidence supports one.
 - Seasonal/month-specific normalization is not a current product requirement; do not create fake precision while data is sparse.
 
@@ -172,16 +172,13 @@ If a crawler rule, scoring rule, transport model, source-coverage requirement, o
 
 Do not ask the user to decide implementation questions that can only be answered after source/tool experimentation. Measure first, then propose the smallest policy necessary.
 
-## 15. Downstream Family Trip Radar handoff
+## 15. Absolute-low provenance (downstream handoff retired)
 
-Cheap Flight Radar is the airfare producer for Family Trip Radar (FTR), but the two products keep separate ranking semantics. CFR continues to decide airfare Deal truth from airfare evidence; FTR decides whole-trip worth after adding home access, lodging, usable time, child fit and other travel factors.
+Cheap Flight Radar no longer produces a downstream feed for Family Trip Radar. The handoff contract below is retired; CFR keeps deciding airfare Deal truth from airfare evidence for its own Deals, Signals, and bounded absolute-low non-Deal set.
 
-- CFR should publish a compact, machine-readable downstream feed from terminal acquisition evidence instead of requiring FTR to scrape CFR presentation output or depend on chat/project memory.
-- The downstream feed contains formal CFR Deals plus a **bounded, explicitly selected absolute-low non-Deal airfare set**. A generic Signal is never silently promoted into that absolute-low set merely because it has a low-looking price.
-- Every downstream airfare variant retains exact dates, complete airfare, actual Taiwan outbound/return gateway, destination-side route shape, observed time, verification/evidence references and whether it came from Deal or absolute-low selection. CFR anomaly score/classification remains provenance; it is not FTR's travel-value score.
-- Canonical handoff evidence is immutable and Git-backed. A mutable latest manifest may advance only after a terminal, schema-valid, consumable snapshot has been written and checksummed. Failed production must preserve the previous last-good manifest rather than synthesize or overwrite it.
+- A generic Signal is never silently promoted into the absolute-low set merely because it has a low-looking price.
+- Every absolute-low variant retains exact dates, complete airfare, actual Taiwan outbound/return gateway, destination-side route shape, observed time, verification/evidence references and whether it came from Deal or absolute-low selection.
 - A truthfully partial run may publish degraded coverage when fresh usable evidence survives. Broad provider/coverage collapse must not masquerade as a healthy fresh snapshot.
-- Explicit Search-mode/scoped acquisitions and same-day recovery acquisitions use separate provenance modes. Scoped search evidence never overwrites canonical daily latest; successful same-day recovery may advance canonical latest after proving fresh health.
-- Geographic/provider coverage in the handoff is attempted execution truth, not a claim that all worldwide or restricted fare space was searched.
-- GitHub Actions artifacts are **optional debug convenience only**, never a correctness or handoff dependency. Artifact quota exhaustion must not prevent acquisition evidence, canonical manifest publication, or downstream FTR consumption.
-- The producer contract is versioned. Breaking field/meaning changes require a schema-major change; consumers fail closed on unsupported major versions, missing snapshots, checksum mismatch, or non-terminal producer state.
+- Explicit Search-mode/scoped acquisitions use a separate provenance mode from the canonical daily run.
+- Geographic/provider coverage in CFR output is attempted execution truth, not a claim that all worldwide or restricted fare space was searched.
+- GitHub Actions artifacts are **optional debug convenience only**, never a correctness dependency. Artifact quota exhaustion must not prevent acquisition evidence or canonical manifest publication.
