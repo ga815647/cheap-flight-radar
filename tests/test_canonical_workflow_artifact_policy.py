@@ -22,12 +22,10 @@ class ProductionWorkflowArtifactPolicyTest(unittest.TestCase):
             text.index("Stage immutable CFR success and recovery evidence"),
             text.index("Upload failure debug evidence (best effort)"),
         )
-        self.assertLess(
-            text.index("Stage canonical FTR handoff from durable CFR evidence"),
-            text.index("Upload failure debug evidence (best effort)"),
-        )
+        self.assertNotIn("canonical FTR handoff", text)
+        self.assertNotIn("canonical_ftr_runtime", text)
         self.assertIn("git add data/price-history data/run-evidence", text)
-        self.assertIn("git add data/ftr-feed data/run-evidence", text)
+        self.assertNotIn("git add data/ftr-feed data/run-evidence", text)
         self.assertIn("git push origin HEAD:history/price-observations", text)
 
     def test_isolated_canonical_artifacts_are_failure_only_best_effort_debug(self):
@@ -36,7 +34,7 @@ class ProductionWorkflowArtifactPolicyTest(unittest.TestCase):
             upload_name="Upload isolated failure debug evidence (best effort)",
         )
         self.assertIn("if: failure()", text)
-        self.assertIn("git add data/ftr-feed data/run-evidence", text)
+        self.assertNotIn("data/ftr-feed", text)
         self.assertNotIn("            _out/", text)
 
     def test_operator_artifacts_are_failure_only_best_effort_debug(self):

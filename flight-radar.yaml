@@ -1051,7 +1051,6 @@ source_routing:
       machine_known_route_flexible_fallback: null
       web_surface_never_becomes_automatic_fallback_by_observation: true
       current_geography_unchanged: true
-      ftr_handoff_semantics_unchanged: true
   route_plan_execution_contract:
     entry_means_current_execution_plane_can_invoke_provider: true
     research_or_external_candidate_metadata_is_not_executable_plan: true
@@ -1290,7 +1289,7 @@ return_windows_policy:
   formal_deal_minimum_away_hours: 24
   trip_length_does_not_affect_deal_status_or_ranking: true
 ftr_handoff:
-  status: canonical_runtime_active_launch_ready
+  status: downstream_feed_retired_absolute_low_and_scoped_retained
   route_shape_return_gateway_convergence:
     enabled: true
     package: RP-06
@@ -1317,91 +1316,6 @@ ftr_handoff:
       opportunistic_non_primary_requires_live_route_evidence: true
       exact_revalidated_itinerary_is_live_route_evidence: true
       no_live_evidence_semantics: not_searched_not_eligible_as_opportunistic_extra
-  same_day_recovery_orchestration:
-    enabled: true
-    package: RP-05
-    contract_version: "1.0"
-    capability_state: implemented_active
-    live_proof_status: not_exercised_no_eligible_repair_incident
-    workflow: .github/workflows/ftr-same-day-recovery.yml
-    driver_module: cheap_flight_radar.ftr_recovery_workflow
-    transaction_module: cheap_flight_radar.ftr_recovery
-    scheduled: false
-    request:
-      required_fields:
-      - request_date
-      - recovery_request_id
-      local_day_timezone: Asia/Taipei
-      request_date_must_equal_current_local_day: true
-      request_id_path_safe: true
-      new_explicit_id_required_for_each_additional_acquisition: true
-      duplicate_request_provider_calls: 0
-    identity:
-      claim_path_template: data/ftr-recovery-attempts/YYYY/MM/DD/{request_id}.json
-      run_id_prefix_template: ftr-recovery-{request_id}-
-      mode: same_day_recovery
-      application_sha_source: actual_current_main_checkout_head
-      original_repair_incident_identity_required: true
-      canonical_daily_claim_consumption: forbidden
-      canonical_daily_snapshot_rewrite: forbidden
-      operator_claim_reuse: forbidden
-      scoped_search_identity_reuse: forbidden
-    preflight:
-      current_status_required_and_valid: true
-      active_repair_required: true
-      repair_trigger_and_latest_failed_evidence_readable: true
-      prior_last_good_and_latest_guard_required: true
-      recovery_namespace_collision_action: fail_closed
-      claim_created_only_after_preflight: true
-      no_active_repair_provider_calls: 0
-      duplicate_request_provider_calls: 0
-    acquisition:
-      reuse_production_runtime: true
-      reuse_existing_provider_adapter: true
-      reuse_source_router_and_exact_revalidation: true
-      execution_mode: same_day_recovery
-      shared_concurrency_group: production-radar-acquisition
-      provider_invocations_per_claimed_request: 1
-      hidden_retry: forbidden
-      new_provider: forbidden
-      sticky_429_semantics_unchanged: true
-      proxy_ua_session_rotation: forbidden
-    persistence:
-      durable_ref: history/price-observations
-      cfr_price_history_path_template: data/price-history/YYYY/MM/DD/{radar_run_id}.json
-      run_evidence_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}
-      ftr_snapshot_path_template: data/ftr-feed/YYYY/MM/DD/{run_id}.json
-      canonical_latest_path: data/ftr-feed/latest.json
-      current_status_path: data/ftr-feed/current-status.json
-      claim_must_commit_before_acquisition: true
-      legitimate_cfr_evidence_must_commit_before_ftr_transaction: true
-      cfr_evidence_survives_later_ftr_failure: true
-      actions_artifact_correctness_dependency: false
-    success_order:
-    - reload_and_validate_active_repair_and_exact_claim
-    - validate_terminal_successful_recovery_run_result
-    - build_same_day_recovery_snapshot
-    - validate_supported_schema_candidate_contract_complete_fresh_healthy_identity_and_application_sha
-    - guard_exact_prior_canonical_latest_bytes_or_absence
-    - write_immutable_recovery_snapshot
-    - sha256_exact_persisted_snapshot_bytes
-    - write_canonical_latest_to_exact_recovery_snapshot
-    - reload_and_revalidate_checksum_run_id_mode_and_application_sha
-    - clear_repair_required_only_after_reload_validation
-    - retain_original_incident_chronology_and_exact_clearing_evidence
-    failure:
-      restore_prior_canonical_latest_exact_bytes_or_absence: true
-      preserve_prior_last_good_snapshot_exact_bytes: true
-      preserve_original_repair_trigger: true
-      repair_required_remains_true: true
-      latest_failed_attempt_may_advance_to_recovery: true
-      safely_persisted_recovery_snapshot_may_remain_non_authoritative: true
-      automatic_second_provider_attempt: false
-    publication_dispatch: forbidden_in_RP-05
-    artifacts:
-      role: best_effort_debug_only
-      continue_on_error: true
-      short_retention: true
   scoped_search_acquisition:
     enabled: true
     contract_version: "1.0"
@@ -1472,8 +1386,8 @@ ftr_handoff:
       missing_window_consumability: fail_closed
       complete_empty_provider_response_may_succeed_window: true
     persistence:
-      immutable_snapshot: ftr_handoff.persistence.immutable_snapshot_path_template
-      scoped_manifest: ftr_handoff.persistence.scoped_manifest_path_template
+      immutable_snapshot: data/scoped-search/YYYY/MM/DD/{run_id}.json
+      scoped_manifest: data/scoped-search/{run_id}.json
       checksum_required: true
       manifest_write_last: true
     canonical_isolation:
@@ -1483,7 +1397,7 @@ ftr_handoff:
       never_replace_repair_incident: true
       never_consume_canonical_claim: true
     activation:
-      canonical_runtime: active_via_RP-04
+      downstream_feed: retired
       production_launch: out_of_scope
   absolute_low_non_deal_producer:
     enabled: true
@@ -1566,177 +1480,5 @@ ftr_handoff:
     preserve_existing_route_identity: true
     rp06_new_open_jaw_or_return_gateway_acquisition: out_of_scope
     rp06_marker_resolution: no_new_acquisition_added_existing_bounded_canonical_route_variant_calls_may_feed_pool_only_after_rp02_truth
-    canonical_ftr_activation: active_via_RP-04
-  canonical_activation:
-    enabled: true
-    activated_by_package: RP-04
-    runtime_module: cheap_flight_radar.canonical_ftr_runtime
-    canonical_workflow: .github/workflows/canonical-production-radar.yml
-    isolated_workflow: .github/workflows/canonical-production-radar-test.yml
-    evidence_ref: history/price-observations
-    application_checkout:
-      ref: main
-      producer_commit_sha_source: actual_checkout_head
-      resolve_command: git_-C__app_rev-parse_HEAD
-      request_trigger_sha_forbidden_as_producer_commit_sha: true
-    run_truth:
-      durable_run_result_path_template: data/run-evidence/YYYY/MM/DD/{radar_run_id}/run-result.json
-      terminal_success_gate: acquisition_process_success_and_cfr_stage_success
-      actions_artifact_is_terminal_truth: false
-    write_order:
-    - durable_cfr_evidence_already_persisted
-    - build_and_validate_snapshot
-    - write_immutable_snapshot
-    - sha256_exact_persisted_snapshot_bytes
-    - write_canonical_latest_manifest
-    - reload_manifest_snapshot_checksum_and_run_identity
-    - write_current_status_from_exact_latest_snapshot
-    failure:
-      set_repair_required: true
-      compact_failed_attempt_evidence_path_template: data/run-evidence/YYYY/MM/DD/{attempt_run_id}/ftr-failed-attempt.json
-      preserve_previous_latest_bytes: true
-      preserve_previous_immutable_snapshot_bytes: true
-      no_last_good_freshness: unavailable
-      existing_last_good_freshness: stale_reference
-      actions_artifact_correctness_dependency: false
-      cfr_evidence_survives_ftr_failure: true
-    active_repair:
-      ordinary_canonical_daily_cannot_clear: true
-      ordinary_canonical_daily_cannot_advance_latest: true
-      ordinary_canonical_daily_cannot_masquerade_as_recovery: true
-      required_clear_mode: same_day_recovery
-      recovery_orchestration_package: RP-05
-      recovery_orchestration_status: implemented_active
-      recovery_orchestration_status_semantics: capability_active_live_proof_not_exercised_no_eligible_repair_incident
-      recovery_capability_state: implemented_active
-      live_recovery_proof_status: not_exercised_no_eligible_repair_incident
-    readiness:
-      canonical_producer_active: true
-      recovery_capability_active: true
-      recovery_live_proof_complete: false
-      route_shape_return_gateway_convergence_complete: true
-      provider_fallback_execution_truth_convergence_complete: true
-      final_ftr_readiness: true
-      pending_packages: []
-  schema_version: "2.0"
-  schema_versioning:
-    format: MAJOR.MINOR
-    unsupported_major_action: fail_closed
-    optional_compatible_field_may_increment_minor: true
-    required_structure_or_field_meaning_change_requires_major: true
-  modes:
-  - canonical_daily
-  - scoped_search
-  - same_day_recovery
-  identity_separation:
-    operator_reacquisition: cfr_acquisition_identity_not_ftr_snapshot_mode
-    scoped_search_cannot_advance_canonical_latest: true
-    scoped_or_operator_cannot_clear_repair_required: true
-    same_day_recovery_is_only_current_repair_clear_identity: true
-  persistence:
-    durable_store: github_repository
-    repository: self
-    ref: history/price-observations
-    immutable_snapshot_path_template: data/ftr-feed/YYYY/MM/DD/{run_id}.json
-    canonical_latest_path: data/ftr-feed/latest.json
-    scoped_manifest_path_template: data/ftr-feed/scoped/{run_id}.json
-    immutable_snapshot_reuse_requires_identical_bytes: true
-    manifest_write_last: true
-    sha256_required: true
-  coverage:
-    preferred_evidence: existing_normalized_execution_and_coverage_evidence
-    required_dimensions:
-    - provider
-    - surface
-    - origin
-    - market
-    optional_dimensions:
-      return_gateway_expansion:
-        mandatory_health_dimension: false
-        can_imply_exhaustive_gateway_search: false
-        exact_attempted_not_attempted_truth_required_when_present: true
-    slice_states:
-    - succeeded
-    - failed
-    - not_attempted
-    partial_or_degraded_slice_cannot_be_hidden_by_overall_success: true
-    provider_success_cannot_be_inferred_from_not_provider_failed: true
-    unknown_or_inconsistent_action: fail_closed
-    deal_count_is_coverage_or_provider_health_truth: false
-    candidate_count_is_coverage_or_provider_health_truth: false
-    complete_empty_provider_response_may_be_execution_success: true
-    multiple_providers_require_explicit_per_provider_execution_evidence: true
-    market_candidate_metrics_are_not_market_execution_truth: true
-  freshness:
-    immutable_snapshot_states:
-    - fresh
-    - degraded
-    mutable_current_states:
-    - fresh
-    - degraded
-    - stale_reference
-    - unavailable
-    stale_reference_belongs_to_current_status_only: true
-    later_failure_never_mutates_old_snapshot_bytes: true
-    immutable_snapshot_freshness_is_generation_time_truth: true
-    broad_collapse_does_not_publish_new_fresh_snapshot: true
-    preserved_last_good_may_be_exposed_only_as_stale_reference_current_fallback: true
-  current_status:
-    durable_store: github_repository
-    repository: self
-    ref: history/price-observations
-    path: data/ftr-feed/current-status.json
-    mutable_current_usability_not_historical_fare_truth: true
-    required_top_level_fields:
-    - schema_version
-    - updated_at
-    - producer_status
-    - producer_health_status
-    - repair_required
-    - current_freshness_state
-    - last_good
-    - repair_incident
-    - clearing_contract
-    required_nested_paths:
-      when_last_good_present:
-      - last_good.run_id
-      - last_good.schema_version
-      - last_good.snapshot_path
-      - last_good.snapshot_sha256
-      - last_good.snapshot_freshness_at_generation
-      - last_good.manifest_path
-      when_repair_required:
-      - repair_incident.state
-      - repair_incident.set_at
-      - repair_incident.trigger_attempt
-      - repair_incident.latest_failed_attempt
-      - repair_incident.latest_failed_attempt.run_id
-      - repair_incident.latest_failed_attempt.mode
-      - repair_incident.latest_failed_attempt.attempt_state
-      - repair_incident.latest_failed_attempt.evidence_ref
-    failed_attempt_preserves_last_good_latest: true
-    failed_attempt_preserves_last_good_snapshot_bytes: true
-    failed_or_invalid_canonical_attempt_sets_repair_required: true
-    scoped_or_operator_attempt_cannot_replace_canonical_incident: true
-    repair_required_clear:
-      required_mode: same_day_recovery
-      requires_terminal_success: true
-      requires_supported_schema: true
-      requires_valid_snapshot: true
-      requires_complete_coverage: true
-      requires_fresh_snapshot: true
-      requires_healthy_provider_status: true
-      requires_manifest_snapshot_run_identity_match: true
-      requires_manifest_snapshot_checksum_match: true
-      workflow_green_is_insufficient: true
-      operator_reacquisition_cannot_clear: true
-      scoped_search_cannot_clear: true
-      publication_recovery_cannot_clear: true
-      stale_snapshot_existence_cannot_clear: true
-  activation_dependencies:
-  - RP-02_bounded_absolute_low_non_deal_producer
-  - RP-03_scoped_search_acquisition_workflow
-  - RP-04_canonical_ftr_runtime_activation
-  - RP-05_live_same_day_recovery_orchestration
-  - RP-06_route_shape_return_gateway_convergence
-  - RP-07_provider_fallback_execution_truth_convergence
+    canonical_ftr_activation: retired_downstream_feed_removed
+

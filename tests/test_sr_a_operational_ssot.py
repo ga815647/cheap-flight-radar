@@ -99,7 +99,11 @@ class SRAOperationalSSOTTests(unittest.TestCase):
         self.assertTrue(absolute_low["enabled"])
         self.assertEqual(absolute_low["deal_isolation"]["formal_deal_input"], "excluded")
         self.assertEqual(absolute_low["generic_signal_isolation"]["weak_seed_promotion"], "forbidden")
-        self.assertEqual(self.policy["ftr_handoff"]["schema_version"], "2.0")
+        self.assertEqual(
+            self.policy["ftr_handoff"]["status"],
+            "downstream_feed_retired_absolute_low_and_scoped_retained",
+        )
+        self.assertNotIn("canonical_activation", self.policy["ftr_handoff"])
 
     def test_retired_outbound_first_is_compatibility_only(self):
         contract = self.policy["search"]["outbound_first_contract"]

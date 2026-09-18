@@ -3,22 +3,13 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import yaml
-
 from cheap_flight_radar.ftr_handoff import (
-    CANONICAL_LATEST_PATH,
-    CURRENT_STATUS_PATH,
     FTRHandoffError,
     SCHEMA_VERSION,
     build_snapshot,
-    clear_repair_required,
-    load_current_reference,
-    load_current_status,
     load_manifest_snapshot,
     manifest_repository_path,
-    mark_repair_required,
     snapshot_repository_path,
-    stage_current_status_from_snapshot,
     stage_snapshot,
     summarize_coverage,
     validate_snapshot,
@@ -184,15 +175,6 @@ def generic_provider_signal(record_id="provider-evidence"):
     return item(record(record_id), classification="Signal", state="weak_seed")
 
 
-def assert_nested_paths(test_case, payload, paths):
-    for path in paths:
-        current = payload
-        for component in path.split("."):
-            test_case.assertIsInstance(current, dict, msg=f"{path}: {component} parent is not an object")
-            test_case.assertIn(component, current, msg=f"machine SSOT required path missing: {path}")
-            current = current[component]
-
-
 class FTRHandoffCoverageTest(unittest.TestCase):
     def test_fully_healthy_coverage_is_slice_faithful(self):
         result = run_result(deals=(item(record("deal")),))
@@ -329,19 +311,19 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
         self.assertEqual(variant["variant_id"], "absolute-low")
         self.assertEqual(variant["candidate_kind"], "absolute_low_non_deal")
 
-    def test_scoped_manifest_never_moves_canonical_latest(self):
+    def test_scoped_manifests_stage_under_scoped_search_store(self):
         with tempfile.TemporaryDirectory() as tmp:
             history = Path(tmp)
-            canonical = build_snapshot(
-                run_result(deals=(item(record("canonical")),)),
+            first = build_snapshot(
+                run_result(deals=(item(record("first")),)),
                 producer_commit_sha="abc123",
+                mode="scoped_search",
                 generated_at="2026-08-19T08:05:00+08:00",
             )
-            stage_snapshot(history_dir=history, snapshot=canonical)
-            latest_before = (history / CANONICAL_LATEST_PATH).read_bytes()
-            scoped = build_snapshot(
+            staged_first = stage_snapshot(history_dir=history, snapshot=first)
+            second = build_snapshot(
                 run_result(
-                    deals=(item(record("scoped")),),
+                    deals=(item(record("second")),),
                     run_id="ftr-scoped-20260819T090000+0800",
                     run_at="2026-08-19T09:00:00+08:00",
                 ),
@@ -349,10 +331,24 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
                 mode="scoped_search",
                 generated_at="2026-08-19T09:05:00+08:00",
             )
-            staged = stage_snapshot(history_dir=history, snapshot=scoped)
-            self.assertNotEqual(staged["manifest_path"], CANONICAL_LATEST_PATH)
-            self.assertEqual((history / CANONICAL_LATEST_PATH).read_bytes(), latest_before)
-            self.assertEqual(staged["manifest_path"], manifest_repository_path(scoped))
+            staged_second = stage_snapshot(history_dir=history, snapshot=second)
+            self.assertTrue(staged_first["manifest_path"].startswith("data/scoped-search/"))
+            self.assertTrue(staged_second["manifest_path"].startswith("data/scoped-search/"))
+            self.assertNotEqual(staged_first["manifest_path"], staged_second["manifest_path"])
+            reloaded = load_manifest_snapshot(history_dir=history, manifest_path=staged_first["manifest_path"])
+            self.assertEqual(reloaded["run_id"], first["run_id"])
+
+    def test_retired_feed_modes_are_no_longer_stageable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            history = Path(tmp)
+            snapshot = build_snapshot(
+                run_result(deals=(item(record("deal")),)),
+                producer_commit_sha="abc123",
+                generated_at="2026-08-19T08:05:00+08:00",
+            )
+            self.assertEqual(snapshot["mode"], "canonical_daily")
+            with self.assertRaisesRegex(FTRHandoffError, "retired handoff mode"):
+                stage_snapshot(history_dir=history, snapshot=snapshot)
 
     def test_consumer_fails_closed_on_checksum_or_unknown_major(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -360,6 +356,7 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
             snapshot = build_snapshot(
                 run_result(deals=(item(record("deal")),)),
                 producer_commit_sha="abc123",
+                mode="scoped_search",
                 generated_at="2026-08-19T08:05:00+08:00",
             )
             staged = stage_snapshot(history_dir=history, snapshot=snapshot)
@@ -368,7 +365,7 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
             payload["candidate_counts"]["variants"] = 999
             snapshot_file.write_text(json.dumps(payload) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(FTRHandoffError, "checksum mismatch"):
-                load_manifest_snapshot(history_dir=history)
+                load_manifest_snapshot(history_dir=history, manifest_path=staged["manifest_path"])
 
             unsupported = dict(snapshot)
             unsupported["schema_version"] = "3.0"
@@ -392,147 +389,9 @@ class FTRHandoffSnapshotTest(unittest.TestCase):
             generated_at="2026-08-19T08:05:00+08:00",
         )
         self.assertEqual(SCHEMA_VERSION, "2.0")
-        self.assertEqual(snapshot_repository_path(snapshot), "data/ftr-feed/2026/08/19/production-radar-20260819T080000-0800.json")
-
-
-class FTRRepairIncidentTest(unittest.TestCase):
-    def _seed_last_good(self, history: Path):
-        snapshot = build_snapshot(
-            run_result(deals=(item(record("last-good")),)),
-            producer_commit_sha="abc123",
-            generated_at="2026-08-19T08:05:00+08:00",
-        )
-        staged = stage_snapshot(history_dir=history, snapshot=snapshot)
-        stage_current_status_from_snapshot(history_dir=history, snapshot=snapshot, updated_at="2026-08-19T08:06:00+08:00")
-        return snapshot, staged
-
-    def _set_incident(self, history: Path):
-        return mark_repair_required(
-            history_dir=history,
-            failed_attempt={
-                "run_id": "production-radar-20260819T120000+0800",
-                "mode": "canonical_daily",
-                "attempt_state": "failed",
-                "terminal_state": "failed",
-                "producer_health_status": "provider_failed",
-                "evidence_ref": "data/run-evidence/2026/08/19/failed-run/result.json",
-            },
-            incident_set_at="2026-08-19T12:10:00+08:00",
-        )
-
-    def test_machine_ssot_required_current_status_paths_match_persisted_payloads(self):
-        policy = yaml.safe_load(Path("flight-radar.yaml").read_text(encoding="utf-8"))
-        contract = policy["ftr_handoff"]["current_status"]
-        required_top_level = contract["required_top_level_fields"]
-        conditional_paths = contract["required_nested_paths"]
-
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            self._seed_last_good(history)
-            healthy = load_current_status(history_dir=history)
-            for field in required_top_level:
-                self.assertIn(field, healthy, msg=f"machine SSOT required top-level field missing: {field}")
-            assert_nested_paths(self, healthy, conditional_paths["when_last_good_present"])
-
-            repair = self._set_incident(history)
-            for field in required_top_level:
-                self.assertIn(field, repair, msg=f"machine SSOT required top-level field missing: {field}")
-            assert_nested_paths(self, repair, conditional_paths["when_last_good_present"])
-            assert_nested_paths(self, repair, conditional_paths["when_repair_required"])
-
-    def test_failed_attempt_preserves_last_good_and_exposes_stale_reference_only_in_current_status(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            snapshot, staged = self._seed_last_good(history)
-            snapshot_file = history / staged["snapshot_path"]
-            snapshot_before = snapshot_file.read_bytes()
-            latest_before = (history / CANONICAL_LATEST_PATH).read_bytes()
-
-            status = self._set_incident(history)
-            self.assertTrue(status["repair_required"])
-            self.assertEqual(status["current_freshness_state"], "stale_reference")
-            self.assertEqual(status["last_good"]["run_id"], snapshot["run_id"])
-            self.assertEqual((history / CANONICAL_LATEST_PATH).read_bytes(), latest_before)
-            self.assertEqual(snapshot_file.read_bytes(), snapshot_before)
-
-            current = load_current_reference(history_dir=history)
-            self.assertEqual(current["current_freshness_state"], "stale_reference")
-            self.assertEqual(current["snapshot"]["freshness_state"], "fresh")
-            self.assertEqual(snapshot_file.read_bytes(), snapshot_before)
-
-    def test_recovery_like_validated_transition_clears_incident(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            self._seed_last_good(history)
-            self._set_incident(history)
-            recovery_run = run_result(
-                deals=(item(record("recovery", observed_at="2026-08-19T13:00:00+08:00")),),
-                run_id="recovery-radar-20260819T130000+0800",
-                run_at="2026-08-19T13:00:00+08:00",
-            )
-            recovery = build_snapshot(
-                recovery_run,
-                producer_commit_sha="def456",
-                mode="same_day_recovery",
-                generated_at="2026-08-19T13:05:00+08:00",
-            )
-            stage_snapshot(history_dir=history, snapshot=recovery)
-            cleared = clear_repair_required(
-                history_dir=history,
-                recovery_run_id=recovery["run_id"],
-                attempt_mode="same_day_recovery",
-                cleared_at="2026-08-19T13:06:00+08:00",
-            )
-            self.assertFalse(cleared["repair_required"])
-            self.assertEqual(cleared["current_freshness_state"], "fresh")
-            self.assertEqual(cleared["last_good"]["run_id"], recovery["run_id"])
-            self.assertEqual(cleared["repair_incident"]["state"], "cleared")
-            self.assertEqual(load_current_status(history_dir=history)["repair_required"], False)
-
-    def test_invalid_or_incomplete_recovery_cannot_clear(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            self._seed_last_good(history)
-            self._set_incident(history)
-            status_before = (history / CURRENT_STATUS_PATH).read_bytes()
-            with self.assertRaisesRegex(FTRHandoffError, "does not reference the claimed recovery run"):
-                clear_repair_required(
-                    history_dir=history,
-                    recovery_run_id="missing-recovery",
-                    attempt_mode="same_day_recovery",
-                    cleared_at="2026-08-19T13:06:00+08:00",
-                )
-            self.assertEqual((history / CURRENT_STATUS_PATH).read_bytes(), status_before)
-            self.assertTrue(load_current_status(history_dir=history)["repair_required"])
-
-    def test_scoped_and_operator_identity_cannot_masquerade_as_recovery(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            self._seed_last_good(history)
-            self._set_incident(history)
-            status_before = (history / CURRENT_STATUS_PATH).read_bytes()
-            for mode in ("scoped_search", "operator_reacquisition"):
-                with self.subTest(mode=mode):
-                    with self.assertRaisesRegex(FTRHandoffError, "only same_day_recovery"):
-                        clear_repair_required(
-                            history_dir=history,
-                            recovery_run_id="anything",
-                            attempt_mode=mode,
-                            cleared_at="2026-08-19T13:06:00+08:00",
-                        )
-                    self.assertEqual((history / CURRENT_STATUS_PATH).read_bytes(), status_before)
-
-    def test_old_immutable_snapshot_bytes_never_mutate_after_later_failure(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            history = Path(tmp)
-            snapshot, staged = self._seed_last_good(history)
-            path = history / staged["snapshot_path"]
-            old_bytes = path.read_bytes()
-            self._set_incident(history)
-            self.assertEqual(path.read_bytes(), old_bytes)
-            self.assertEqual(json.loads(old_bytes.decode("utf-8"))["freshness_state"], "fresh")
-            self.assertEqual(load_current_status(history_dir=history)["last_good"]["run_id"], snapshot["run_id"])
+        self.assertEqual(snapshot_repository_path(snapshot), "data/scoped-search/2026/08/19/production-radar-20260819T080000-0800.json")
 
 
 if __name__ == "__main__":
     unittest.main()
+

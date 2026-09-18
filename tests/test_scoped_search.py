@@ -583,16 +583,14 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
 
         return FakeScopedAdapter(discovery_factory=discovery_factory, exact_factory=exact_factory)
 
-    async def test_success_writes_immutable_scoped_snapshot_manifest_and_preserves_canonical_bytes(self):
+    async def test_success_writes_immutable_scoped_snapshot_manifest_and_preserves_existing(self):
         with tempfile.TemporaryDirectory() as tmp:
             history = Path(tmp)
-            latest = history / "data/ftr-feed/latest.json"
-            status = history / "data/ftr-feed/current-status.json"
-            latest.parent.mkdir(parents=True, exist_ok=True)
-            latest.write_bytes(b"canonical-latest-fixture\n")
-            status.write_bytes(b'{"repair_required":true,"fixture":"incident"}\n')
-            latest_before = latest.read_bytes()
-            status_before = status.read_bytes()
+            seed_dir = history / "data/scoped-search"
+            seed_dir.mkdir(parents=True, exist_ok=True)
+            seed = seed_dir / "seed-manifest.json"
+            seed.write_bytes(b'{"seed":"fixture"}\n')
+            seed_before = seed.read_bytes()
 
             outcome = await execute_scoped_search(
                 request=request(request_id="handoff-success", discovery_calls=4, exact_calls=4),
@@ -604,13 +602,11 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
                 generated_at=GENERATED_AT,
             )
             self.assertEqual(outcome.snapshot["mode"], "scoped_search")
-            self.assertTrue(outcome.staged["manifest_path"].startswith("data/ftr-feed/scoped/"))
-            self.assertNotEqual(outcome.staged["manifest_path"], "data/ftr-feed/latest.json")
+            self.assertTrue(outcome.staged["manifest_path"].startswith("data/scoped-search/"))
             self.assertTrue((history / outcome.staged["snapshot_path"]).exists())
             loaded = load_manifest_snapshot(history_dir=history, manifest_path=outcome.staged["manifest_path"])
             validate_scoped_snapshot(loaded, plan=outcome.plan)
-            self.assertEqual(latest.read_bytes(), latest_before)
-            self.assertEqual(status.read_bytes(), status_before)
+            self.assertEqual(seed.read_bytes(), seed_before)
             self.assertEqual(loaded["candidate_counts"]["deals"], 1)
             self.assertEqual(loaded["candidate_counts"]["absolute_low_non_deals"], 1)
             self.assertEqual(
@@ -662,15 +658,14 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
                     generated_at=GENERATED_AT,
                 )
 
-    async def test_failure_does_not_touch_canonical_latest_or_repair_incident(self):
+    async def test_failure_leaves_no_scoped_manifest_behind(self):
         with tempfile.TemporaryDirectory() as tmp:
             history = Path(tmp)
-            latest = history / "data/ftr-feed/latest.json"
-            status = history / "data/ftr-feed/current-status.json"
-            latest.parent.mkdir(parents=True, exist_ok=True)
-            latest.write_bytes(b"canonical-before\n")
-            status.write_bytes(b"repair-required-before\n")
-            before = (latest.read_bytes(), status.read_bytes())
+            seed_dir = history / "data/scoped-search"
+            seed_dir.mkdir(parents=True, exist_ok=True)
+            seed = seed_dir / "seed-manifest.json"
+            seed.write_bytes(b'{"seed":"before"}\n')
+            before = seed.read_bytes()
             with self.assertRaisesRegex(FTRHandoffError, "not consumable"):
                 await execute_scoped_search(
                     request=request(request_id="failure", discovery_calls=4, exact_calls=4),
@@ -681,9 +676,9 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
                     run_at=RUN_AT,
                     generated_at=GENERATED_AT,
                 )
-            self.assertEqual((latest.read_bytes(), status.read_bytes()), before)
-            scoped_dir = history / "data/ftr-feed/scoped"
-            self.assertFalse(scoped_dir.exists() and any(scoped_dir.iterdir()))
+            self.assertEqual(seed.read_bytes(), before)
+            staged = [path for path in seed_dir.iterdir() if path.name != "seed-manifest.json"]
+            self.assertEqual(staged, [])
 
     async def test_checksum_mismatch_and_invalid_scoped_snapshot_fail_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -713,13 +708,12 @@ class ScopedHandoffIsolationTest(unittest.IsolatedAsyncioTestCase):
 
 
 class ScopedSSOTDriftTest(unittest.TestCase):
-    def test_machine_ssot_matches_runtime_and_canonical_activation_is_rp04_active(self):
+    def test_machine_ssot_matches_runtime_and_feed_is_retired(self):
         policy = load_policy()
         contract = validate_scoped_search_policy(policy)
         self.assertEqual(contract["mode"], "scoped_search")
-        self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["enabled"])
-        self.assertEqual(policy["ftr_handoff"]["canonical_activation"]["activated_by_package"], "RP-04")
-        self.assertTrue(policy["ftr_handoff"]["canonical_activation"]["readiness"]["final_ftr_readiness"])
+        self.assertEqual(contract["activation"]["downstream_feed"], "retired")
+        self.assertNotIn("canonical_activation", policy["ftr_handoff"])
         self.assertEqual(contract["acquisition"]["broad_horizon_then_post_filter"], "forbidden")
         self.assertFalse(contract["bounded_execution"]["search_horizon_days_is_scoped_budget"])
         self.assertEqual(
@@ -744,13 +738,8 @@ class ScopedSSOTDriftTest(unittest.TestCase):
             validate_scoped_search_policy(drifted)
 
         drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["enabled"] = False
-        with self.assertRaisesRegex(ScopedSearchError, "RP-04 canonical FTR activation contract drifted"):
-            validate_scoped_search_policy(drifted)
-
-        drifted = copy.deepcopy(policy)
-        drifted["ftr_handoff"]["canonical_activation"]["active_repair"]["recovery_orchestration_status"] = "active"
-        with self.assertRaisesRegex(ScopedSearchError, "RP-05 recovery boundary drifted"):
+        drifted["ftr_handoff"]["scoped_search_acquisition"]["activation"]["downstream_feed"] = "active"
+        with self.assertRaisesRegex(ScopedSearchError, "activation boundary drifted"):
             validate_scoped_search_policy(drifted)
 
 
