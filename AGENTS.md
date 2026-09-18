@@ -69,7 +69,7 @@ For meaningful repository changes:
 6. Add/update tests.
 7. Run required gates.
 8. Open a PR with the exact head commit and a concise explanation of behavioral impact.
-9. Do not merge unless explicitly requested by the user.
+9. Merge standing authorization: the owner has granted standing permission to merge to `main` once the required gates pass on the exact head commit. Still open the PR first (step 8) so every change has review history; never merge with failing gates or on a stale head. If a change is high-risk or the owner flags it, wait for explicit approval instead.
 
 Exception: the repository's very first initialization commit may exist on `main` solely to create a branchable base.
 
