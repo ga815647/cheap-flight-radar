@@ -41,6 +41,23 @@ class LocalRunnerPolicyTest(unittest.TestCase):
         remaining = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
         self.assertEqual([path.name for path in remaining], ["ci.yml"])
 
+    def test_unattended_permissions_and_prompt_guards(self):
+        import json as jsonlib
+
+        config = jsonlib.loads((ROOT / "opencode.json").read_text(encoding="utf-8"))
+        bash_rules = config["permission"]["bash"]
+        self.assertEqual(
+            bash_rules.get("python3 scripts/local_daily_radar.py*"), "allow"
+        )
+        external = config["permission"]["external_directory"]
+        self.assertIn("cheap-flight-radar", jsonlib.dumps(external))
+        runner_text = (ROOT / "scripts" / "local_daily_radar.py").read_text(encoding="utf-8")
+        self.assertIn('"--execution-mode", "operator_requested_reacquisition"', runner_text)
+        loop = (ROOT / ".agents" / "loops" / "daily-radar.md").read_text(encoding="utf-8")
+        self.assertIn("nohup python3 scripts/local_daily_radar.py", loop)
+        self.assertIn("never ask the user any question", loop)
+        self.assertIn("claim without a snapshot", loop)
+
 
 class LocalRunnerBehaviorTest(unittest.TestCase):
     def test_stale_or_future_date_is_refused_without_side_effects(self):
