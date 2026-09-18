@@ -198,7 +198,7 @@ def run_operator(*, args: argparse.Namespace, root: Path, history_dir: Path,
     code = run_acquisition_with_timeout([
         "--policy", str(args.policy), "--history-dir", str(history_dir),
         "--output-dir", str(run_dir), "--run-id-prefix", prefix,
-        "--execution-mode", "operator_reacquisition",
+        "--execution-mode", "operator_requested_reacquisition",
     ], args.timeout)
     if code == 124:
         emit({"mode": "operator_reacquisition", "requested_date": requested_date,
