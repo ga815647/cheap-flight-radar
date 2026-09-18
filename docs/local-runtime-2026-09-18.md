@@ -43,3 +43,22 @@ deleted.
 - The first scheduled live run is the production proof; it uses the canonical
   daily identity and consumes that day's one attempt.
 - Live validation must never invent a second canonical daily attempt.
+
+## VPS egress probation and rollback trigger (owner decision 2026-09-18)
+
+The 2026-09-18 operator probe (`manual-test-02`) staged end-to-end but ended
+`provider_failed`: the VPS fixed egress hit a sticky Google 429 on the first
+Flight Deals call and all four origins collapsed. The pipeline is proven; the
+egress reputation is on probation.
+
+- Watch the next two canonical daily runs (09-19, 09-20).
+- If both end `provider_failed` with sticky-429 as the dominant cause, the
+  VPS egress is systematically throttled: roll production back to GitHub
+  Actions (restore the retired workflows from pre-decoupling history, repoint
+  the SSOT, rewrite the loop prompt to the control-branch trigger).
+- If at least one run is healthy (or degraded with real Deals), the VPS path
+  stays and we tune pressure instead of rolling back.
+- A single failed run proves nothing by itself; the GitHub era also had
+  429 days. The trigger requires two consecutive sticky-429 collapses.
+- Locally accumulated snapshots remain valid evidence either way; rollback
+  changes where acquisition runs, not the Deal truth.
