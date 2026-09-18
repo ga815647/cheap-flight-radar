@@ -1,4 +1,10 @@
-# Daily Flight Radar — ChatGPT automation prompt
+# Daily Flight Radar — ChatGPT automation prompt — RETIRED
+
+> Retirement notice (2026-09-18): the ChatGPT control-branch trigger and
+> GitHub Actions production path are retired. Routine automation is now an
+> OpenChamber scheduled task running `scripts/local_daily_radar.py` on the
+> owner's machine; see `docs/local-runtime-2026-09-18.md` and
+> `.agents/loops/daily-radar.md`. The prompt below is historical evidence.
 
 Use this as the canonical prompt contract for the ChatGPT automation named `Daily Flight Radar`.
 
