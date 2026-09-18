@@ -3,6 +3,8 @@ import json
 import tempfile
 import unittest
 
+import yaml
+
 from cheap_flight_radar.operator_operations import (
     inspect_operator_state,
     operator_claim_repository_path,
@@ -117,14 +119,15 @@ class OperatorOperationsTest(unittest.TestCase):
         self.assertTrue(snapshot["observations"][0]["observation_id"].startswith(result["radar_run_id"].lower()))
         self.assertFalse(snapshot_path.exists())
 
-    def test_operator_workflow_is_explicit_and_unscheduled(self):
-        workflow = Path(".github/workflows/operator-production-radar.yml").read_text(encoding="utf-8")
-        canonical = Path(".github/workflows/canonical-production-radar.yml").read_text(encoding="utf-8")
-        self.assertIn("ops/radar-operator-request", workflow)
-        self.assertIn("operator_reacquisition", workflow)
-        self.assertNotIn("schedule:", workflow)
-        self.assertIn("group: production-radar-acquisition", workflow)
-        self.assertIn("group: production-radar-acquisition", canonical)
+    def test_operator_local_runner_is_explicit_and_unscheduled(self):
+        self.assertTrue(Path("scripts/local_daily_radar.py").exists())
+        runner = Path("scripts/local_daily_radar.py").read_text(encoding="utf-8")
+        self.assertIn("--request-id", runner)
+        self.assertIn("operator_reacquisition", runner)
+        self.assertIn("flock", runner)
+        policy = yaml.safe_load(Path("flight-radar.yaml").read_text(encoding="utf-8"))
+        operator = policy["publication"]["orchestration"]["operator_reacquisition_control"]
+        self.assertEqual(operator["scheduled_or_automatic_use"], "forbidden")
 
 
 if __name__ == "__main__":

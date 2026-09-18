@@ -87,15 +87,11 @@ class PublicationUiTests(unittest.TestCase):
                 run_page.read_bytes(),
             )
 
-    def test_pages_rebuilds_for_new_reports_and_main_presentation_changes(self) -> None:
-        text = PAGES_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("- publication/radar-reports", text)
-        self.assertIn("- main", text)
-        self.assertIn('"publication/runs/*.json"', text)
-        self.assertIn('"src/cheap_flight_radar/publication.py"', text)
-        self.assertIn('"flight-radar.yaml"', text)
-        self.assertIn('".github/workflows/radar-pages.yml"', text)
-        self.assertNotIn("schedule:", text)
+    def test_production_pages_workflows_are_retired_only_ci_remains(self) -> None:
+        workflows = ROOT / ".github" / "workflows"
+        remaining = sorted(path.name for path in workflows.glob("*.yml"))
+        self.assertEqual(remaining, ["ci.yml"])
+        self.assertFalse(PAGES_WORKFLOW.exists())
 
 
 if __name__ == "__main__":
