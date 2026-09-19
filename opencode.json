@@ -2,7 +2,17 @@
   "$schema": "https://opencode.ai/config.json",
   "permission": {
     "bash": {
-      "python3 scripts/local_daily_radar.py*": "allow"
+      "python3 scripts/local_daily_radar.py*": "allow",
+      "nohup python3 scripts/local_daily_radar.py*": "allow",
+      "ls*": "allow",
+      "cat*": "allow",
+      "tail*": "allow",
+      "head*": "allow",
+      "ps*": "allow",
+      "date*": "allow",
+      "echo*": "allow",
+      "test*": "allow",
+      "kill -0 *": "allow"
     },
     "external_directory": {
       "~/.local/share/cheap-flight-radar/**": "allow"
