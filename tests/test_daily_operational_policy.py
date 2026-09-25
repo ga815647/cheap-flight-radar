@@ -37,6 +37,8 @@ class DailyOperationalPolicyTest(unittest.TestCase):
         self.assertEqual(operator["branch"], "ops/radar-operator-request")
         self.assertEqual(operator["request_path"], "requests/operator.json")
         self.assertEqual(operator["request_mode"], "operator_reacquisition")
+        self.assertEqual(operator["request_local_date_timezone"], "Asia/Taipei")
+        self.assertTrue(operator["request_must_match_current_local_date"])
         self.assertTrue(operator["request_id_required"])
         self.assertTrue(operator["requires_explicit_user_or_operator_request"])
         self.assertEqual(operator["scheduled_or_automatic_use"], "forbidden")

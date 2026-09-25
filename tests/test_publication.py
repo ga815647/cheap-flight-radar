@@ -64,6 +64,14 @@ class PublicationPolicyTests(unittest.TestCase):
         self.assertEqual(policy["publication"]["legacy_views_status"], "diagnostic_or_transition_only")
         self.assertEqual(policy["publication"]["historical_display"]["role"], "supplemental_when_available")
         self.assertEqual(policy["publication"]["platform"], "github_pages")
+        self.assertIn(
+            "deploy_github_pages",
+            policy["publication"]["write_sequence"],
+        )
+        self.assertNotIn(
+            "report_session_summary_from_terminal_evidence",
+            policy["publication"]["write_sequence"],
+        )
         self.assertFalse(policy["publication"]["orchestration"]["independent_github_cron"])
 
 

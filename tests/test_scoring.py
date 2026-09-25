@@ -110,7 +110,13 @@ class ScoringPolicyTests(unittest.TestCase):
         )
         self.assertEqual(source["history_confidence_levels"], ["low", "medium", "high"])
         self.assertEqual(
+            source["history_typical_formula"], "(baseline_twd-current_twd)/baseline_twd*100"
+        )
+        self.assertEqual(
             source["fallback_condition"], "baseline_null_or_confidence_none_or_sparse"
+        )
+        self.assertEqual(
+            source["fallback_order"], "inherit_external_anomaly_truth_priority"
         )
         self.assertEqual(
             source["conflict_resolution"], "explicit_source_priority_never_average"
