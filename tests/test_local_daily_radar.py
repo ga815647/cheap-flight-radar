@@ -25,21 +25,29 @@ RUNNER = load_runner()
 
 
 class LocalRunnerPolicyTest(unittest.TestCase):
-    def test_local_runtime_ssot_matches_runner(self):
+    def test_github_trigger_ssot_matches_restored_workflows(self):
         policy = yaml.safe_load((ROOT / "flight-radar.yaml").read_text(encoding="utf-8"))
         orchestration = policy["publication"]["orchestration"]
-        self.assertEqual(orchestration["primary_scheduler"], "openchamber_scheduled_local_run")
-        local = orchestration["local_runtime"]
-        self.assertEqual(local["runner"], "scripts/local_daily_radar.py")
-        self.assertTrue((ROOT / local["runner"]).exists())
-        loop = (ROOT / ".agents" / "loops" / "daily-radar.md").read_text(encoding="utf-8")
-        self.assertIn("scripts/local_daily_radar.py", loop)
-        self.assertNotIn("ops/radar-request", loop)
-        self.assertNotIn("workflow_dispatch", loop)
+        self.assertEqual(orchestration["primary_scheduler"], "chatgpt_scheduled_radar_run")
+        control = orchestration["canonical_daily_control"]
+        self.assertEqual(control["branch"], "ops/radar-request")
+        self.assertEqual(control["request_path"], "requests/daily.json")
+        self.assertEqual(control["request_mode"], "canonical_daily")
+        self.assertFalse((ROOT / ".agents" / "loops" / "daily-radar.md").exists())
 
-    def test_production_github_workflows_are_retired(self):
+    def test_production_github_workflows_are_present(self):
         remaining = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
-        self.assertEqual([path.name for path in remaining], ["ci.yml"])
+        self.assertEqual(
+            [path.name for path in remaining],
+            [
+                "canonical-production-radar-test.yml",
+                "canonical-production-radar.yml",
+                "ci.yml",
+                "operator-production-radar.yml",
+                "radar-pages-isolated-test.yml",
+                "radar-pages.yml",
+            ],
+        )
 
     def test_unattended_permissions_and_prompt_guards(self):
         import json as jsonlib
@@ -53,10 +61,6 @@ class LocalRunnerPolicyTest(unittest.TestCase):
         self.assertIn("cheap-flight-radar", jsonlib.dumps(external))
         runner_text = (ROOT / "scripts" / "local_daily_radar.py").read_text(encoding="utf-8")
         self.assertIn('"--execution-mode", "operator_requested_reacquisition"', runner_text)
-        loop = (ROOT / ".agents" / "loops" / "daily-radar.md").read_text(encoding="utf-8")
-        self.assertIn("nohup python3 scripts/local_daily_radar.py", loop)
-        self.assertIn("never ask the user any question", loop)
-        self.assertIn("claim without a snapshot", loop)
 
 
 class LocalRunnerBehaviorTest(unittest.TestCase):

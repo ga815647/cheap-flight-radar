@@ -60,12 +60,13 @@ class PriceHistoryPolicyTests(unittest.TestCase):
         with (ROOT / "flight-radar.yaml").open("r", encoding="utf-8") as handle:
             cls.policy = yaml.safe_load(handle)["price_history"]
 
-    def test_history_is_durable_locally_not_in_github(self):
+    def test_history_is_durable_in_github_not_chatgpt(self):
         persistence = self.policy["persistence"]
-        self.assertEqual(persistence["durable_store"], "local_machine")
-        self.assertEqual(persistence["history_root_template"], "{CFR_LOCAL_ROOT}/history")
+        self.assertEqual(persistence["durable_store"], "github_repository")
+        self.assertEqual(persistence["repository"], "self")
+        self.assertEqual(persistence["ref"], "history/price-observations")
         self.assertTrue(persistence["immutable_run_snapshots"])
-        self.assertTrue(persistence["github_actions_is_not_durable_history_service"])
+        self.assertFalse(persistence["github_actions_is_not_durable_history_service"])
         self.assertEqual(persistence["artifact_role"], "transient_handoff_only")
 
     def test_history_policy_has_robust_windows_and_sparse_guards(self):

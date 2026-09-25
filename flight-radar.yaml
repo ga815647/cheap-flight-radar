@@ -493,14 +493,16 @@ price_history:
   enabled: true
   persistence:
     observation_log_mode: immutable_run_snapshots
-    durable_store: local_machine
-    history_root_template: "{CFR_LOCAL_ROOT}/history"
+    durable_store: github_repository
+    repository: self
+    ref: history/price-observations
     snapshot_path_template: data/price-history/YYYY/MM/DD/{radar_run_id}.json
     immutable_run_snapshots: true
-    baseline_state: derived_from_local_snapshots_each_run
-    history_root_absent_action: initialize_empty_history_without_backfill
-    local_runner_may_write_validated_snapshot_when_delegated: true
-    github_actions_is_not_durable_history_service: true
+    baseline_state: derived_from_github_snapshots_each_run
+    history_ref_absent_action: initialize_empty_history_without_backfill
+    chatgpt_may_write_snapshot_directly_when_practical: true
+    github_actions_may_write_validated_snapshot_when_delegated: true
+    github_actions_is_not_durable_history_service: false
     artifact_role: transient_handoff_only
     data_snapshot_write_is_not_policy_or_code_merge: true
     canonical_daily_acquisition:
@@ -647,7 +649,17 @@ price_history:
   - new_route_low
   - percentile_vs_route_history
   - percentage_below_recent_baseline
-  role: supplemental_evidence_and_fallback_anomaly_truth
+  role: primary_history_baseline_with_external_fallback
+  primary_typical_price_source:
+    history_baseline_condition: selected_baseline_twd_non_null_and_confidence_low_medium_or_high
+    history_confidence_levels:
+    - low
+    - medium
+    - high
+    history_typical_formula: (baseline_twd-current_twd)/baseline_twd*100
+    fallback_condition: baseline_null_or_confidence_none_or_sparse
+    fallback_order: inherit_external_anomaly_truth_priority
+    conflict_resolution: explicit_source_priority_never_average
   required_for_formal_deal: false
   external_anomaly_truth:
     preferred: true
@@ -700,18 +712,19 @@ operational_health:
       automatic_retry: false
 publication:
   enabled: true
-  platform: local_session_report
-  evidence_root_template: "{CFR_LOCAL_ROOT}/history"
+  platform: github_pages
+  code_ref: main
+  evidence_ref: history/price-observations
   presentation:
-    publication_root_template: "{CFR_LOCAL_ROOT}/publication"
+    ref: publication/radar-reports
     manifest_path_template: publication/runs/{radar_run_id}.json
     manifest_mode: append_only_per_run
     presentation_is_not_fare_evidence: true
+    daily_manifest_write_requires_pr_or_main_merge: false
   static_site:
     generator: cheap_flight_radar.publication
     deterministic: true
     build_from_all_manifests_each_deploy: true
-    site_root_template: "{CFR_LOCAL_ROOT}/site"
     per_run_path_template: runs/{radar_run_id}/index.html
     latest_path: latest/index.html
     index_path: index.html
@@ -732,7 +745,7 @@ publication:
   - origin_coverage
   - china_mode_coverage
   historical_display:
-    derive_from_local_history: true
+    derive_from_evidence_ref: true
     show_all_time_and_rolling_low_when_supported: true
     show_recent_baseline_and_percent_below_when_supported: true
     percentile_threshold: inherit_price_history_percentile_minimum_samples
@@ -745,35 +758,32 @@ publication:
   - read_history_and_derive_comparable_metrics
   - append_publication_manifest
   - generate_per_run_latest_and_index_pages
-  - report_session_summary_from_terminal_evidence
+  - deploy_github_pages
   orchestration:
-    primary_scheduler: openchamber_scheduled_local_run
-    local_runtime:
-      runner: scripts/local_daily_radar.py
-      execution_plane: local_machine
-      history_root_template: "{CFR_LOCAL_ROOT}/history"
-      publication_root_template: "{CFR_LOCAL_ROOT}/publication"
-      run_root_template: "{CFR_LOCAL_ROOT}/runs"
-      lock_path_template: "{CFR_LOCAL_ROOT}/locks/daily.lock"
-      request_local_date_timezone: Asia/Taipei
-      request_must_match_current_local_date: true
-      concurrency: single_flight_flock_no_overlap
+    primary_scheduler: chatgpt_scheduled_radar_run
     canonical_daily_control:
+      branch: ops/radar-request
+      request_path: requests/daily.json
       request_mode: canonical_daily
       request_local_date_timezone: Asia/Taipei
       request_must_match_current_local_date: true
     operator_reacquisition_control:
+      branch: ops/radar-operator-request
+      request_path: requests/operator.json
       request_mode: operator_reacquisition
       request_local_date_timezone: Asia/Taipei
       request_must_match_current_local_date: true
       request_id_required: true
       requires_explicit_user_or_operator_request: true
       scheduled_or_automatic_use: forbidden
-    publication_trigger: local_run_evidence_completion
+    publication_trigger: presentation_manifest_push
+    publication_trigger_semantics: durable_state_transition_not_assumed_recursive_workflow_event
+    github_token_manifest_push_recursively_triggers_pages: false
+    github_token_pages_trigger: explicit_radar_pages_workflow_dispatch_after_manifest_push
     publication_recovery: immutable_run_evidence_without_reacquisition
     completion_evidence:
-      schedule_trigger_is_not_completion: true
-      wait_for_local_run_terminal_state: true
+      control_request_submission_is_not_completion: true
+      wait_for_workflow_terminal_state: true
       read_final_immutable_run_evidence_before_notification_decision: true
       required_final_evidence:
       - pre_acquisition_claim
@@ -782,9 +792,9 @@ publication:
       - immutable_recovery_manifest
       - active_publication_manifest
       terminal_or_final_evidence_unavailable_action: notify_operational_failure
-    github_actions_in_production_path: false
-    production_workflows: retired_use_local_runner
+    github_actions_role: disposable_static_build_gate_and_deploy_backend
     independent_github_cron: false
+    github_actions_is_not_scheduler: true
   primary_user_facing_views:
   - deals
   - signals
@@ -836,10 +846,10 @@ public_intelligence:
       definition: candidate_triggered_airline_ota_or_fare_search_surface
       failure_affects_discovery_coverage: false
   orchestration:
-    primary_scheduler: openchamber_scheduled_local_run
-    production_backend: local_machine_runner_not_github_actions
+    primary_scheduler: chatgpt_scheduled_radar_run
+    github_actions_role: disposable_execution_gate_backend_not_public_intelligence_crawler
     independent_github_cron: false
-    local_run_sequence:
+    chatgpt_run_sequence:
     - perform_opportunistic_web_discovery
     - perform_deep_search_and_revalidation
     - persist_immutable_price_history_snapshot
@@ -1188,7 +1198,7 @@ source_routing:
       truth_source: google_flight_deals
       library: gflights==0.3.1
       license: MIT
-      execution: local_machine_runner
+      execution: disposable_github_runner_or_local
       credential_required: false
       proxy: forbidden
       user_agent: fixed_explicit_project_identity_required
