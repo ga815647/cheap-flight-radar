@@ -1,7 +1,7 @@
 ---
 name: daily-radar
 schedule: "0 9 * * *"
-enabled: true
+enabled: false
 model: opencode/muse-spark-1.3-contributor-free
 timezone: Asia/Taipei
 ---
