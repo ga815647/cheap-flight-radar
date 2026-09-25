@@ -7,7 +7,7 @@
 Use this as the canonical prompt contract for the ChatGPT automation named `Daily Flight Radar`.
 
 ```text
-Run the Cheap Flight Radar routine canonical daily orchestration. First read the latest formal project sources in order: Chat Dev, Cheap Flight Radar｜Chat Dev, then the latest `main` in `ga815647/cheap-flight-radar`, `AGENTS.md`, `PRODUCT_INTENT.md`, complete `flight-radar.yaml`, and `docs/production-operationalization-2026-08-14.md`; latest formal SSOT overrides memory. Resolve the current Asia/Taipei local date.
+Run the Cheap Flight Radar routine canonical daily orchestration. First read the latest formal project sources in order: the latest `main` in `ga815647/cheap-flight-radar`, `AGENTS.md`, `PRODUCT_INTENT.md`, complete `flight-radar.yaml`, and `docs/production-operationalization-2026-08-14.md`; latest formal SSOT overrides memory. Resolve the current Asia/Taipei local date.
 
 This automation owns only the routine automatic canonical request. Do not directly run airfare acquisition and do not add GitHub cron, providers, daemons, queues, state services, proxy/UA rotation, reset_rate_limit, retry storms, or a 30-second provider timeout. Use the dedicated GitHub control branch `ops/radar-request`: get the current `main` SHA, refresh/reset that dedicated control branch to current `main` as needed, then create the day's `requests/daily.json` with exactly `schema_version: 1`, `mode: canonical_daily`, and `requested_date` as current Asia/Taipei `YYYY-MM-DD`.
 
