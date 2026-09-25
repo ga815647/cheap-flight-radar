@@ -99,10 +99,28 @@ class ScoringPolicyTests(unittest.TestCase):
         self.assertIn("absolute_cheapest", ranking["preserve_views"])
         self.assertEqual(ranking["legacy_absolute_price_views_status"], "diagnostic_only_not_first_class_deal_views")
 
-    def test_history_is_fallback_not_required_deal_truth(self):
+    def test_history_is_primary_baseline_with_external_fallback(self):
         history = self.policy["price_history"]
-        self.assertEqual(history["role"], "supplemental_evidence_and_fallback_anomaly_truth")
+        self.assertEqual(history["role"], "primary_history_baseline_with_external_fallback")
         self.assertFalse(history["required_for_formal_deal"])
+        source = history["primary_typical_price_source"]
+        self.assertEqual(
+            source["history_baseline_condition"],
+            "selected_baseline_twd_non_null_and_confidence_low_medium_or_high",
+        )
+        self.assertEqual(source["history_confidence_levels"], ["low", "medium", "high"])
+        self.assertEqual(
+            source["history_typical_formula"], "(baseline_twd-current_twd)/baseline_twd*100"
+        )
+        self.assertEqual(
+            source["fallback_condition"], "baseline_null_or_confidence_none_or_sparse"
+        )
+        self.assertEqual(
+            source["fallback_order"], "inherit_external_anomaly_truth_priority"
+        )
+        self.assertEqual(
+            source["conflict_resolution"], "explicit_source_priority_never_average"
+        )
         external = history["external_anomaly_truth"]
         self.assertTrue(external["preferred"])
         self.assertEqual(

@@ -24,20 +24,18 @@ class DailyOperationalPolicyTest(unittest.TestCase):
             "data/production-attempts/YYYY/MM/DD/canonical.json",
         )
 
-    def test_local_runtime_control_and_no_github_production_path(self):
+    def test_chatgpt_control_and_explicit_pages_dispatch_are_ssot(self):
         orchestration = self.policy["publication"]["orchestration"]
-        self.assertEqual(orchestration["primary_scheduler"], "openchamber_scheduled_local_run")
-        local = orchestration["local_runtime"]
-        self.assertEqual(local["runner"], "scripts/local_daily_radar.py")
-        self.assertEqual(local["execution_plane"], "local_machine")
-        self.assertEqual(local["request_local_date_timezone"], "Asia/Taipei")
-        self.assertTrue(local["request_must_match_current_local_date"])
-        self.assertEqual(local["concurrency"], "single_flight_flock_no_overlap")
         control = orchestration["canonical_daily_control"]
+        self.assertEqual(orchestration["primary_scheduler"], "chatgpt_scheduled_radar_run")
+        self.assertEqual(control["branch"], "ops/radar-request")
+        self.assertEqual(control["request_path"], "requests/daily.json")
         self.assertEqual(control["request_mode"], "canonical_daily")
         self.assertEqual(control["request_local_date_timezone"], "Asia/Taipei")
         self.assertTrue(control["request_must_match_current_local_date"])
         operator = orchestration["operator_reacquisition_control"]
+        self.assertEqual(operator["branch"], "ops/radar-operator-request")
+        self.assertEqual(operator["request_path"], "requests/operator.json")
         self.assertEqual(operator["request_mode"], "operator_reacquisition")
         self.assertEqual(operator["request_local_date_timezone"], "Asia/Taipei")
         self.assertTrue(operator["request_must_match_current_local_date"])
@@ -49,13 +47,17 @@ class DailyOperationalPolicyTest(unittest.TestCase):
         self.assertFalse(explicit["automatic_retry"])
         self.assertTrue(explicit["does_not_consume_or_replace_canonical_daily_claim"])
         self.assertTrue(explicit["does_not_overwrite_canonical_daily_snapshot"])
+        self.assertFalse(orchestration["github_token_manifest_push_recursively_triggers_pages"])
+        self.assertEqual(
+            orchestration["github_token_pages_trigger"],
+            "explicit_radar_pages_workflow_dispatch_after_manifest_push",
+        )
         self.assertEqual(
             orchestration["publication_recovery"],
             "immutable_run_evidence_without_reacquisition",
         )
-        self.assertFalse(orchestration["github_actions_in_production_path"])
-        self.assertEqual(orchestration["production_workflows"], "retired_use_local_runner")
         self.assertFalse(orchestration["independent_github_cron"])
+        self.assertTrue(orchestration["github_actions_is_not_scheduler"])
 
 
 if __name__ == "__main__":

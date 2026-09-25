@@ -87,11 +87,21 @@ class PublicationUiTests(unittest.TestCase):
                 run_page.read_bytes(),
             )
 
-    def test_production_pages_workflows_are_retired_only_ci_remains(self) -> None:
+    def test_production_pages_workflows_are_restored(self) -> None:
         workflows = ROOT / ".github" / "workflows"
         remaining = sorted(path.name for path in workflows.glob("*.yml"))
-        self.assertEqual(remaining, ["ci.yml"])
-        self.assertFalse(PAGES_WORKFLOW.exists())
+        self.assertEqual(
+            remaining,
+            [
+                "canonical-production-radar-test.yml",
+                "canonical-production-radar.yml",
+                "ci.yml",
+                "operator-production-radar.yml",
+                "radar-pages-isolated-test.yml",
+                "radar-pages.yml",
+            ],
+        )
+        self.assertTrue(PAGES_WORKFLOW.exists())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,61 @@
+{
+  "observations": [
+    {
+      "availability_state": "available",
+      "departure_date": "2026-08-30",
+      "destination": "DRP",
+      "fare_scope": "usable_complete_trip",
+      "normalized_twd_price": 7523,
+      "observation_id": "production-radar-20260815t083311+0800-khh-drp-2026-08-30-2026-09-06-c60088e73b",
+      "observed_at": "2026-08-15T00:33:41.884112+00:00",
+      "origin": "KHH",
+      "original_currency": "TWD",
+      "original_price": 7523,
+      "radar_run_id": "production-radar-20260815T083311+0800",
+      "related_observation_id": null,
+      "source_id": "gflights_google_exact",
+      "source_url": null,
+      "trip_type": "round_trip",
+      "verification_state": "revalidated"
+    },
+    {
+      "availability_state": "available",
+      "departure_date": "2026-08-30",
+      "destination": "CJU",
+      "fare_scope": "usable_complete_trip",
+      "normalized_twd_price": 6123,
+      "observation_id": "production-radar-20260815t083311+0800-khh-cju-2026-08-30-2026-09-05-8c2725e6fa",
+      "observed_at": "2026-08-15T00:33:42.283807+00:00",
+      "origin": "KHH",
+      "original_currency": "TWD",
+      "original_price": 6123,
+      "radar_run_id": "production-radar-20260815T083311+0800",
+      "related_observation_id": null,
+      "source_id": "gflights_google_exact",
+      "source_url": null,
+      "trip_type": "round_trip",
+      "verification_state": "revalidated"
+    },
+    {
+      "availability_state": "available",
+      "departure_date": "2026-10-11",
+      "destination": "DRP",
+      "fare_scope": "usable_complete_trip",
+      "normalized_twd_price": 45298,
+      "observation_id": "production-radar-20260815t083311+0800-khh-drp-2026-10-11-2026-10-12-96bbd9797f",
+      "observed_at": "2026-08-15T00:34:49.395712+00:00",
+      "origin": "KHH",
+      "original_currency": "TWD",
+      "original_price": 45298,
+      "radar_run_id": "production-radar-20260815T083311+0800",
+      "related_observation_id": null,
+      "source_id": "gflights_google_exact",
+      "source_url": null,
+      "trip_type": "multi_city",
+      "verification_state": "revalidated"
+    }
+  ],
+  "radar_run_id": "production-radar-20260815T083311+0800",
+  "run_at": "2026-08-15T08:33:11.382585+08:00",
+  "schema_version": 1
+}
